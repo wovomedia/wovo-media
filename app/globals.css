@@ -1,141 +1,95 @@
 @import "tailwindcss";
 
-/* ================================
-   ROOT THEME VARIABLES
-================================ */
+/* =====================
+   ROOT VARIABLES
+===================== */
 :root {
-  --background: #050505;
-  --foreground: #f5f5f5;
+  --bg: #050505;
+  --fg: #f5f5f5;
 
-  /* Brand Green (Emerald) */
-  --wovo-green: 16 185 129;
-  --wovo-green-soft: 16 185 129 / 0.15;
-
-  /* Borders & Glass */
-  --wovo-border: 255 255 255 / 0.08;
+  --emerald: 16 185 129;
+  --emerald-soft: 16 185 129 / 0.18;
+  --border-soft: 255 255 255 / 0.08;
 }
 
-/* ================================
-   BASE STYLES
-================================ */
-html,
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-geist-sans, Arial, Helvetica, sans-serif);
+/* =====================
+   BASE
+===================== */
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  scroll-behavior: smooth;
 }
 
-/* ================================
-   BACKGROUNDS & EFFECTS
-================================ */
-
-/* Animated gradient hero */
-.animated-gradient {
+/* =====================
+   ANIMATED EMERALD BACKGROUND
+===================== */
+.animated-bg {
   background:
-    radial-gradient(
-      600px circle at 50% -20%,
-      rgba(var(--wovo-green), 0.25),
-      transparent 60%
-    ),
-    linear-gradient(180deg, #050505, #050505);
+    radial-gradient(circle at 20% 20%, rgba(16,185,129,.18), transparent 40%),
+    radial-gradient(circle at 80% 30%, rgba(16,185,129,.12), transparent 45%),
+    radial-gradient(circle at 50% 80%, rgba(16,185,129,.08), transparent 40%),
+    #050505;
+  animation: bgMove 18s ease-in-out infinite alternate;
 }
 
-/* Subtle grid texture */
-.bg-grid {
-  background-image:
-    linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
-  background-size: 40px 40px;
+@keyframes bgMove {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 100% 100%; }
 }
 
-/* Glow blobs */
-.glow {
-  filter: blur(140px);
-  opacity: 0.45;
-}
-.glow-primary {
-  background: rgb(var(--wovo-green));
-}
-
-/* ================================
-   TEXT EFFECTS
-================================ */
-.gradient-text {
-  background: linear-gradient(
-    90deg,
-    #34d399,
-    #10b981,
-    #059669
-  );
-
-  background-clip: text;              /* ✅ standard */
-  -webkit-background-clip: text;      /* ✅ safari/chrome */
-  color: transparent;
-  -webkit-text-fill-color: transparent;
+/* =====================
+   GLASS CARD
+===================== */
+.glass {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(var(--border-soft));
+  backdrop-filter: blur(14px);
 }
 
-
-/* ================================
-   CARDS & GLASS
-================================ */
-.card {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(var(--wovo-border));
-  backdrop-filter: blur(12px);
-}
-
-/* ================================
-   BUTTONS
-================================ */
-.btn-primary {
-  background: rgb(var(--wovo-green));
-  color: #000;
-  font-weight: 800;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-.btn-primary:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 0 40px rgba(var(--wovo-green), 0.4);
-}
-
-.btn-ghost {
-  border: 1px solid rgba(var(--wovo-green), 0.4);
-  color: rgb(167 243 208);
-  background: rgba(var(--wovo-green), 0.08);
-}
-
-/* ================================
-   FORM INPUTS
-================================ */
-.input {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(var(--wovo-border));
-  padding: 0.75rem 1rem;
-  border-radius: 1rem;
-  color: white;
-}
-
-.input::placeholder {
-  color: rgba(255,255,255,0.4);
-}
-
-.input:focus {
-  outline: none;
-  border-color: rgba(var(--wovo-green), 0.8);
-  box-shadow: 0 0 0 2px rgba(var(--wovo-green), 0.25);
-}
-
-/* ================================
-   SCROLL ANIMATIONS
-================================ */
+/* =====================
+   SCROLL REVEAL
+===================== */
 .reveal {
   opacity: 0;
-  transform: translateY(16px);
-  transition: opacity 0.6s ease, transform 0.6s ease;
+  transform: translateY(24px);
+  transition: all .6s ease;
 }
 
-.reveal-visible {
+.reveal.show {
   opacity: 1;
   transform: translateY(0);
+}
+
+/* =====================
+   BUTTONS
+===================== */
+.btn-primary {
+  background: rgb(var(--emerald));
+  color: black;
+  font-weight: 700;
+  padding: 14px 22px;
+  border-radius: 14px;
+}
+
+.btn-outline {
+  border: 1px solid rgba(var(--emerald) / 0.4);
+  color: rgb(var(--emerald));
+  padding: 14px 22px;
+  border-radius: 14px;
+}
+
+/* =====================
+   MOBILE CTA BAR
+===================== */
+.mobile-cta {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: rgba(5,5,5,0.9);
+  border-top: 1px solid rgba(var(--border-soft));
+  backdrop-filter: blur(12px);
 }
