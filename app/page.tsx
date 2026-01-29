@@ -42,6 +42,22 @@ const provenResults: ResultCard[] = [
     detail: "Steady reach growth with weekly content.",
   },
   {
+  {
+    label: "Local Restaurant",
+    metric: "2.0M+ views in 28 days",
+    detail: "Short-form campaigns + consistent posting.",
+  },
+  {
+    label: "BBQ Restaurant",
+    metric: "400+ inbound calls in 6 weeks",
+    detail: "Offer-driven content and conversion CTAs.",
+  },
+  {
+    label: "Service Business",
+    metric: "85k–100k monthly views",
+    detail: "Steady reach growth with weekly content.",
+  },
+  {
     label: "HVAC Company",
     metric: "+250% reach growth",
     detail: "Trust-building ads with local targeting.",
@@ -432,6 +448,28 @@ export default function Home() {
                 Text {BRAND.phone}
               </a>
             </p>
+          </div>
+        </div>
+      </section>
+
+      {/* PROVEN GROWTH */}
+      <section className="border-y border-white/10 bg-white/5">
+        <div className="mx-auto max-w-6xl px-6 py-10" data-reveal>
+          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-sm font-semibold tracking-wide text-white/85">Proven growth snapshots</p>
+              <p className="mt-1 text-xs text-white/55">Serving businesses in all 50 states.</p>
+            </div>
+          </div>
+
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {provenResults.map((result) => (
+              <div key={result.label} className="rounded-3xl border border-white/10 bg-black/20 p-5">
+                <div className="text-xs font-semibold uppercase tracking-widest text-white/60">{result.label}</div>
+                <div className="mt-3 text-2xl font-extrabold text-emerald-300">{result.metric}</div>
+                <div className="mt-2 text-sm text-white/65">{result.detail}</div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
