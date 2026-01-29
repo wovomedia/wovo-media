@@ -105,9 +105,9 @@ export default async function CaseStudyPage({
       </header>
 
       <section className="mx-auto max-w-5xl px-6 py-12">
-        <Link href="/#growth" className="text-sm text-white/70 underline">
+        <a href="/#growth" className="text-sm text-white/70 underline">
           ← Back to results
-        </Link>
+        </a>
 
         <h1 className="mt-4 text-4xl font-extrabold md:text-5xl">{cs.name}</h1>
         <p className="mt-2 text-white/60">{cs.location}</p>
