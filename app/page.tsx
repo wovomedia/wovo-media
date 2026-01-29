@@ -1,15 +1,14 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 /**
  * HOME PAGE
- * - Trusted by logo row (with fallback pills if logo missing)
- * - Case study cards link to /case-studies/[slug]
+ * - Proven growth snapshot cards
  * - Scroll reveal animations (IntersectionObserver)
  * - Sticky mobile Call/Text bar
  * - Animated emerald gradient background (pure CSS via utility classes + inline styles)
- * - Form posts to /api/lead (server route) so Google Sheets works reliably
+ * - Form posts to NEXT_PUBLIC_LEADS_WEBHOOK_URL
  */
 
 const BRAND = {
@@ -20,91 +19,32 @@ const BRAND = {
   phone: "931-458-3255",
 };
 
-// Put logo files in: website/public/logos/...
-// If a logo src is missing, the UI will render a fallback pill.
-const trustedLogos: Array<{ name: string; src?: string; alt?: string }> = [
-  { name: "Campbell Station", src: "/logos/campbell-station.png", alt: "Campbell Station" },
-  { name: "Boot Stompin’ BBQ", src: "/logos/boot-stompin.png", alt: "Boot Stompin’ BBQ" },
-  { name: "Erwin Heating & Cooling", src: "/logos/erwin.png", alt: "Erwin Heating & Cooling" },
-  { name: "Liquid Fire Vintage Neon", src: "/logos/liquid-fire.png", alt: "Liquid Fire Vintage Neon" },
-  { name: "Dark Knight Contractors", src: "/logos/dark-knight.png", alt: "Dark Knight Contractors" },
-  // If you don't have a logo, omit src and it will render text.
-  { name: "Mayor Sheila Butt", src: undefined, alt: "Mayor Sheila Butt" },
-];
-
-type ClientLink = { label: string; url: string };
-type CaseStudy = {
-  slug: string;
-  name: string;
-  location: string;
-  tagline?: string;
-  highlight?: string;
-  stats?: Array<{ label: string; value: string }>;
-  links: ClientLink[];
+type ResultCard = {
+  label: string;
+  metric: string;
+  detail: string;
 };
 
-const caseStudies: CaseStudy[] = [
+const provenResults: ResultCard[] = [
   {
-    slug: "campbell-station",
-    name: "Campbell Station",
-    location: "Culleoka, TN",
-    tagline: "Restaurant growth systems + content pipeline",
-    highlight: "2M+ views / 28 days",
-    stats: [
-      { label: "Views", value: "2,000,000+ / 28 days" },
-      { label: "Focus", value: "Short-form + community + conversion" },
-    ],
-    links: [
-      { label: "Facebook", url: "https://www.facebook.com/CampbellStationRestaurant/" },
-      { label: "Website", url: "https://thecampbellstation.com/" },
-    ],
+    label: "Local Restaurant",
+    metric: "2.0M+ views in 28 days",
+    detail: "Short-form campaigns + consistent posting.",
   },
   {
-    slug: "boot-stompin-bbq",
-    name: "Boot Stompin’ BBQ",
-    location: "Columbia, TN",
-    tagline: "Daily posts + promos + local awareness",
-    highlight: "Restaurant content + offers that convert",
-    links: [
-      { label: "Facebook", url: "https://www.facebook.com/profile.php?id=61569065816720" },
-      { label: "Website", url: "https://bootstompinbbq.co/" },
-    ],
+    label: "BBQ Restaurant",
+    metric: "400+ inbound calls in 6 weeks",
+    detail: "Offer-driven content and conversion CTAs.",
   },
   {
-    slug: "erwin-heating-cooling",
-    name: "Erwin Heating & Cooling",
-    location: "Columbia, TN",
-    tagline: "Call-driven ads + trust content",
-    highlight: "Lead-focused messaging",
-    links: [{ label: "Facebook", url: "https://www.facebook.com/profile.php?id=61585412455842" }],
+    label: "Service Business",
+    metric: "85k–100k monthly views",
+    detail: "Steady reach growth with weekly content.",
   },
   {
-    slug: "dark-knight-contractors",
-    name: "Dark Knight Contractors",
-    location: "Knoxville, TN",
-    tagline: "Social presence + lead capture foundation",
-    links: [{ label: "Facebook", url: "https://www.facebook.com/profile.php?id=61584182552495" }],
-  },
-  {
-    slug: "liquid-fire-vintage-neon",
-    name: "Liquid Fire Vintage Neon",
-    location: "Franklin, TN",
-    tagline: "Brand presence + conversion upgrades",
-    links: [
-      { label: "Website", url: "https://www.liquidfirevintageneon.com/" },
-      { label: "Instagram", url: "https://www.instagram.com/liquidfireneon" },
-      { label: "Facebook", url: "https://www.facebook.com/liquidfirevn" },
-    ],
-  },
-  {
-    slug: "mayor-sheila-butt",
-    name: "Mayor Sheila Butt",
-    location: "Public Figure",
-    tagline: "Content planning + posting support",
-    links: [
-      { label: "Official Page", url: "https://www.facebook.com/MayorSheilaButt" },
-      { label: "Profile", url: "https://www.facebook.com/sheila.k.butt" },
-    ],
+    label: "HVAC Company",
+    metric: "+250% reach growth",
+    detail: "Trust-building ads with local targeting.",
   },
 ];
 
@@ -137,22 +77,22 @@ const services = [
 
 const proofStats = [
   {
-    title: "Campbell Station",
-    value: "2,000,000+",
-    label: "views every 28 days",
-    note: "Recent performance (rolling 28-day periods).",
-  },
-  {
-    title: "Facebook Monetization",
-    value: "Enablement",
-    label: "helping clients get monetized",
-    note: "We help set up and improve eligibility so clients can earn extra revenue.",
+    title: "Nationwide Reach",
+    value: "All 50 States",
+    label: "serving businesses coast-to-coast",
+    note: "Nationwide digital growth for local businesses.",
   },
   {
     title: "Lead Capture",
-    value: "Systems",
+    value: "Always-On",
     label: "forms + follow-up that convert",
-    note: "Forms, contact workflows, and reporting—built for consistency.",
+    note: "Conversion-focused workflows and reporting.",
+  },
+  {
+    title: "Content Velocity",
+    value: "Weekly",
+    label: "consistent short-form output",
+    note: "Content systems that compound reach.",
   },
 ];
 
@@ -202,8 +142,11 @@ function Nav() {
           <a className="transition hover:text-white" href="#process">
             Process
           </a>
-          <a className="transition hover:text-white" href="#work">
-            Case Studies
+          <a className="transition hover:text-white" href="#growth">
+            Proven Growth
+          </a>
+          <a className="transition hover:text-white" href="#about">
+            About
           </a>
           <a className="transition hover:text-white" href="#contact">
             Contact
@@ -251,31 +194,6 @@ function SectionHeading({
   );
 }
 
-function TrustedLogo({ name, src, alt }: { name: string; src?: string; alt?: string }) {
-  const [broken, setBroken] = useState(false);
-
-  if (!src || broken) {
-    return (
-      <div className="flex h-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-4 text-sm font-semibold text-white/80">
-        {name}
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex h-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-4">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={src}
-        alt={alt || name}
-        className="h-6 w-auto opacity-90"
-        onError={() => setBroken(true)}
-        loading="lazy"
-      />
-    </div>
-  );
-}
-
 /** Sticky mobile CTA bar */
 function MobileCtaBar() {
   return (
@@ -313,21 +231,38 @@ export default function Home() {
 
     const form = e.currentTarget;
     const fd = new FormData(form);
+    const company = String(fd.get("company") || "");
+    const email = String(fd.get("email") || "").trim();
+    const state = String(fd.get("state") || "").trim();
+
+    if (company) {
+      setStatus("error");
+      setErrorMsg("Unable to submit. Please try again.");
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setStatus("error");
+      setErrorMsg("Please enter a valid email address.");
+      return;
+    }
+
+    const webhookUrl = process.env.NEXT_PUBLIC_LEADS_WEBHOOK_URL;
+    if (!webhookUrl) {
+      setStatus("error");
+      setErrorMsg("Submission endpoint is not configured.");
+      return;
+    }
 
     const payload = {
-      name: String(fd.get("name") || ""),
-      business: String(fd.get("business") || ""),
-      email: String(fd.get("email") || ""),
-      phone: String(fd.get("phone") || ""),
-      state: String(fd.get("state") || ""),
-      industry: String(fd.get("industry") || ""),
-      needs: String(fd.get("needs") || ""),
-      source: "wovomedia.com",
-      createdAt: new Date().toISOString(),
+      email,
+      state,
+      timestamp: new Date().toISOString(),
+      source: "website-form",
     };
 
     try {
-      const res = await fetch("/api/lead", {
+      const res = await fetch(webhookUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -419,7 +354,8 @@ export default function Home() {
             </h1>
 
             <p className="mt-6 max-w-xl text-lg text-white/75">
-              Social media, content, websites, and lead systems built to produce calls and revenue.
+              Social media, content, websites, and lead systems built to produce calls and revenue. Serving businesses
+              in all 50 states.
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -456,7 +392,8 @@ export default function Home() {
               A plan built for your workload.
             </h3>
             <p className="mt-3 text-white/75">
-              We scope your goals and industry, then build a plan that produces calls, bookings, and consistent growth.
+              We scope your goals and industry, then build a plan that produces calls, bookings, and consistent growth
+              nationwide.
             </p>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
@@ -499,24 +436,24 @@ export default function Home() {
         </div>
       </section>
 
-      {/* TRUSTED BY (LOGOS) */}
+      {/* PROVEN GROWTH */}
       <section className="border-y border-white/10 bg-white/5">
         <div className="mx-auto max-w-6xl px-6 py-10" data-reveal>
           <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
             <div>
-              <p className="text-sm font-semibold tracking-wide text-white/85">
-                Trusted by real businesses & local leaders
-              </p>
-              <p className="mt-1 text-xs text-white/55">
-                Logos load from <span className="font-semibold">/public/logos</span>. Missing logos fallback to text.
-              </p>
+              <p className="text-sm font-semibold tracking-wide text-white/85">Proven growth snapshots</p>
+              <p className="mt-1 text-xs text-white/55">Serving businesses in all 50 states.</p>
             </div>
+          </div>
 
-            <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 md:w-auto">
-              {trustedLogos.map((l) => (
-                <TrustedLogo key={l.name} name={l.name} src={l.src} alt={l.alt} />
-              ))}
-            </div>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {provenResults.map((result) => (
+              <div key={result.label} className="rounded-3xl border border-white/10 bg-black/20 p-5">
+                <div className="text-xs font-semibold uppercase tracking-widest text-white/60">{result.label}</div>
+                <div className="mt-3 text-2xl font-extrabold text-emerald-300">{result.metric}</div>
+                <div className="mt-2 text-sm text-white/65">{result.detail}</div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -625,47 +562,73 @@ export default function Home() {
           </div>
 
           <p className="mt-6 text-center text-sm text-white/65">
-            Nationwide remote service • On-site available when needed • Custom plans
+            Serving businesses in all 50 states • Nationwide digital growth for local businesses • Custom plans
           </p>
         </div>
       </section>
 
-      {/* CASE STUDIES */}
-      <section id="work" className="border-y border-white/10 bg-white/5 py-14">
+      {/* PROVEN GROWTH */}
+      <section id="growth" className="border-y border-white/10 bg-white/5 py-14">
         <SectionHeading
-          kicker="CASE STUDIES"
-          title="Click a client to view the details"
-          subtitle="Each page includes links to their live channels and what we did."
+          kicker="PROVEN GROWTH"
+          title="Anonymized results across industries"
+          subtitle="Metrics-only outcomes from recent campaigns."
         />
         <div className="mx-auto mt-8 max-w-6xl px-6">
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {caseStudies.map((c) => (
-              <a
-                key={c.slug}
-                href={`/case-studies/${c.slug}`}
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {provenResults.map((result) => (
+              <div
+                key={result.label}
                 data-reveal
-                className="group rounded-3xl border border-white/10 bg-black/20 p-6 transition hover:border-emerald-400/30 hover:bg-white/5"
+                className="rounded-3xl border border-white/10 bg-black/20 p-6"
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="text-lg font-extrabold">{c.name}</div>
-                    <div className="text-sm text-white/60">{c.location}</div>
-                  </div>
-                  <span className="rounded-full border border-emerald-400/30 bg-emerald-400/15 px-3 py-1 text-xs font-bold text-emerald-200">
-                    VIEW
-                  </span>
-                </div>
-
-                {c.highlight ? (
-                  <div className="mt-3 text-sm font-semibold text-emerald-300">{c.highlight}</div>
-                ) : null}
-                {c.tagline ? <div className="mt-2 text-sm text-white/70">{c.tagline}</div> : null}
-
-                <div className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-white/80">
-                  Open case study <span className="transition group-hover:translate-x-1">→</span>
-                </div>
-              </a>
+                <div className="text-xs font-semibold uppercase tracking-widest text-white/60">{result.label}</div>
+                <div className="mt-3 text-2xl font-extrabold text-emerald-300">{result.metric}</div>
+                <div className="mt-2 text-sm text-white/70">{result.detail}</div>
+              </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ABOUT */}
+      <section id="about" className="py-14">
+        <SectionHeading
+          kicker="ABOUT"
+          title="About Wovo Media"
+          subtitle="Serving businesses in all 50 states with nationwide digital growth for local businesses."
+        />
+        <div className="mx-auto mt-8 max-w-6xl px-6">
+          <div className="grid gap-6 md:grid-cols-2">
+            <div data-reveal className="rounded-3xl border border-white/10 bg-white/5 p-6">
+              <div className="text-sm font-semibold text-white/70">Who we are</div>
+              <h3 className="mt-3 text-2xl font-extrabold text-white">Built for outcomes, not vanity metrics.</h3>
+              <p className="mt-3 text-white/70">
+                Wovo Media helps local businesses win attention and turn it into measurable growth. We focus on
+                consistent content, conversion-focused websites, and lead systems that drive calls and revenue—no matter
+                where you operate.
+              </p>
+            </div>
+
+            <div data-reveal className="rounded-3xl border border-white/10 bg-black/20 p-6">
+              <div className="text-sm font-semibold text-white/70">Leadership</div>
+              <div className="mt-4 space-y-4">
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="text-lg font-extrabold text-white">Payton Cody</div>
+                  <div className="text-sm text-white/65">CEO, Founder of Wovo Media</div>
+                  <a className="mt-2 block text-sm font-semibold text-emerald-200" href="mailto:Payton@wovomedia.com">
+                    Payton@wovomedia.com
+                  </a>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="text-lg font-extrabold text-white">Austin Cody</div>
+                  <div className="text-sm text-white/65">Head of Operations</div>
+                  <a className="mt-2 block text-sm font-semibold text-emerald-200" href="mailto:Austin@wovomedia.com">
+                    Austin@wovomedia.com
+                  </a>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -674,64 +637,41 @@ export default function Home() {
       <section id="contact" className="py-16">
         <SectionHeading
           kicker="CONTACT"
-          title="Request a custom plan"
-          subtitle="This will save into your lead sheet again (via /api/lead)."
+          title="Get pricing for your market"
+          subtitle="Serving all 50 states — now working with businesses nationwide."
         />
 
         <div className="mx-auto mt-8 max-w-6xl px-6">
           <div data-reveal className="rounded-3xl border border-white/10 bg-black/25 p-8 md:p-10">
+            <div className="mb-6 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/70">
+              Serving businesses in all 50 states. Nationwide digital growth for local businesses.
+            </div>
             <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
               <input
-                name="name"
-                placeholder="Your name"
-                required
-                className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3 placeholder:text-white/40 outline-none focus:ring-2 focus:ring-emerald-400"
-              />
-              <input
-                name="business"
-                placeholder="Business name"
-                className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3 placeholder:text-white/40 outline-none focus:ring-2 focus:ring-emerald-400"
-              />
-              <input
                 name="email"
-                placeholder="Email"
+                placeholder="Email address"
                 type="email"
                 required
                 className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3 placeholder:text-white/40 outline-none focus:ring-2 focus:ring-emerald-400"
               />
               <input
-                name="phone"
-                placeholder="Phone"
-                required
-                className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3 placeholder:text-white/40 outline-none focus:ring-2 focus:ring-emerald-400"
-              />
-              <input
                 name="state"
-                placeholder="State"
+                placeholder="State or location (optional)"
                 className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3 placeholder:text-white/40 outline-none focus:ring-2 focus:ring-emerald-400"
               />
-              <input
-                name="industry"
-                placeholder="Industry (restaurant, HVAC, etc.)"
-                className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3 placeholder:text-white/40 outline-none focus:ring-2 focus:ring-emerald-400"
-              />
-              <textarea
-                name="needs"
-                placeholder="What do you need help with?"
-                className="h-32 rounded-2xl border border-white/15 bg-white/5 px-4 py-3 placeholder:text-white/40 outline-none focus:ring-2 focus:ring-emerald-400 md:col-span-2"
-              />
+              <input name="company" tabIndex={-1} autoComplete="off" className="hidden" />
 
               <button
                 type="submit"
                 disabled={status === "sending"}
                 className="rounded-2xl bg-emerald-400 px-6 py-4 font-extrabold text-black transition hover:bg-emerald-300 disabled:opacity-60 md:col-span-2"
               >
-                {status === "sending" ? "Sending..." : "Send Request"}
+                {status === "sending" ? "Sending..." : "Get pricing"}
               </button>
 
               {status === "success" ? (
                 <div className="rounded-2xl border border-emerald-400/30 bg-emerald-400/10 p-4 text-sm text-emerald-200 md:col-span-2">
-                  Submitted. We’ll reach out ASAP. If it’s urgent, call or text{" "}
+                  Thanks! We’ll send pricing details shortly. If it’s urgent, call or text{" "}
                   <a className="underline" href={`sms:${BRAND.phone}`}>
                     {BRAND.phone}
                   </a>
