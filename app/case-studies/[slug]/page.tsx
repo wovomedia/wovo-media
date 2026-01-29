@@ -1,4 +1,5 @@
 import React from "react";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 type CaseStudy = {
@@ -83,9 +84,9 @@ export default async function CaseStudyPage({
     <main className="min-h-screen bg-black text-white">
       <header className="border-b border-white/10 bg-black/50 backdrop-blur-xl">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
-          <a href="/" className="font-extrabold tracking-tight">
+          <Link href="/" className="font-extrabold tracking-tight">
             {BRAND.name}
-          </a>
+          </Link>
           <div className="flex gap-2">
             <a
               href={`tel:${BRAND.phone}`}
@@ -161,12 +162,12 @@ export default async function CaseStudyPage({
           </p>
 
           <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-            <a
+            <Link
               href="/#contact"
               className="rounded-2xl bg-emerald-400 px-6 py-4 text-center font-extrabold text-black hover:bg-emerald-300"
             >
               Request a Plan
-            </a>
+            </Link>
             <a
               href={`sms:${BRAND.phone}`}
               className="rounded-2xl border border-emerald-400/35 bg-emerald-400/10 px-6 py-4 text-center font-extrabold text-emerald-200 hover:bg-emerald-400/20"

@@ -136,10 +136,6 @@ function useRevealOnScroll() {
   }, []);
 }
 
-function cx(...classes: Array<string | false | null | undefined>) {
-  return classes.filter(Boolean).join(" ");
-}
-
 function Nav() {
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-black/40 backdrop-blur-xl">
@@ -292,9 +288,9 @@ export default function Home() {
       setStatus("success");
       form.reset();
       setTimeout(() => setStatus("idle"), 5000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setStatus("error");
-      setErrorMsg(err?.message || "Failed to submit. Try again.");
+      setErrorMsg(err instanceof Error ? err.message : "Failed to submit. Try again.");
     }
   }
 
@@ -390,7 +386,14 @@ export default function Home() {
             </div>
 
             <div className="mt-8 flex flex-wrap gap-2">
-              {["Content system", "Editing", "Website conversion", "Lead capture", "DM management"].map((t) => (
+              {[
+                "Licensed & insured",
+                "Content system",
+                "Editing",
+                "Website conversion",
+                "Lead capture",
+                "DM management",
+              ].map((t) => (
                 <span
                   key={t}
                   className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm text-white/80"
