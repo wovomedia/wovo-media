@@ -145,9 +145,6 @@ function Nav() {
           <a className="transition hover:text-white" href="#growth">
             Proven Growth
           </a>
-          <a className="transition hover:text-white" href="#about">
-            About
-          </a>
           <a className="transition hover:text-white" href="#contact">
             Contact
           </a>
@@ -436,6 +433,28 @@ export default function Home() {
         </div>
       </section>
 
+      {/* PROVEN GROWTH */}
+      <section className="border-y border-white/10 bg-white/5">
+        <div className="mx-auto max-w-6xl px-6 py-10" data-reveal>
+          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-sm font-semibold tracking-wide text-white/85">Proven growth snapshots</p>
+              <p className="mt-1 text-xs text-white/55">Serving businesses in all 50 states.</p>
+            </div>
+          </div>
+
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {provenResults.map((result) => (
+              <div key={result.label} className="rounded-3xl border border-white/10 bg-black/20 p-5">
+                <div className="text-xs font-semibold uppercase tracking-widest text-white/60">{result.label}</div>
+                <div className="mt-3 text-2xl font-extrabold text-emerald-300">{result.metric}</div>
+                <div className="mt-2 text-sm text-white/65">{result.detail}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* SERVICES */}
       <section id="services" className="py-14">
         <SectionHeading
@@ -565,48 +584,6 @@ export default function Home() {
                 <div className="mt-2 text-sm text-white/70">{result.detail}</div>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ABOUT */}
-      <section id="about" className="py-14">
-        <SectionHeading
-          kicker="ABOUT"
-          title="About Wovo Media"
-          subtitle="Serving businesses in all 50 states with nationwide digital growth for local businesses."
-        />
-        <div className="mx-auto mt-8 max-w-6xl px-6">
-          <div className="grid gap-6 md:grid-cols-2">
-            <div data-reveal className="rounded-3xl border border-white/10 bg-white/5 p-6">
-              <div className="text-sm font-semibold text-white/70">Who we are</div>
-              <h3 className="mt-3 text-2xl font-extrabold text-white">Built for outcomes, not vanity metrics.</h3>
-              <p className="mt-3 text-white/70">
-                Wovo Media helps local businesses win attention and turn it into measurable growth. We focus on
-                consistent content, conversion-focused websites, and lead systems that drive calls and revenue—no matter
-                where you operate.
-              </p>
-            </div>
-
-            <div data-reveal className="rounded-3xl border border-white/10 bg-black/20 p-6">
-              <div className="text-sm font-semibold text-white/70">Leadership</div>
-              <div className="mt-4 space-y-4">
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <div className="text-lg font-extrabold text-white">Payton Cody</div>
-                  <div className="text-sm text-white/65">CEO, Founder of Wovo Media</div>
-                  <a className="mt-2 block text-sm font-semibold text-emerald-200" href="mailto:Payton@wovomedia.com">
-                    Payton@wovomedia.com
-                  </a>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <div className="text-lg font-extrabold text-white">Austin Cody</div>
-                  <div className="text-sm text-white/65">Head of Operations</div>
-                  <a className="mt-2 block text-sm font-semibold text-emerald-200" href="mailto:Austin@wovomedia.com">
-                    Austin@wovomedia.com
-                  </a>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </section>
