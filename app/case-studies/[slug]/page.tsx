@@ -1,7 +1,7 @@
 import React from "react";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
-type ClientLink = { label: string; url: string };
 type CaseStudy = {
   slug: string;
   name: string;
@@ -10,7 +10,7 @@ type CaseStudy = {
   highlight?: string;
   summary?: string;
   stats?: Array<{ label: string; value: string }>;
-  links: ClientLink[];
+  links?: Array<{ label: string; url: string }>;
 };
 
 const BRAND = {
@@ -21,75 +21,52 @@ const BRAND = {
 
 const CASE_STUDIES: CaseStudy[] = [
   {
-    slug: "campbell-station",
-    name: "Campbell Station",
-    location: "Culleoka, TN",
-    highlight: "2,000,000+ views / 28 days",
-    tagline: "Restaurant content + community + conversion upgrades",
+    slug: "local-restaurant",
+    name: "Local Restaurant",
+    location: "Multi-state campaign",
+    highlight: "2.0M+ views in 28 days",
+    tagline: "Short-form content + community engagement",
     summary:
-      "We built a consistent content cadence, improved conversion paths, and kept community engagement active so attention turns into real customers.",
+      "We built a consistent content cadence, improved conversion paths, and kept engagement active so attention turns into real customers.",
     stats: [
-      { label: "Views", value: "2,000,000+ / 28 days" },
-      { label: "Deliverables", value: "Posting + editing + community + website support" },
-    ],
-    links: [
-      { label: "Facebook", url: "https://www.facebook.com/CampbellStationRestaurant/" },
-      { label: "Website", url: "https://thecampbellstation.com/" },
+      { label: "Views", value: "2.0M+ in 28 days" },
+      { label: "Deliverables", value: "Posting + editing + community support" },
     ],
   },
   {
-    slug: "boot-stompin-bbq",
-    name: "Boot Stompin’ BBQ",
-    location: "Columbia, TN",
-    tagline: "Daily posting + promos that drive real visits",
+    slug: "bbq-restaurant",
+    name: "BBQ Restaurant",
+    location: "Regional coverage",
+    tagline: "Daily posting + promos that drive calls",
     summary:
-      "We focus on clear offers, strong hooks, consistent posting, and simple CTAs that translate into calls, catering inquiries, and foot traffic.",
-    links: [
-      { label: "Facebook", url: "https://www.facebook.com/profile.php?id=61569065816720" },
-      { label: "Website", url: "https://bootstompinbbq.co/" },
+      "We focus on clear offers, strong hooks, consistent posting, and simple CTAs that translate into inbound calls and bookings.",
+    stats: [
+      { label: "Inbound Calls", value: "400+ in 6 weeks" },
+      { label: "Primary Focus", value: "Offers + conversions" },
     ],
   },
   {
-    slug: "erwin-heating-cooling",
-    name: "Erwin Heating & Cooling",
-    location: "Columbia, TN",
+    slug: "service-business",
+    name: "Service Business",
+    location: "Nationwide remote support",
     tagline: "Call-driven creative + trust-building posts",
     summary:
-      "We build call-heavy creative, local trust signals, and consistent posting so people choose you when their system fails.",
-    links: [{ label: "Facebook", url: "https://www.facebook.com/profile.php?id=61585412455842" }],
+      "We build call-heavy creative, trust signals, and consistent posting so people choose you when they need help fast.",
+    stats: [
+      { label: "Monthly Views", value: "85k–100k" },
+      { label: "Primary Focus", value: "Calls + credibility" },
+    ],
   },
   {
-    slug: "dark-knight-contractors",
-    name: "Dark Knight Contractors",
-    location: "Knoxville, TN",
+    slug: "hvac-company",
+    name: "HVAC Company",
+    location: "Multi-state reach",
     tagline: "Modern presence + lead capture foundation",
     summary:
       "We tighten the offer, improve clarity, and connect content to lead capture so visibility becomes booked jobs.",
-    links: [{ label: "Facebook", url: "https://www.facebook.com/profile.php?id=61584182552495" }],
-  },
-  {
-    slug: "liquid-fire-vintage-neon",
-    name: "Liquid Fire Vintage Neon",
-    location: "Franklin, TN",
-    tagline: "Brand presence + conversion upgrades",
-    summary:
-      "We focus on showcasing work, building credibility, and making it easy for customers to inquire and buy.",
-    links: [
-      { label: "Website", url: "https://www.liquidfirevintageneon.com/" },
-      { label: "Instagram", url: "https://www.instagram.com/liquidfireneon" },
-      { label: "Facebook", url: "https://www.facebook.com/liquidfirevn" },
-    ],
-  },
-  {
-    slug: "mayor-sheila-butt",
-    name: "Mayor Sheila Butt",
-    location: "Public Figure",
-    tagline: "Content planning + posting support",
-    summary:
-      "We support consistent posting and content organization to maintain a strong, clear public presence.",
-    links: [
-      { label: "Official Page", url: "https://www.facebook.com/MayorSheilaButt" },
-      { label: "Profile", url: "https://www.facebook.com/sheila.k.butt" },
+    stats: [
+      { label: "Reach Growth", value: "+250%" },
+      { label: "Primary Focus", value: "Lead capture + ads" },
     ],
   },
 ];
@@ -107,9 +84,9 @@ export default async function CaseStudyPage({
     <main className="min-h-screen bg-black text-white">
       <header className="border-b border-white/10 bg-black/50 backdrop-blur-xl">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
-          <a href="/" className="font-extrabold tracking-tight">
+          <Link href="/" className="font-extrabold tracking-tight">
             {BRAND.name}
-          </a>
+          </Link>
           <div className="flex gap-2">
             <a
               href={`tel:${BRAND.phone}`}
@@ -128,9 +105,9 @@ export default async function CaseStudyPage({
       </header>
 
       <section className="mx-auto max-w-5xl px-6 py-12">
-        <a href="/#work" className="text-sm text-white/70 underline">
-          ← Back to case studies
-        </a>
+        <Link href="/#growth" className="text-sm text-white/70 underline">
+          ← Back to results
+        </Link>
 
         <h1 className="mt-4 text-4xl font-extrabold md:text-5xl">{cs.name}</h1>
         <p className="mt-2 text-white/60">{cs.location}</p>
@@ -145,22 +122,24 @@ export default async function CaseStudyPage({
         {cs.summary ? <p className="mt-3 max-w-3xl text-white/70">{cs.summary}</p> : null}
 
         <div className="mt-8 grid gap-4 md:grid-cols-2">
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-            <div className="text-xs font-bold tracking-widest text-white/60">LINKS</div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {cs.links.map((l) => (
-                <a
-                  key={l.url}
-                  href={l.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-black hover:bg-emerald-300"
-                >
-                  {l.label}
-                </a>
-              ))}
+          {cs.links?.length ? (
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+              <div className="text-xs font-bold tracking-widest text-white/60">LINKS</div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {cs.links.map((l) => (
+                  <a
+                    key={l.url}
+                    href={l.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-black hover:bg-emerald-300"
+                  >
+                    {l.label}
+                  </a>
+                ))}
+              </div>
             </div>
-          </div>
+          ) : null}
 
           <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
             <div className="text-xs font-bold tracking-widest text-white/60">QUICK STATS</div>
@@ -178,16 +157,17 @@ export default async function CaseStudyPage({
         <div className="mt-10 rounded-3xl border border-white/10 bg-black/30 p-6">
           <div className="text-lg font-extrabold">Want results like this?</div>
           <p className="mt-2 text-white/70">
-            Call or text {BRAND.phone} or email {BRAND.email}. We’ll scope your workload and build a custom plan.
+            Call or text {BRAND.phone} or email {BRAND.email}. We’ll scope your workload and build a custom plan for
+            your market.
           </p>
 
           <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-            <a
+            <Link
               href="/#contact"
               className="rounded-2xl bg-emerald-400 px-6 py-4 text-center font-extrabold text-black hover:bg-emerald-300"
             >
               Request a Plan
-            </a>
+            </Link>
             <a
               href={`sms:${BRAND.phone}`}
               className="rounded-2xl border border-emerald-400/35 bg-emerald-400/10 px-6 py-4 text-center font-extrabold text-emerald-200 hover:bg-emerald-400/20"
