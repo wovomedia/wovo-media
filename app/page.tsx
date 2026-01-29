@@ -42,6 +42,22 @@ const provenResults: ResultCard[] = [
     detail: "Steady reach growth with weekly content.",
   },
   {
+  {
+    label: "Local Restaurant",
+    metric: "2.0M+ views in 28 days",
+    detail: "Short-form campaigns + consistent posting.",
+  },
+  {
+    label: "BBQ Restaurant",
+    metric: "400+ inbound calls in 6 weeks",
+    detail: "Offer-driven content and conversion CTAs.",
+  },
+  {
+    label: "Service Business",
+    metric: "85k–100k monthly views",
+    detail: "Steady reach growth with weekly content.",
+  },
+  {
     label: "HVAC Company",
     metric: "+250% reach growth",
     detail: "Trust-building ads with local targeting.",
@@ -144,6 +160,9 @@ function Nav() {
           </a>
           <a className="transition hover:text-white" href="#growth">
             Proven Growth
+          </a>
+          <a className="transition hover:text-white" href="#about">
+            About
           </a>
           <a className="transition hover:text-white" href="#contact">
             Contact
@@ -584,6 +603,48 @@ export default function Home() {
                 <div className="mt-2 text-sm text-white/70">{result.detail}</div>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ABOUT */}
+      <section id="about" className="py-14">
+        <SectionHeading
+          kicker="ABOUT"
+          title="About Wovo Media"
+          subtitle="Serving businesses in all 50 states with nationwide digital growth for local businesses."
+        />
+        <div className="mx-auto mt-8 max-w-6xl px-6">
+          <div className="grid gap-6 md:grid-cols-2">
+            <div data-reveal className="rounded-3xl border border-white/10 bg-white/5 p-6">
+              <div className="text-sm font-semibold text-white/70">Who we are</div>
+              <h3 className="mt-3 text-2xl font-extrabold text-white">Built for outcomes, not vanity metrics.</h3>
+              <p className="mt-3 text-white/70">
+                Wovo Media helps local businesses win attention and turn it into measurable growth. We focus on
+                consistent content, conversion-focused websites, and lead systems that drive calls and revenue—no matter
+                where you operate.
+              </p>
+            </div>
+
+            <div data-reveal className="rounded-3xl border border-white/10 bg-black/20 p-6">
+              <div className="text-sm font-semibold text-white/70">Leadership</div>
+              <div className="mt-4 space-y-4">
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="text-lg font-extrabold text-white">Payton Cody</div>
+                  <div className="text-sm text-white/65">CEO, Founder of Wovo Media</div>
+                  <a className="mt-2 block text-sm font-semibold text-emerald-200" href="mailto:Payton@wovomedia.com">
+                    Payton@wovomedia.com
+                  </a>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="text-lg font-extrabold text-white">Austin Cody</div>
+                  <div className="text-sm text-white/65">Head of Operations</div>
+                  <a className="mt-2 block text-sm font-semibold text-emerald-200" href="mailto:Austin@wovomedia.com">
+                    Austin@wovomedia.com
+                  </a>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
