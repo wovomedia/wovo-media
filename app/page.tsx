@@ -129,6 +129,9 @@ function Nav() {
         </a>
 
         <nav className="hidden items-center gap-6 text-sm font-semibold text-white/80 md:flex">
+          <a className="transition hover:text-white" href="/wovo-ai">
+            Wovo AI
+          </a>
           <a className="transition hover:text-white" href="#services">
             Services
           </a>
