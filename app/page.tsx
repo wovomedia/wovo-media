@@ -8,7 +8,7 @@ import React, { useEffect, useState } from "react";
  * - Scroll reveal animations (IntersectionObserver)
  * - Sticky mobile Call/Text bar
  * - Animated emerald gradient background (pure CSS via utility classes + inline styles)
- * - Form posts to NEXT_PUBLIC_LEADS_WEBHOOK_URL
+ * - Form posts to /api/lead (server forwards to Google Sheets webhook)
  */
 
 const BRAND = {
@@ -27,40 +27,19 @@ type ResultCard = {
 
 const provenResults: ResultCard[] = [
   {
-    label: "Local Restaurant",
-    metric: "2.0M+ views in 28 days",
-    detail: "Short-form campaigns + consistent posting.",
+    label: "Restaurant Campaigns",
+    metric: "10M monthly views total",
+    detail: "Consistent short-form posting across local restaurant brands.",
   },
   {
-    label: "BBQ Restaurant",
-    metric: "400+ inbound calls in 6 weeks",
-    detail: "Offer-driven content and conversion CTAs.",
+    label: "HVAC / Contractor Campaigns",
+    metric: "2M+ monthly views",
+    detail: "Campaign systems producing 50+ extra calls per week.",
   },
   {
-    label: "Service Business",
-    metric: "85k–100k monthly views",
-    detail: "Steady reach growth with weekly content.",
-  },
-  {
-  {
-    label: "Local Restaurant",
-    metric: "2.0M+ views in 28 days",
-    detail: "Short-form campaigns + consistent posting.",
-  },
-  {
-    label: "BBQ Restaurant",
-    metric: "400+ inbound calls in 6 weeks",
-    detail: "Offer-driven content and conversion CTAs.",
-  },
-  {
-    label: "Service Business",
-    metric: "85k–100k monthly views",
-    detail: "Steady reach growth with weekly content.",
-  },
-  {
-    label: "HVAC Company",
-    metric: "+250% reach growth",
-    detail: "Trust-building ads with local targeting.",
+    label: "Government Trust",
+    metric: "Trusted by TN officials",
+    detail: "Established relationships with government officials in Tennessee.",
   },
 ];
 
@@ -88,6 +67,10 @@ const services = [
   {
     title: "Operations & Systems",
     desc: "Clean workflows for scale and consistency.",
+  },
+  {
+    title: "Drone Content & Aerial Shoots",
+    desc: "Drone footage for properties, jobsites, and brand storytelling with licensed pilots.",
   },
 ];
 
@@ -136,9 +119,6 @@ function useRevealOnScroll() {
   }, []);
 }
 
-function cx(...classes: Array<string | false | null | undefined>) {
-  return classes.filter(Boolean).join(" ");
-}
 
 function Nav() {
   return (
@@ -247,9 +227,14 @@ export default function Home() {
 
     const form = e.currentTarget;
     const fd = new FormData(form);
+    const name = String(fd.get("name") || "").trim();
+    const business = String(fd.get("business") || "").trim();
     const company = String(fd.get("company") || "");
     const email = String(fd.get("email") || "").trim();
+    const phone = String(fd.get("phone") || "").trim();
     const state = String(fd.get("state") || "").trim();
+    const industry = String(fd.get("industry") || "").trim();
+    const needs = String(fd.get("needs") || "").trim();
 
     if (company) {
       setStatus("error");
@@ -263,22 +248,26 @@ export default function Home() {
       return;
     }
 
-    const webhookUrl = process.env.NEXT_PUBLIC_LEADS_WEBHOOK_URL;
-    if (!webhookUrl) {
+    if (!name || !business || !phone || !state || !industry || !needs) {
       setStatus("error");
-      setErrorMsg("Submission endpoint is not configured.");
+      setErrorMsg("Please complete all required fields.");
       return;
     }
 
     const payload = {
+      name,
+      business,
       email,
+      phone,
       state,
+      industry,
+      needs,
       timestamp: new Date().toISOString(),
-      source: "website-form",
+      source: "wovomedia.com",
     };
 
     try {
-      const res = await fetch(webhookUrl, {
+      const res = await fetch("/api/lead", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -405,11 +394,11 @@ export default function Home() {
           <div data-reveal className="rounded-3xl border border-white/10 bg-white/5 p-8 shadow-[0_30px_120px_rgba(0,0,0,0.35)] md:p-10">
             <p className="text-xs font-bold tracking-widest text-white/60">NO PUBLIC PRICING • CUSTOM PLAN</p>
             <h3 className="mt-3 text-2xl font-extrabold md:text-3xl">
-              A plan built for your workload.
+              Packages built for your workload.
             </h3>
             <p className="mt-3 text-white/75">
-              We scope your goals and industry, then build a plan that produces calls, bookings, and consistent growth
-              nationwide.
+              We scope your goals and industry, then build the right package for what you need—from remote content systems
+              to monthly fly-out production days for on-site filming.
             </p>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
@@ -419,7 +408,8 @@ export default function Home() {
                 "Website conversion upgrades",
                 "Lead capture + follow-up",
                 "Monthly reporting",
-                "Fast turnaround",
+                "Drone footage available",
+                "Optional monthly fly-outs",
               ].map((x) => (
                 <div key={x} className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white/85">
                   {x}
@@ -479,7 +469,7 @@ export default function Home() {
         <SectionHeading
           kicker="SERVICES"
           title="Built to generate attention — and convert it"
-          subtitle="You can pick what you need, or we can build the full plan end-to-end."
+          subtitle="You can pick what you need—from monthly fly-outs to full-service management—or we can build it end-to-end."
         />
         <div className="mx-auto mt-8 max-w-6xl px-6">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -578,7 +568,7 @@ export default function Home() {
           </div>
 
           <p className="mt-6 text-center text-sm text-white/65">
-            Serving businesses in all 50 states • Nationwide digital growth for local businesses • Custom plans
+            Serving businesses in all 50 states • Nationwide digital growth for local businesses • Flexible packages
           </p>
         </div>
       </section>
@@ -639,8 +629,8 @@ export default function Home() {
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                   <div className="text-lg font-extrabold text-white">Austin Cody</div>
                   <div className="text-sm text-white/65">Head of Operations</div>
-                  <a className="mt-2 block text-sm font-semibold text-emerald-200" href="mailto:Austin@wovomedia.com">
-                    Austin@wovomedia.com
+                  <a className="mt-2 block text-sm font-semibold text-emerald-200" href="mailto:Austin.cody@wovomedia.com">
+                    Austin.cody@wovomedia.com
                   </a>
                 </div>
               </div>
@@ -664,6 +654,18 @@ export default function Home() {
             </div>
             <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
               <input
+                name="name"
+                placeholder="Full name"
+                required
+                className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3 placeholder:text-white/40 outline-none focus:ring-2 focus:ring-emerald-400"
+              />
+              <input
+                name="business"
+                placeholder="Business"
+                required
+                className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3 placeholder:text-white/40 outline-none focus:ring-2 focus:ring-emerald-400"
+              />
+              <input
                 name="email"
                 placeholder="Email address"
                 type="email"
@@ -671,9 +673,29 @@ export default function Home() {
                 className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3 placeholder:text-white/40 outline-none focus:ring-2 focus:ring-emerald-400"
               />
               <input
-                name="state"
-                placeholder="State or location (optional)"
+                name="phone"
+                placeholder="Phone number"
+                required
                 className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3 placeholder:text-white/40 outline-none focus:ring-2 focus:ring-emerald-400"
+              />
+              <input
+                name="state"
+                placeholder="State"
+                required
+                className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3 placeholder:text-white/40 outline-none focus:ring-2 focus:ring-emerald-400"
+              />
+              <input
+                name="industry"
+                placeholder="Industry"
+                required
+                className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3 placeholder:text-white/40 outline-none focus:ring-2 focus:ring-emerald-400"
+              />
+              <textarea
+                name="needs"
+                placeholder="What do you need help with?"
+                required
+                rows={4}
+                className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3 placeholder:text-white/40 outline-none focus:ring-2 focus:ring-emerald-400 md:col-span-2"
               />
               <input name="company" tabIndex={-1} autoComplete="off" className="hidden" />
 
