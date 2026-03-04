@@ -1,5 +1,6 @@
 import { requireServerUser, supabaseServiceRoleRequest } from "@/lib/supabase/server";
 import { getPlanConfig, getUpgradeSuggestion, isPaidStatus } from "@/lib/wovo-ai/plans";
+import { isAdminEmail } from "@/lib/wovo-ai/admin";
 import { getSubscriptionStatus } from "@/lib/wovo-ai/subscription";
 
 export const dynamic = "force-dynamic";
@@ -43,14 +44,25 @@ export async function POST(request: Request) {
     }
 
     const { user } = await requireServerUser(request.headers.get("authorization"));
-    const subscription = await getSubscriptionStatus(user.id);
+    const isAdmin = isAdminEmail(user.email);
+    const subscription = isAdmin
+      ? {
+          status: "admin",
+          plan_key: "admin" as const,
+          credits_used_month: 0,
+          credits_limit_month: 999999,
+          period_end: null,
+          can_generate: true,
+        }
+      : await getSubscriptionStatus(user.id);
+    const currentPlan = subscription.plan_key === "admin" ? null : subscription.plan_key;
 
-    if (!isPaidStatus(subscription.status)) {
-      return blockedResponse("An active subscription is required to generate posts.", subscription.plan_key);
+    if (!isAdmin && !isPaidStatus(subscription.status)) {
+      return blockedResponse("An active subscription is required to generate posts.", currentPlan);
     }
 
-    if (subscription.credits_used_month >= subscription.credits_limit_month) {
-      return blockedResponse("Monthly credits exhausted. Upgrade to continue generating.", subscription.plan_key);
+    if (!isAdmin && subscription.credits_used_month >= subscription.credits_limit_month) {
+      return blockedResponse("Monthly credits exhausted. Upgrade to continue generating.", currentPlan);
     }
 
     const body = (await request.json()) as WovoAiRequestBody;
@@ -116,18 +128,34 @@ export async function POST(request: Request) {
       };
     }
 
-    const consumeRows = await supabaseServiceRoleRequest<CreditConsumeResponse[]>(
-      "/rest/v1/rpc/consume_generation_credit",
-      {
-        method: "POST",
-        body: JSON.stringify({ p_user_id: user.id }),
-      },
-    );
+    let consume: CreditConsumeResponse = {
+      consumed: true,
+      credits_used_month: subscription.credits_used_month,
+      credits_limit_month: subscription.credits_limit_month,
+    };
 
-    const consume = consumeRows?.[0];
+    try {
+      const consumeRows = await supabaseServiceRoleRequest<CreditConsumeResponse[]>(
+        "/rest/v1/rpc/consume_generation_credit",
+        {
+          method: "POST",
+          body: JSON.stringify({ p_user_id: user.id }),
+        },
+      );
 
-    if (!consume?.consumed) {
-      return blockedResponse("Monthly credits exhausted. Upgrade to continue generating.", subscription.plan_key);
+      const consumeResult = consumeRows?.[0];
+
+      if (!consumeResult?.consumed && !isAdmin) {
+        return blockedResponse("Monthly credits exhausted. Upgrade to continue generating.", currentPlan);
+      }
+
+      if (consumeResult) {
+        consume = consumeResult;
+      }
+    } catch (consumeError) {
+      if (!isAdmin) {
+        throw consumeError;
+      }
     }
 
     await supabaseServiceRoleRequest("/rest/v1/generations", {
@@ -156,11 +184,14 @@ export async function POST(request: Request) {
         data: parsed,
         credits_used_month: consume.credits_used_month,
         credits_limit_month: consume.credits_limit_month,
-        current_plan_limit: subscription.plan_key ? getPlanConfig(subscription.plan_key).monthlyCredits : null,
+        current_plan_limit: subscription.plan_key && subscription.plan_key !== "admin" ? getPlanConfig(subscription.plan_key).monthlyCredits : null,
       },
       { status: 200 },
     );
   } catch (error) {
+    if (error instanceof Error && (error.message.includes("Missing bearer token") || error.message.includes("Unable to verify session"))) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
     return Response.json(
       {
         error: error instanceof Error ? error.message : "Unexpected server error.",

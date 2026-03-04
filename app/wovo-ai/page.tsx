@@ -19,11 +19,12 @@ type ProfileRecord = {
 type CaptionsPayload = { facebook: string; instagram: string; tiktok: string; hashtags: string };
 type SubscriptionSummary = {
   status: string | null;
-  plan_key: "starter" | "pro" | "agency" | null;
+  plan_key: "starter" | "pro" | "agency" | "admin" | null;
   credits_used_month: number;
   credits_limit_month: number;
   period_end: string | null;
   can_generate: boolean;
+  warning?: string;
 };
 
 const STORAGE_KEY = "wovo-supabase-session";
@@ -53,6 +54,15 @@ function ensureDataUrl(image: string) {
   return image.startsWith("data:") ? image : `data:image/png;base64,${image}`;
 }
 
+function safeJsonParse<T>(raw: string): T | null {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+}
+
 export default function WovoAiPage() {
   const [loadingSession, setLoadingSession] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
@@ -74,9 +84,12 @@ export default function WovoAiPage() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [submittingCheckout, setSubmittingCheckout] = useState<string | null>(null);
+  const [openingPortal, setOpeningPortal] = useState(false);
 
   const [info, setInfo] = useState("");
   const [error, setError] = useState("");
+
+  const hasMissingPriceIds = useMemo(() => PLAN_OPTIONS.some((plan) => !plan.priceId), []);
 
   const redirectUrl = useMemo(() => {
     if (typeof window === "undefined") return "";
@@ -93,6 +106,9 @@ export default function WovoAiPage() {
     const payload = (await response.json()) as SubscriptionSummary & { error?: string };
     if (!response.ok) throw new Error(payload.error ?? "Unable to load subscription.");
     setSubscription(payload);
+    if (payload.warning) {
+      setInfo(payload.warning);
+    }
   }, []);
 
   const loadProfile = useCallback(async (token: string) => {
@@ -238,15 +254,20 @@ export default function WovoAiPage() {
   const startCheckout = async (priceId: string) => {
     if (!session?.access_token || !priceId) return;
     setSubmittingCheckout(priceId);
+    setError("");
     try {
       const response = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: withAuthHeaders(session.access_token),
         body: JSON.stringify({ priceId }),
       });
-      const payload = (await response.json()) as { url?: string; error?: string };
-      if (!response.ok || !payload.url) throw new Error(payload.error ?? "Unable to start checkout.");
-      window.location.href = payload.url;
+      const responseText = await response.text();
+      const payload = safeJsonParse<{ url?: string; error?: string; message?: string }>(responseText) ?? {};
+      if (!response.ok || !payload.url) {
+        const fallbackText = payload.error ?? payload.message ?? responseText ?? "Unable to start checkout.";
+        throw new Error(fallbackText);
+      }
+      window.location.assign(payload.url);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Checkout failed.");
     } finally {
@@ -256,16 +277,24 @@ export default function WovoAiPage() {
 
   const openPortal = async () => {
     if (!session?.access_token) return;
+    setOpeningPortal(true);
+    setError("");
     try {
       const response = await fetch("/api/stripe/portal", {
         method: "POST",
         headers: withAuthHeaders(session.access_token),
       });
-      const payload = (await response.json()) as { url?: string; error?: string };
-      if (!response.ok || !payload.url) throw new Error(payload.error ?? "Unable to open billing portal.");
-      window.location.href = payload.url;
+      const responseText = await response.text();
+      const payload = safeJsonParse<{ url?: string; error?: string; message?: string }>(responseText) ?? {};
+      if (!response.ok || !payload.url) {
+        const fallbackText = payload.error ?? payload.message ?? responseText ?? "Unable to open billing portal.";
+        throw new Error(fallbackText);
+      }
+      window.location.assign(payload.url);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Portal request failed.");
+    } finally {
+      setOpeningPortal(false);
     }
   };
 
@@ -342,6 +371,7 @@ export default function WovoAiPage() {
             {!subscription?.can_generate && (
               <section className="rounded-2xl border border-white/15 bg-white/5 p-5">
                 <h2 className="text-xl font-semibold">Choose a plan to continue</h2>
+                {hasMissingPriceIds && <p className="mt-2 text-sm text-amber-300">Missing price IDs</p>}
                 <div className="mt-4 grid gap-3 md:grid-cols-3">
                   {PLAN_OPTIONS.map((plan) => (
                     <article key={plan.key} className="relative rounded-xl border border-white/20 bg-black/40 p-4">
@@ -350,10 +380,16 @@ export default function WovoAiPage() {
                       <p className="mt-1 text-sm text-white/70">{plan.desc}</p>
                       <button
                         onClick={() => void startCheckout(plan.priceId)}
-                        disabled={submittingCheckout === plan.priceId || !plan.priceId}
+                        disabled={submittingCheckout === plan.priceId || hasMissingPriceIds || !plan.priceId}
                         className="mt-4 w-full rounded-lg bg-emerald-400 px-3 py-2 text-sm font-bold text-black disabled:opacity-60"
                       >
-                        {plan.key === "starter" ? "Subscribe Starter" : plan.key === "pro" ? "Subscribe Pro" : "Subscribe Agency"}
+                        {submittingCheckout === plan.priceId
+                          ? "Starting checkout..."
+                          : plan.key === "starter"
+                            ? "Subscribe Starter"
+                            : plan.key === "pro"
+                              ? "Subscribe Pro"
+                              : "Subscribe Agency"}
                       </button>
                     </article>
                   ))}
@@ -370,7 +406,7 @@ export default function WovoAiPage() {
                 <button onClick={() => void handleGenerate()} disabled={generating || !subscription?.can_generate} className="rounded-lg bg-emerald-400 px-4 py-2 text-sm font-bold text-black disabled:opacity-60">
                   {generating ? "Generating..." : "Generate Post"}
                 </button>
-                <button onClick={() => void openPortal()} className="rounded-lg border border-white/30 px-4 py-2 text-sm">Manage Billing</button>
+                <button onClick={() => void openPortal()} disabled={openingPortal} className="rounded-lg border border-white/30 px-4 py-2 text-sm disabled:opacity-60">{openingPortal ? "Opening..." : "Manage Billing"}</button>
               </div>
             </section>
 
