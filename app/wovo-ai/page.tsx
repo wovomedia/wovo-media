@@ -18,12 +18,15 @@ type GenerateResponse = {
 };
 
 type WovoAiApiResponse = {
-  captions?: { facebook?: string; instagram?: string; tiktok?: string };
+  status?: "active" | "inactive";
+  plan?: string;
+  remaining?: { credits_total: number; credits_remaining: number; weekly_used: number; weekly_limit: number };
+  can_generate?: boolean;
+  message?: string;
+  captions?: string[];
   hashtags?: string[];
   image_prompt?: string;
   image?: { url?: string } | null;
-  updated_credits?: { remaining?: number; total?: number; weekly_used?: number; weekly_limit?: number };
-  error?: string;
 };
 
 type ChatMessage = { id: string; role: "user" | "assistant"; text: string; result?: GenerateResponse };
@@ -221,48 +224,41 @@ export default function WovoAiPage() {
     setMessages((prev) => [...prev, { id: createId(), role: "user", text: topic }, { id: thinkingId, role: "assistant", text: "Thinking..." }]);
 
     try {
-      const response = await fetch("/api/wovo-ai", {
+      const response = await fetch("/api/wovo-ai/generate", {
         method: "POST",
         headers: await authHeaders(),
         body: JSON.stringify({
-          topic,
+          message: topic,
           business_name: businessName.trim(),
           business_type: businessType.trim(),
           location: location.trim(),
           contact: contact.trim(),
           goal: goal.trim(),
-          include_image: Boolean(referenceImage),
-          image_base64: referenceImage,
+          reference_image: referenceImage,
         }),
       });
       const payload = (await response.json()) as WovoAiApiResponse;
-      if (!response.ok) throw new Error(payload.error ?? "Generation failed.");
-
-      const captions = [payload.captions?.facebook, payload.captions?.instagram, payload.captions?.tiktok]
-        .map((caption) => caption?.trim() ?? "")
-        .filter(Boolean);
+      if (!response.ok) throw new Error(payload.message ?? "Generation failed.");
 
       const result: GenerateResponse = {
-        captions,
+        captions: payload.captions ?? [],
         hashtags: payload.hashtags ?? [],
         image_prompt: payload.image_prompt ?? "",
         image_url: payload.image?.url ?? null,
       };
 
       setSubscription((prev) => {
-        if (!prev || !payload.updated_credits) return prev;
-        const creditsRemaining = payload.updated_credits.remaining ?? prev.remaining.credits_remaining;
-        const weeklyUsed = payload.updated_credits.weekly_used ?? prev.remaining.weekly_used;
-        const weeklyLimit = payload.updated_credits.weekly_limit ?? prev.remaining.weekly_limit;
+        if (!prev || !payload.remaining) return prev;
+        const creditsRemaining = payload.remaining.credits_remaining;
+        const weeklyUsed = payload.remaining.weekly_used;
+        const weeklyLimit = payload.remaining.weekly_limit;
         return {
           ...prev,
-          remaining: {
-            credits_total: payload.updated_credits.total ?? prev.remaining.credits_total,
-            credits_remaining: creditsRemaining,
-            weekly_used: weeklyUsed,
-            weekly_limit: weeklyLimit,
-          },
-          can_generate: prev.admin_access ? true : creditsRemaining > 0 && (weeklyLimit <= 0 || weeklyUsed < weeklyLimit),
+          status: payload.status ?? prev.status,
+          plan: (payload.plan as SubscriptionPayload["plan"] | undefined) ?? prev.plan,
+          remaining: payload.remaining,
+          can_generate: prev.admin_access ? true : payload.can_generate ?? (creditsRemaining > 0 && (weeklyLimit <= 0 || weeklyUsed < weeklyLimit)),
+          message: payload.message ?? prev.message,
         };
       });
       setMessages((prev) => prev.map((m) => (m.id === thinkingId ? { id: createId(), role: "assistant", text: "Generated response", result } : m)));
