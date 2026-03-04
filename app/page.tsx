@@ -357,7 +357,7 @@ export default function Home() {
               {BRAND.legal} • Trusted by real businesses • Custom plans only
             </p>
 
-            <h1 className="mt-6 text-5xl font-extrabold leading-tight md:text-6xl">
+            <h1 className="mt-6 text-4xl font-extrabold leading-tight sm:text-5xl md:text-6xl">
               Grow your brand with content that sells.
               <span className="block text-emerald-300">Wovo turns attention into booked customers.</span>
             </h1>
@@ -369,13 +369,13 @@ export default function Home() {
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <a
                 href="#contact"
-                className="rounded-2xl bg-emerald-400 px-6 py-4 text-center font-extrabold text-black transition hover:bg-emerald-300"
+                className="rounded-2xl bg-emerald-400 px-6 py-3.5 text-center font-extrabold text-black transition hover:bg-emerald-300"
               >
                 Request a Plan
               </a>
               <a
                 href="/wovo-ai"
-                className="rounded-2xl border border-emerald-400/35 bg-emerald-400/10 px-6 py-4 text-center font-extrabold text-emerald-200 transition hover:bg-emerald-400/20"
+                className="rounded-2xl border border-emerald-400/35 bg-emerald-400/10 px-6 py-3.5 text-center font-extrabold text-emerald-200 transition hover:bg-emerald-400/20"
               >
                 Try Wovo AI
               </a>
@@ -394,7 +394,7 @@ export default function Home() {
           </div>
 
           {/* HERO RIGHT CARD */}
-          <div data-reveal className="rounded-3xl border border-white/10 bg-white/5 p-8 shadow-[0_30px_120px_rgba(0,0,0,0.35)] md:p-10">
+          <div data-reveal className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-[0_30px_120px_rgba(0,0,0,0.35)] sm:p-8 md:p-10">
             <p className="text-xs font-bold tracking-widest text-white/60">NO PUBLIC PRICING • CUSTOM PLAN</p>
             <h3 className="mt-3 text-2xl font-extrabold md:text-3xl">
               Packages built for your workload.

@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { mapSupabaseAuthError } from "@/lib/supabase/auth-errors";
 import { supabaseClient, type SupabaseSession } from "@/lib/supabase/client";
@@ -27,6 +28,8 @@ type CaptionsPayload = {
 };
 
 const STORAGE_KEY = "wovo-supabase-session";
+const fieldClass =
+  "w-full rounded-xl border border-white/20 bg-black/70 px-3 py-2.5 text-sm text-white outline-none transition focus:border-emerald-300/60 focus:ring-2 focus:ring-emerald-400/40";
 
 function parseSessionFromHash(hash: string): SupabaseSession | null {
   if (!hash.startsWith("#")) return null;
@@ -47,6 +50,15 @@ function parseSessionFromHash(hash: string): SupabaseSession | null {
 function ensureDataUrl(image: string) {
   if (image.startsWith("data:")) return image;
   return `data:image/png;base64,${image}`;
+}
+
+function CaptionBlock({ title, value }: { title: string; value: string }) {
+  return (
+    <article className="rounded-xl border border-white/15 bg-black/30 p-3">
+      <h3 className="text-sm font-semibold text-white">{title}</h3>
+      <p className="mt-2 whitespace-pre-wrap text-sm text-white/80">{value || "-"}</p>
+    </article>
+  );
 }
 
 export default function WovoAiPage() {
@@ -268,14 +280,12 @@ export default function WovoAiPage() {
       }
 
       const sourceCaptions = payload.captions ?? payload.data?.captions ?? {};
-      const nextCaptions: CaptionsPayload = {
+      setCaptions({
         facebook: sourceCaptions.facebook_caption ?? sourceCaptions.facebook ?? "",
         instagram: sourceCaptions.instagram_caption ?? sourceCaptions.instagram ?? "",
         tiktok: sourceCaptions.tiktok_caption ?? sourceCaptions.tiktok ?? "",
         hashtags: sourceCaptions.hashtags ?? "",
-      };
-
-      setCaptions(nextCaptions);
+      });
 
       const imageData = payload.generated_image_data ?? payload.data?.generated_image_data ?? null;
       if (imageData) {
@@ -334,155 +344,129 @@ export default function WovoAiPage() {
   };
 
   return (
-    <main className="min-h-screen bg-black px-4 py-8 text-white sm:px-6 lg:px-8">
-      <div className="mx-auto w-full max-w-6xl space-y-6">
-        {loadingSession ? <p className="text-white/70">Loading session...</p> : null}
-
+    <main className="min-h-screen bg-black px-4 py-6 text-white sm:px-6 sm:py-8">
+      <div className="mx-auto w-full max-w-6xl space-y-5">
         {!loadingSession && !session ? (
-          <section className="mx-auto flex min-h-[70vh] max-w-md items-center justify-center">
-            <div className="w-full rounded-2xl border border-white/15 bg-white/5 p-6">
-              <h1 className="text-2xl font-bold">Wovo AI</h1>
-              <p className="mt-2 text-sm text-white/70">Sign in to access your AI dashboard.</p>
+          <section className="mx-auto flex min-h-[78vh] max-w-md items-center justify-center">
+            <div className="w-full rounded-2xl border border-white/15 bg-white/5 p-6 shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-200/80">Wovo AI Dashboard</p>
+              <h1 className="mt-2 text-2xl font-bold">Sign in to continue</h1>
+              <p className="mt-2 text-sm text-white/70">Generate platform-ready captions and creative concepts in seconds.</p>
 
-              <div className="mt-4 space-y-3">
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder="Email"
-                  className="w-full rounded-lg border border-white/20 bg-black px-3 py-2"
-                />
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  placeholder="Password"
-                  className="w-full rounded-lg border border-white/20 bg-black px-3 py-2"
-                />
+              <div className="mt-5 space-y-3">
+                <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Email" className={fieldClass} />
+                <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Password" className={fieldClass} />
               </div>
 
-              <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                <button type="button" onClick={() => void handleSignIn()} className="rounded-lg bg-emerald-400 px-4 py-2 font-semibold text-black">
+              <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <button type="button" onClick={() => void handleSignIn()} className="rounded-xl bg-emerald-400 px-4 py-2.5 text-sm font-bold text-black transition hover:bg-emerald-300">
                   Sign in
                 </button>
-                <button type="button" onClick={() => void handleSignUp()} className="rounded-lg border border-white/30 px-4 py-2">
+                <button type="button" onClick={() => void handleSignUp()} className="rounded-xl border border-white/30 px-4 py-2.5 text-sm font-semibold transition hover:bg-white/10">
                   Sign up
                 </button>
               </div>
 
-              <button
-                type="button"
-                onClick={handleGoogle}
-                className="mt-3 w-full rounded-lg border border-white/30 px-4 py-2"
-              >
+              <button type="button" onClick={handleGoogle} className="mt-3 w-full rounded-xl border border-white/30 px-4 py-2.5 text-sm font-semibold transition hover:bg-white/10">
                 Continue with Google
               </button>
             </div>
           </section>
         ) : null}
 
+        {loadingSession ? <p className="text-sm text-white/60">Loading session...</p> : null}
+
         {!loadingSession && session ? (
           <>
-            <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/15 bg-white/5 p-4">
-              <div>
-                <h1 className="text-2xl font-bold">Wovo AI</h1>
-                <p className="text-sm text-white/70">{authUser?.email ?? "Signed in"}</p>
+            <header className="rounded-2xl border border-white/15 bg-white/5 p-4 sm:p-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h1 className="text-2xl font-bold">Wovo AI</h1>
+                  <p className="text-sm text-white/70">{authUser?.email ?? "Signed in"}</p>
+                </div>
+                <div className="flex gap-2">
+                  <Link href="/" className="rounded-lg border border-white/20 px-3 py-2 text-xs font-semibold text-white/90 transition hover:bg-white/10">Home</Link>
+                  <button type="button" onClick={signOut} className="rounded-lg border border-white/30 px-3 py-2 text-xs font-semibold transition hover:bg-white/10">
+                    Sign out
+                  </button>
+                </div>
               </div>
-              <button type="button" onClick={signOut} className="rounded-lg border border-white/30 px-4 py-2 text-sm">
-                Sign out
-              </button>
             </header>
 
             <section className="rounded-2xl border border-white/15 bg-white/5 p-4 sm:p-6">
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <h2 className="text-lg font-semibold">Profile</h2>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => void saveProfile()}
-                    disabled={savingProfile}
-                    className="rounded-lg border border-white/30 px-4 py-2 text-sm"
-                  >
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <button type="button" onClick={() => void saveProfile()} disabled={savingProfile} className="rounded-lg border border-white/30 px-4 py-2 text-sm transition hover:bg-white/10 disabled:opacity-60">
                     {savingProfile ? "Saving..." : "Save profile"}
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowDeleteModal(true)}
-                    className="rounded-lg border border-red-500/50 px-4 py-2 text-sm text-red-200"
-                  >
+                  <button type="button" onClick={() => setShowDeleteModal(true)} className="rounded-lg border border-red-500/50 px-4 py-2 text-sm text-red-200 transition hover:bg-red-500/10">
                     Delete account
                   </button>
                 </div>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                <input value={businessName} onChange={(e) => setBusinessName(e.target.value)} placeholder="Business Name" className="rounded-lg border border-white/20 bg-black px-3 py-2" />
-                <input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Full Name" className="rounded-lg border border-white/20 bg-black px-3 py-2" />
-                <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Location" className="rounded-lg border border-white/20 bg-black px-3 py-2" />
-                <input value={contact} onChange={(e) => setContact(e.target.value)} placeholder="Contact (phone or website)" className="rounded-lg border border-white/20 bg-black px-3 py-2" />
-                <input value={businessType} onChange={(e) => setBusinessType(e.target.value)} placeholder="Business Type" className="rounded-lg border border-white/20 bg-black px-3 py-2 sm:col-span-2 lg:col-span-1" />
+                <input value={businessName} onChange={(e) => setBusinessName(e.target.value)} placeholder="Business Name" className={fieldClass} />
+                <input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Full Name" className={fieldClass} />
+                <input value={businessType} onChange={(e) => setBusinessType(e.target.value)} placeholder="Business Type" className={fieldClass} />
+                <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Location" className={fieldClass} />
+                <input value={contact} onChange={(e) => setContact(e.target.value)} placeholder="Contact (phone or website)" className={`${fieldClass} sm:col-span-2 lg:col-span-1`} />
               </div>
             </section>
 
-            <section className="grid gap-4 lg:grid-cols-2">
+            <section className="grid gap-4 xl:grid-cols-[1.1fr_1fr]">
               <div className="rounded-2xl border border-white/15 bg-white/5 p-4 sm:p-6">
-                <h2 className="text-lg font-semibold">Input</h2>
+                <h2 className="text-lg font-semibold">Create content</h2>
+                <p className="mt-1 text-sm text-white/65">Use your saved profile context and add a topic + goal to generate platform captions.</p>
+
                 <div className="mt-4 grid gap-3">
-                  <input value={businessName} onChange={(e) => setBusinessName(e.target.value)} placeholder="Business Name" className="rounded-lg border border-white/20 bg-black px-3 py-2" />
-                  <input value={businessType} onChange={(e) => setBusinessType(e.target.value)} placeholder="Business Type" className="rounded-lg border border-white/20 bg-black px-3 py-2" />
-                  <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Location" className="rounded-lg border border-white/20 bg-black px-3 py-2" />
-                  <input value={contact} onChange={(e) => setContact(e.target.value)} placeholder="Contact (phone or website)" className="rounded-lg border border-white/20 bg-black px-3 py-2" />
-                  <input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Topic" className="rounded-lg border border-white/20 bg-black px-3 py-2" />
-                  <input value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="Goal" className="rounded-lg border border-white/20 bg-black px-3 py-2" />
+                  <input value={businessName} onChange={(e) => setBusinessName(e.target.value)} placeholder="Business Name" className={fieldClass} />
+                  <input value={businessType} onChange={(e) => setBusinessType(e.target.value)} placeholder="Business Type" className={fieldClass} />
+                  <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Location" className={fieldClass} />
+                  <input value={contact} onChange={(e) => setContact(e.target.value)} placeholder="Contact (phone or website)" className={fieldClass} />
+                  <input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Topic" className={fieldClass} />
+                  <input value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="Goal" className={fieldClass} />
                 </div>
 
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => void handleGenerate()}
-                    disabled={generating}
-                    className="rounded-lg bg-emerald-400 px-4 py-2 font-semibold text-black disabled:opacity-60"
-                  >
+                <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                  <button type="button" onClick={() => void handleGenerate()} disabled={generating} className="rounded-xl bg-emerald-400 px-4 py-2.5 text-sm font-bold text-black transition hover:bg-emerald-300 disabled:opacity-60">
                     {generating ? "Generating..." : "Generate"}
                   </button>
-                  <button type="button" onClick={clearGeneration} className="rounded-lg border border-white/30 px-4 py-2">
+                  <button type="button" onClick={clearGeneration} className="rounded-xl border border-white/30 px-4 py-2.5 text-sm font-semibold transition hover:bg-white/10">
                     Clear
                   </button>
                 </div>
               </div>
 
               <div className="rounded-2xl border border-white/15 bg-white/5 p-4 sm:p-6">
-                <h2 className="text-lg font-semibold">Results Preview</h2>
-                {generating ? <p className="mt-4 text-white/70">Generating captions and creative...</p> : null}
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h2 className="text-lg font-semibold">Results preview</h2>
+                  {captions ? (
+                    <button type="button" onClick={() => void copyCaptions()} className="rounded-lg border border-white/30 px-3 py-1.5 text-xs font-semibold transition hover:bg-white/10">
+                      Copy captions
+                    </button>
+                  ) : null}
+                </div>
+
+                {generating ? <p className="mt-4 text-sm text-white/70">Generating captions and image data...</p> : null}
 
                 {captions ? (
                   <div className="mt-4 space-y-3">
-                    <div className="rounded-lg border border-white/15 p-3">
-                      <h3 className="font-semibold">Facebook Caption</h3>
-                      <p className="mt-1 text-sm text-white/80">{captions.facebook || "-"}</p>
-                    </div>
-                    <div className="rounded-lg border border-white/15 p-3">
-                      <h3 className="font-semibold">Instagram Caption</h3>
-                      <p className="mt-1 text-sm text-white/80">{captions.instagram || "-"}</p>
-                    </div>
-                    <div className="rounded-lg border border-white/15 p-3">
-                      <h3 className="font-semibold">TikTok Caption</h3>
-                      <p className="mt-1 text-sm text-white/80">{captions.tiktok || "-"}</p>
-                    </div>
-                    <div className="rounded-lg border border-white/15 p-3">
-                      <h3 className="font-semibold">Hashtags</h3>
-                      <p className="mt-1 text-sm text-white/80">{captions.hashtags || "-"}</p>
-                    </div>
-
-                    <button type="button" onClick={() => void copyCaptions()} className="rounded-lg border border-white/30 px-3 py-2 text-sm">
-                      Copy captions
-                    </button>
+                    <CaptionBlock title="Facebook Caption" value={captions.facebook} />
+                    <CaptionBlock title="Instagram Caption" value={captions.instagram} />
+                    <CaptionBlock title="TikTok Caption" value={captions.tiktok} />
+                    <CaptionBlock title="Hashtags" value={captions.hashtags} />
                   </div>
+                ) : !generating ? (
+                  <p className="mt-4 rounded-xl border border-dashed border-white/20 p-4 text-sm text-white/60">
+                    Your generated captions and image preview will appear here.
+                  </p>
                 ) : null}
 
                 {generatedImage ? (
                   <div className="mt-4 space-y-3">
-                    <h3 className="font-semibold">Image</h3>
+                    <h3 className="text-sm font-semibold">Generated image</h3>
                     <Image
                       src={generatedImage}
                       alt="Generated Wovo creative"
@@ -491,7 +475,7 @@ export default function WovoAiPage() {
                       unoptimized
                       className="h-auto w-full rounded-lg border border-white/20"
                     />
-                    <a href={generatedImage} download="wovo-ai-image.png" className="inline-flex rounded-lg border border-white/30 px-3 py-2 text-sm">
+                    <a href={generatedImage} download="wovo-ai-image.png" className="inline-flex rounded-lg border border-white/30 px-3 py-2 text-sm font-semibold transition hover:bg-white/10">
                       Download image
                     </a>
                   </div>
@@ -500,15 +484,15 @@ export default function WovoAiPage() {
             </section>
 
             {showDeleteModal ? (
-              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4">
                 <div className="w-full max-w-md rounded-2xl border border-white/15 bg-zinc-950 p-5">
                   <h3 className="text-lg font-semibold">Delete account?</h3>
                   <p className="mt-2 text-sm text-white/70">This permanently removes your account and profile data.</p>
-                  <div className="mt-4 flex justify-end gap-2">
-                    <button type="button" onClick={() => setShowDeleteModal(false)} className="rounded-lg border border-white/30 px-4 py-2 text-sm">
+                  <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+                    <button type="button" onClick={() => setShowDeleteModal(false)} className="rounded-lg border border-white/30 px-4 py-2 text-sm font-semibold transition hover:bg-white/10">
                       Cancel
                     </button>
-                    <button type="button" onClick={() => void deleteAccount()} className="rounded-lg border border-red-500/50 px-4 py-2 text-sm text-red-200">
+                    <button type="button" onClick={() => void deleteAccount()} className="rounded-lg border border-red-500/50 px-4 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-500/10">
                       Yes, delete
                     </button>
                   </div>
