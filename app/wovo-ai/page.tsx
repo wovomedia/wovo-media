@@ -77,6 +77,7 @@ export default function WovoAiPage() {
     const payload = (await response.json()) as SubscriptionPayload & { error?: string };
     if (!response.ok) throw new Error(payload.error ?? "Unable to load subscription.");
     setSubscription(payload);
+    setError("");
   }, [authHeaders]);
 
   useEffect(() => {
@@ -124,7 +125,12 @@ export default function WovoAiPage() {
 
       setAuthUser(data.user as SupabaseAuthUser);
       setEmail(data.user.email ?? "");
-      await loadSubscription();
+      try {
+        await loadSubscription();
+      } catch (err) {
+        setSubscription(null);
+        setError(err instanceof Error ? err.message : "Unable to load subscription.");
+      }
     };
     void hydrate();
   }, [loadSubscription, session?.access_token]);

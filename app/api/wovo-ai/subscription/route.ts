@@ -43,6 +43,6 @@ export async function GET(request: Request) {
       message: error instanceof Error ? error.message : "Unexpected error.",
     };
 
-    return NextResponse.json({ ...fallback, admin_access: false }, { status: 200 });
+    return NextResponse.json({ error: "Failed to load subscription status.", ...fallback, admin_access: false }, { status: 500 });
   }
 }
