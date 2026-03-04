@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createCheckoutSession } from "@/lib/stripe";
+import { createCheckoutSession, createPortalSession } from "@/lib/stripe";
 import { requireServerUser } from "@/lib/supabase/server";
 import { ensureStripeCustomerForUser } from "@/lib/wovo-ai/billing";
 import { getAllowedPriceIds, getPlanFromPriceId, isPaidStatus } from "@/lib/wovo-ai/plans";
@@ -40,12 +40,22 @@ export async function POST(request: Request) {
 
     const existing = await getRawSubscription(user.id);
     const requestedPlan = getPlanFromPriceId(priceId);
+    const siteUrl = getSiteUrlFromRequest(request);
+
     if (requestedPlan && existing?.plan === requestedPlan && isPaidStatus(existing.status)) {
       return NextResponse.json({ error: "You are already subscribed to this plan." }, { status: 409 });
     }
 
     const stripeCustomerId = await ensureStripeCustomerForUser(user.id, user.email);
-    const siteUrl = getSiteUrlFromRequest(request);
+
+    if (existing?.plan && isPaidStatus(existing.status) && requestedPlan && existing.plan !== requestedPlan) {
+      const portal = await createPortalSession(stripeCustomerId, `${siteUrl}/wovo-ai`);
+      return NextResponse.json({
+        url: portal.url,
+        mode: "portal",
+        message: "Use Stripe Billing Portal to change plans.",
+      });
+    }
 
     const session = await createCheckoutSession({
       customerId: stripeCustomerId,
@@ -59,7 +69,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Stripe did not return a checkout URL." }, { status: 502 });
     }
 
-    return NextResponse.json({ url: session.url });
+    return NextResponse.json({ url: session.url, mode: "checkout" });
   } catch (error) {
     if (error instanceof Error && error.message.includes("Unable to verify session")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

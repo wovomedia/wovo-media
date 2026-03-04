@@ -9,18 +9,20 @@ export async function GET(request: Request) {
     if (isAdminEmail(user.email)) {
       return NextResponse.json({
         status: "active",
-        plan_key: "agency",
-        credits_used_month: 0,
-        credits_limit_month: 999999,
+        plan: "agency",
         period_end: null,
+        remaining: {
+          credits_total: 999999,
+          credits_remaining: 999999,
+          weekly_limit: 999999,
+          weekly_used: 0,
+        },
         can_generate: true,
-        weekly_limit: 999999,
-        weekly_used: 0,
         admin_access: true,
       });
     }
-    const status = await getSubscriptionStatus(user.id);
 
+    const status = await getSubscriptionStatus(user.id);
     return NextResponse.json({ ...status, admin_access: false });
   } catch (error) {
     if (error instanceof Error && (error.message.includes("Missing bearer token") || error.message.includes("Unable to verify session"))) {
@@ -30,15 +32,17 @@ export async function GET(request: Request) {
       return NextResponse.json(
         {
           status: null,
-          plan_key: null,
-          credits_used_month: 0,
-          credits_limit_month: 0,
+          plan: null,
           period_end: null,
+          remaining: {
+            credits_total: 0,
+            credits_remaining: 0,
+            weekly_limit: 0,
+            weekly_used: 0,
+          },
           can_generate: false,
-          weekly_limit: 0,
-          weekly_used: 0,
           admin_access: false,
-          warning: "Database not migrated yet",
+          message: "Database not migrated yet",
         },
         { status: 200 },
       );

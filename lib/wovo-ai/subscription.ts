@@ -16,34 +16,43 @@ type SubscriptionRow = {
   week_start: string | null;
 };
 
-export type SubscriptionStatusPayload = {
-  status: string | null;
-  plan_key: PlanName | null;
-  credits_used_month: number;
-  credits_limit_month: number;
-  period_end: string | null;
-  can_generate: boolean;
+export type RemainingCredits = {
+  credits_total: number;
+  credits_remaining: number;
   weekly_limit: number;
   weekly_used: number;
 };
 
+export type SubscriptionStatusPayload = {
+  status: string | null;
+  plan: PlanName | null;
+  period_end: string | null;
+  remaining: RemainingCredits;
+  can_generate: boolean;
+};
+
+function getRemainingFromRow(row: SubscriptionRow | null): RemainingCredits {
+  return {
+    credits_total: row?.credits_total ?? 0,
+    credits_remaining: row?.credits_remaining ?? 0,
+    weekly_limit: row?.weekly_limit ?? 0,
+    weekly_used: row?.weekly_used ?? 0,
+  };
+}
+
 function toStatusPayload(row: SubscriptionRow | null): SubscriptionStatusPayload {
-  const creditsTotal = row?.credits_total ?? 0;
-  const creditsRemaining = row?.credits_remaining ?? 0;
-  const creditsUsed = Math.max(creditsTotal - creditsRemaining, 0);
   const status = row?.status ?? null;
-  const weeklyLimit = row?.weekly_limit ?? 0;
-  const weeklyUsed = row?.weekly_used ?? 0;
+  const remaining = getRemainingFromRow(row);
 
   return {
     status,
-    plan_key: row?.plan ?? null,
-    credits_used_month: creditsUsed,
-    credits_limit_month: creditsTotal,
+    plan: row?.plan ?? null,
     period_end: row?.current_period_end ?? null,
-    can_generate: isPaidStatus(status) && creditsRemaining > 0 && (weeklyLimit <= 0 || weeklyUsed < weeklyLimit),
-    weekly_limit: weeklyLimit,
-    weekly_used: weeklyUsed,
+    remaining,
+    can_generate:
+      isPaidStatus(status) &&
+      remaining.credits_remaining > 0 &&
+      (remaining.weekly_limit <= 0 || remaining.weekly_used < remaining.weekly_limit),
   };
 }
 

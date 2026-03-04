@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createPortalSession } from "@/lib/stripe";
-import { requireServerUser, supabaseServiceRoleRequest } from "@/lib/supabase/server";
+import { requireServerUser } from "@/lib/supabase/server";
+import { ensureStripeCustomerForUser } from "@/lib/wovo-ai/billing";
 
 function getSiteUrlFromRequest(request: Request): string {
   const envUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
@@ -23,14 +24,7 @@ export async function POST(request: Request) {
 
   try {
     const { user } = await requireServerUser(authorization);
-    const rows = await supabaseServiceRoleRequest<Array<{ stripe_customer_id: string | null }>>(
-      `/rest/v1/subscriptions?select=stripe_customer_id&user_id=eq.${user.id}&limit=1`,
-    );
-
-    const stripeCustomerId = rows?.[0]?.stripe_customer_id ?? null;
-    if (!stripeCustomerId) {
-      return NextResponse.json({ error: "No Stripe customer found for this account." }, { status: 400 });
-    }
+    const stripeCustomerId = await ensureStripeCustomerForUser(user.id, user.email);
 
     const session = await createPortalSession(stripeCustomerId, `${getSiteUrlFromRequest(request)}/wovo-ai`);
     return NextResponse.json({ url: session.url });
