@@ -21,6 +21,27 @@ Set these before running locally/deploying:
 1. Apply the SQL in `supabase/migrations/*`.
 2. Confirm `public.subscriptions` and `public.usage_credits` tables exist.
 
+### Credits refactor verification runbook
+
+Use this when `/api/wovo-ai/generate` returns schema/function errors (for example `PGRST202`).
+
+1. Export your DB connection string:
+
+   ```bash
+   export SUPABASE_DB_URL='postgresql://...'
+   ```
+
+2. Apply all migrations in lexical order, validate the new `public.subscriptions` columns,
+   validate `public.consume_generation_credit(uuid)`, verify legacy backfill, and
+   re-run `create or replace function` from
+   `202603040005_subscription_credits_refactor.sql`:
+
+   ```bash
+   ./scripts/verify-supabase-credits-migration.sh
+   ```
+
+3. Retry `POST /api/wovo-ai/generate` from the UI and confirm the previous error is gone.
+
 ## Checkout flow test
 
 1. Sign in at `/wovo-ai`.
