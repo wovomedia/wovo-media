@@ -8,5 +8,8 @@ create table if not exists public.users (
   subscription_status text,
   subscription_id text,
   price_id text,
+  plan text,
+  credits_remaining integer default 0,
+  weekly_limit integer default 0,
   created_at timestamptz default now() not null
 );
