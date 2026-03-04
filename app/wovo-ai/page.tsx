@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { type ChangeEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { type ChangeEvent, type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { mapSupabaseAuthError } from "@/lib/supabase/auth-errors";
 import { supabase, type Session } from "@/lib/supabase/client";
 
@@ -23,12 +23,17 @@ type SubscriptionSummary = {
 };
 
 type ChatMessage = {
-  role: "user" | "assistant";
-  text: string;
+  id: string;
+  role: "user" | "assistant" | "system";
+  content: string;
+  createdAt: number;
+  imageUrl?: string;
   result?: {
-    captions: { facebook: string; instagram: string; tiktok: string };
-    hashtags: string[];
-    image?: { url?: string } | null;
+    facebook: string;
+    instagram: string;
+    tiktok: string;
+    hashtags: string;
+    imagePrompt?: string;
   };
 };
 
@@ -46,6 +51,10 @@ const STORAGE_KEY = "wovo-supabase-session";
 const fieldClass =
   "w-full rounded-xl border border-white/20 bg-black/70 px-3 py-2.5 text-sm text-white outline-none transition focus:border-emerald-300/60 focus:ring-2 focus:ring-emerald-400/40";
 const planOrder: PlanKey[] = ["starter", "pro", "agency"];
+
+function createMessageId() {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
 
 function parseSessionFromHash(hash: string): Session | null {
   if (!hash.startsWith("#")) return null;
@@ -68,6 +77,18 @@ function toDataUrl(file: File): Promise<string> {
     reader.onerror = () => reject(new Error("Unable to read image file."));
     reader.readAsDataURL(file);
   });
+}
+
+function formatAssistantContent(result: { facebook: string; instagram: string; tiktok: string; hashtags: string; imagePrompt?: string }) {
+  return [
+    `Facebook caption: ${result.facebook}`,
+    `Instagram caption: ${result.instagram}`,
+    `TikTok caption: ${result.tiktok}`,
+    `Hashtags: ${result.hashtags}`,
+    result.imagePrompt ? `Image prompt: ${result.imagePrompt}` : undefined,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 }
 
 export default function WovoAiPage() {
@@ -95,6 +116,8 @@ export default function WovoAiPage() {
   const [openingPortal, setOpeningPortal] = useState(false);
   const [info, setInfo] = useState("");
   const [error, setError] = useState("");
+
+  const transcriptRef = useRef<HTMLDivElement | null>(null);
 
   const planOptions: PlanOption[] = useMemo(
     () => [
@@ -161,6 +184,11 @@ export default function WovoAiPage() {
     };
     void hydrate();
   }, [loadSubscription, session]);
+
+  useEffect(() => {
+    if (!transcriptRef.current) return;
+    transcriptRef.current.scrollTo({ top: transcriptRef.current.scrollHeight, behavior: "smooth" });
+  }, [messages]);
 
   const signOut = () => {
     localStorage.removeItem(STORAGE_KEY);
@@ -282,82 +310,123 @@ export default function WovoAiPage() {
     }
   };
 
+  const creditsRemaining = Math.max((subscription?.credits_limit_month ?? 0) - (subscription?.credits_used_month ?? 0), 0);
+  const activeSubscription = subscription?.status === "active";
+  const canAccessGenerator = Boolean(subscription?.admin_access || activeSubscription);
+  const weeklyLimitHit = !subscription?.admin_access && (subscription?.weekly_used ?? 0) >= (subscription?.weekly_limit ?? 0);
+  const creditsExhausted = !subscription?.admin_access && creditsRemaining <= 0;
+  const composerDisabled = generating || !canAccessGenerator || creditsExhausted || weeklyLimitHit;
+
   const handleGenerate = async () => {
-    if (!session?.access_token || !prompt.trim() || generating) return;
+    const trimmedPrompt = prompt.trim();
+    if (!session?.access_token || !trimmedPrompt || composerDisabled) return;
 
     setGenerating(true);
     setError("");
     setInfo("");
 
-    const userMessage: ChatMessage = { role: "user", text: prompt.trim() };
-    setMessages((prev) => [...prev, userMessage]);
+    const userMessage: ChatMessage = {
+      id: createMessageId(),
+      role: "user",
+      content: trimmedPrompt,
+      createdAt: Date.now(),
+      imageUrl: imageDataUrl ?? undefined,
+    };
+
+    const thinkingId = createMessageId();
+    const thinkingMessage: ChatMessage = {
+      id: thinkingId,
+      role: "assistant",
+      content: "Thinking…",
+      createdAt: Date.now(),
+    };
+
+    setMessages((prev) => [...prev, userMessage, thinkingMessage]);
 
     try {
       const response = await fetch("/api/wovo-ai/generate", {
         method: "POST",
         headers: withAuthHeaders(session.access_token),
         body: JSON.stringify({
-          message: prompt.trim(),
+          topic: trimmedPrompt,
           business_name: businessName.trim() || undefined,
           business_type: businessType.trim() || undefined,
           location: location.trim() || undefined,
           contact: contact.trim() || undefined,
           goal: goal.trim() || undefined,
-          image_base64: imageDataUrl,
+          reference_image: imageDataUrl || undefined,
         }),
       });
 
       const payload = (await response.json()) as {
         captions?: { facebook?: string; instagram?: string; tiktok?: string };
-        hashtags?: string[];
-        image?: { url?: string } | null;
+        hashtags?: string[] | string;
+        image_prompt?: string;
+        image?: { url?: string; base64?: string } | null;
         remaining?: { credits_remaining: number; credits_total: number; weekly_used: number; weekly_limit: number };
         error?: string;
       };
 
       if (!response.ok) throw new Error(payload.error ?? "Failed to generate content.");
 
-      const assistantMessage: ChatMessage = {
-        role: "assistant",
-        text: "Generated your captions and promo concept.",
-        result: {
-          captions: {
-            facebook: payload.captions?.facebook ?? "",
-            instagram: payload.captions?.instagram ?? "",
-            tiktok: payload.captions?.tiktok ?? "",
-          },
-          hashtags: payload.hashtags ?? [],
-          image: payload.image ?? null,
-        },
+      const result = {
+        facebook: payload.captions?.facebook ?? "",
+        instagram: payload.captions?.instagram ?? "",
+        tiktok: payload.captions?.tiktok ?? "",
+        hashtags: Array.isArray(payload.hashtags) ? payload.hashtags.join(" ") : (payload.hashtags ?? ""),
+        imagePrompt: payload.image_prompt,
       };
-      setMessages((prev) => [...prev, assistantMessage]);
+      const imageUrl = payload.image?.url ?? (payload.image?.base64 ? `data:image/png;base64,${payload.image.base64}` : undefined);
+
+      const assistantMessage: ChatMessage = {
+        id: createMessageId(),
+        role: "assistant",
+        content: formatAssistantContent(result),
+        createdAt: Date.now(),
+        imageUrl,
+        result,
+      };
+
+      setMessages((prev) => prev.map((message) => (message.id === thinkingId ? assistantMessage : message)));
       setPrompt("");
 
-      if (subscription && payload.remaining) {
-        setSubscription({
-          ...subscription,
-          credits_limit_month: payload.remaining.credits_total,
-          credits_used_month: Math.max(payload.remaining.credits_total - payload.remaining.credits_remaining, 0),
-          weekly_used: payload.remaining.weekly_used,
-          weekly_limit: payload.remaining.weekly_limit,
-          can_generate:
-            (subscription.status === "active" || Boolean(subscription.admin_access)) &&
-            payload.remaining.credits_remaining > 0 &&
-            payload.remaining.weekly_used < payload.remaining.weekly_limit,
-        });
+      if (payload.remaining) {
+        setSubscription((prev) =>
+          prev
+            ? {
+                ...prev,
+                credits_limit_month: payload.remaining?.credits_total ?? prev.credits_limit_month,
+                credits_used_month: Math.max((payload.remaining?.credits_total ?? prev.credits_limit_month) - payload.remaining.credits_remaining, 0),
+                weekly_used: payload.remaining.weekly_used,
+                weekly_limit: payload.remaining.weekly_limit,
+                can_generate:
+                  (prev.status === "active" || Boolean(prev.admin_access)) &&
+                  payload.remaining.credits_remaining > 0 &&
+                  payload.remaining.weekly_used < payload.remaining.weekly_limit,
+              }
+            : prev,
+        );
       }
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Unable to generate right now.");
-      setMessages((prev) => prev.slice(0, Math.max(0, prev.length - 1)));
+    } catch {
+      setMessages((prev) =>
+        prev.map((message) =>
+          message.id === thinkingId
+            ? { ...message, content: "Something went wrong. Please try again.", result: undefined, imageUrl: undefined }
+            : message,
+        ),
+      );
+      setError("Something went wrong. Please try again.");
     } finally {
       setGenerating(false);
     }
   };
 
-  const creditsRemaining = Math.max((subscription?.credits_limit_month ?? 0) - (subscription?.credits_used_month ?? 0), 0);
-  const activeSubscription = subscription?.status === "active";
-  const canAccessGenerator = Boolean(subscription?.admin_access || activeSubscription);
-  const isOutOfCredits = !subscription?.admin_access && (!creditsRemaining || (subscription?.weekly_used ?? 0) >= (subscription?.weekly_limit ?? 0));
+  const handleComposerKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      void handleGenerate();
+    }
+  };
 
   return (
     <main className="min-h-screen bg-black px-4 py-6 text-white sm:px-6 sm:py-8">
@@ -442,7 +511,7 @@ export default function WovoAiPage() {
                   <p className="text-white/80">Status: {subscription?.status ?? "inactive"}</p>
                   <p className="text-white/80">Credits: {subscription?.credits_used_month ?? 0} / {subscription?.credits_limit_month ?? 0}</p>
                   <p className="text-white/80">Weekly: {subscription?.weekly_used ?? 0} / {subscription?.weekly_limit ?? 0}</p>
-                  {isOutOfCredits && (
+                  {(creditsExhausted || weeklyLimitHit) && (
                     <div className="mt-3 rounded-xl border border-amber-400/40 bg-amber-400/10 p-3 text-amber-100">
                       <p className="text-xs">You hit your monthly/weekly limit.</p>
                       {!subscription?.admin_access && (
@@ -453,34 +522,49 @@ export default function WovoAiPage() {
                 </aside>
 
                 <div className="rounded-2xl border border-white/15 bg-white/5 p-4">
-                  <div className="max-h-[420px] space-y-3 overflow-y-auto rounded-xl border border-white/10 bg-black/40 p-3">
+                  <h2 className="text-lg font-semibold">Wovo AI Chat</h2>
+                  <div ref={transcriptRef} className="mt-3 h-[55vh] space-y-3 overflow-y-auto rounded-xl border border-white/10 bg-black/40 p-3 md:h-[420px]">
                     {messages.length === 0 && <p className="text-sm text-white/60">Ask for a promotion caption and design concept to begin.</p>}
-                    {messages.map((msg, idx) => (
-                      <div key={`${msg.role}-${idx}`} className={`rounded-xl p-3 ${msg.role === "user" ? "ml-8 bg-white/10" : "mr-8 border border-white/15 bg-black/50"}`}>
+                    {messages.map((msg) => (
+                      <div
+                        key={msg.id}
+                        className={`max-w-[92%] rounded-xl p-3 ${
+                          msg.role === "user" ? "ml-auto bg-white/10" : "mr-auto border border-white/15 bg-black/50"
+                        }`}
+                      >
                         <p className="mb-1 text-xs uppercase text-white/60">{msg.role}</p>
-                        <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
+                        <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                        {msg.imageUrl && msg.role === "user" && (
+                          <div className="mt-2">
+                            <Image src={msg.imageUrl} alt="Reference upload" width={600} height={600} unoptimized className="max-h-56 w-full rounded-lg object-cover" />
+                          </div>
+                        )}
                         {msg.result && (
                           <div className="mt-3 space-y-3 text-sm">
-                            {(["facebook", "instagram", "tiktok"] as const).map((platform) => (
-                              <div key={platform} className="rounded-lg border border-white/15 bg-black/40 p-3">
-                                <div className="flex items-center justify-between">
-                                  <p className="font-semibold capitalize">{platform}</p>
-                                  <button onClick={() => void copyText(msg.result?.captions[platform] ?? "", `${platform} copied.`)} className="rounded border border-white/25 px-2 py-1 text-xs">Copy</button>
+                            {([
+                              ["Facebook caption", msg.result.facebook],
+                              ["Instagram caption", msg.result.instagram],
+                              ["TikTok caption", msg.result.tiktok],
+                              ["Hashtags", msg.result.hashtags],
+                            ] as const).map(([label, value]) => (
+                              <div key={label} className="rounded-lg border border-white/15 bg-black/40 p-3">
+                                <div className="flex items-center justify-between gap-2">
+                                  <p className="font-semibold">{label}</p>
+                                  <button onClick={() => void copyText(value, `${label} copied.`)} className="rounded border border-white/25 px-2 py-1 text-xs">Copy</button>
                                 </div>
-                                <p className="mt-2 whitespace-pre-wrap text-white/90">{msg.result.captions[platform]}</p>
+                                <p className="mt-2 whitespace-pre-wrap text-white/90">{value}</p>
                               </div>
                             ))}
-                            <div className="rounded-lg border border-white/15 bg-black/40 p-3">
-                              <div className="flex items-center justify-between">
-                                <p className="font-semibold">Hashtags</p>
-                                <button onClick={() => void copyText(msg.result?.hashtags.join(" ") ?? "", "Hashtags copied.")} className="rounded border border-white/25 px-2 py-1 text-xs">Copy</button>
-                              </div>
-                              <p className="mt-2 text-white/90">{msg.result.hashtags.join(" ")}</p>
-                            </div>
-                            {msg.result.image?.url && (
+                            {msg.result.imagePrompt && (
                               <div className="rounded-lg border border-white/15 bg-black/40 p-3">
-                                <Image src={msg.result.image.url} alt="Generated promo graphic" width={1024} height={1024} unoptimized className="aspect-square w-full rounded-lg object-cover" />
-                                <a href={msg.result.image.url} download="wovo-promo.png" className="mt-2 inline-block rounded border border-white/25 px-2 py-1 text-xs">Download image</a>
+                                <p className="font-semibold">Image prompt</p>
+                                <p className="mt-2 whitespace-pre-wrap text-white/90">{msg.result.imagePrompt}</p>
+                              </div>
+                            )}
+                            {msg.imageUrl && (
+                              <div className="rounded-lg border border-white/15 bg-black/40 p-3">
+                                <Image src={msg.imageUrl} alt="Generated promo graphic" width={1024} height={1024} unoptimized className="aspect-square w-full rounded-lg object-cover" />
+                                <a href={msg.imageUrl} download="wovo-promo.png" className="mt-2 inline-block rounded border border-white/25 px-2 py-1 text-xs">Download image</a>
                               </div>
                             )}
                           </div>
@@ -489,8 +573,8 @@ export default function WovoAiPage() {
                     ))}
                   </div>
 
-                  <div className="mt-3">
-                    <button onClick={() => setShowDetails((prev) => !prev)} className="text-xs text-emerald-300 underline">{showDetails ? "Hide" : "Show"} details</button>
+                  <div className="mt-3 border-t border-white/10 pt-3">
+                    <button onClick={() => setShowDetails((prev) => !prev)} className="text-xs text-emerald-300 underline">{showDetails ? "Hide" : "Show"} Details</button>
                     {showDetails && (
                       <div className="mt-2 grid gap-2 sm:grid-cols-2">
                         <input value={businessName} onChange={(e) => setBusinessName(e.target.value)} placeholder="Business name" className={fieldClass} />
@@ -507,11 +591,38 @@ export default function WovoAiPage() {
                     )}
                   </div>
 
-                  <div className="mt-3 flex gap-2">
-                    <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="Describe the promo you want..." rows={3} className={fieldClass} />
-                    <button onClick={() => void handleGenerate()} disabled={generating || !prompt.trim() || isOutOfCredits} className="rounded-xl bg-emerald-400 px-4 py-2 text-sm font-bold text-black disabled:opacity-60">
-                      {generating ? "Generating..." : "Send"}
-                    </button>
+                  <div className="sticky bottom-0 mt-3 rounded-xl border border-white/10 bg-black/80 p-3 backdrop-blur">
+                    {(creditsExhausted || weeklyLimitHit || !canAccessGenerator) && (
+                      <p className="mb-2 text-xs text-amber-300">
+                        {!canAccessGenerator
+                          ? "Your subscription is inactive."
+                          : creditsExhausted
+                            ? "You’re out of credits this month. Upgrade or wait for reset."
+                            : "Weekly limit reached. Try again after reset or upgrade."}
+                      </p>
+                    )}
+                    {error && <p className="mb-2 text-xs text-red-300">{error}</p>}
+                    <div className="flex gap-2">
+                      <textarea
+                        value={prompt}
+                        onChange={(e) => setPrompt(e.target.value)}
+                        onKeyDown={handleComposerKeyDown}
+                        placeholder="Type your message..."
+                        rows={3}
+                        disabled={composerDisabled}
+                        className={fieldClass}
+                      />
+                      <button
+                        onClick={() => void handleGenerate()}
+                        disabled={composerDisabled || !prompt.trim()}
+                        className="rounded-xl bg-emerald-400 px-4 py-2 text-sm font-bold text-black disabled:opacity-60"
+                      >
+                        {generating ? "Sending..." : "Send"}
+                      </button>
+                    </div>
+                    <p className="mt-2 text-xs text-white/60">
+                      Credits remaining: {creditsRemaining} · Weekly remaining: {Math.max((subscription?.weekly_limit ?? 0) - (subscription?.weekly_used ?? 0), 0)}
+                    </p>
                   </div>
                 </div>
               </section>
@@ -521,7 +632,6 @@ export default function WovoAiPage() {
 
         <p className="text-center text-xs text-white/40">Need help? <Link className="underline" href="/">Back home</Link></p>
         {info && <p className="text-sm text-emerald-300">{info}</p>}
-        {error && <p className="text-sm text-red-300">{error}</p>}
       </div>
     </main>
   );
