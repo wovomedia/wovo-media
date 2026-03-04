@@ -2,32 +2,47 @@ import { NextResponse } from "next/server";
 import { createCheckoutSession } from "@/lib/stripe";
 import { requireServerUser } from "@/lib/supabase/server";
 import { ensureStripeCustomerForUser } from "@/lib/wovo-ai/billing";
-import { getPlanFromPriceId } from "@/lib/wovo-ai/plans";
+import { getAllowedPriceIds } from "@/lib/wovo-ai/plans";
 
 type CheckoutBody = {
   priceId?: string;
 };
 
+function getOrigin(request: Request): string {
+  const url = new URL(request.url);
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const forwardedProto = request.headers.get("x-forwarded-proto") ?? "https";
+  if (forwardedHost) {
+    return `${forwardedProto}://${forwardedHost}`;
+  }
+  return url.origin;
+}
+
 export async function POST(request: Request) {
   try {
     const { user } = await requireServerUser(request.headers.get("authorization"));
     const body = (await request.json()) as CheckoutBody;
-    const priceId = body.priceId ?? "";
+    const priceId = (body.priceId ?? "").trim();
 
-    if (!priceId || !getPlanFromPriceId(priceId)) {
+    const allowedPriceIds = getAllowedPriceIds();
+    if (!priceId || !allowedPriceIds.includes(priceId)) {
       return NextResponse.json({ error: "Invalid priceId." }, { status: 400 });
     }
 
     const stripeCustomerId = await ensureStripeCustomerForUser(user.id, user.email);
+    const origin = getOrigin(request);
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
     const session = await createCheckoutSession({
       customerId: stripeCustomerId,
       priceId,
       userId: user.id,
-      successUrl: `${appUrl}/wovo-ai?stripe=success`,
-      cancelUrl: `${appUrl}/wovo-ai?stripe=cancel`,
+      successUrl: `${origin}/wovo-ai?success=1`,
+      cancelUrl: `${origin}/wovo-ai?canceled=1`,
     });
+
+    if (!session.url) {
+      return NextResponse.json({ error: "Stripe did not return a checkout URL." }, { status: 502 });
+    }
 
     return NextResponse.json({ url: session.url });
   } catch (error) {

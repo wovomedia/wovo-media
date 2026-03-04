@@ -26,7 +26,13 @@ Required environment variables:
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY` (server-side only; needed for account deletion)
+- `SUPABASE_SERVICE_ROLE_KEY` (server-side only)
+- `NEXT_PUBLIC_STARTER_PRICE_ID`
+- `NEXT_PUBLIC_PRO_PRICE_ID`
+- `NEXT_PUBLIC_AGENCY_PRICE_ID`
+- `STRIPE_SECRET_KEY` (server-side only)
+- `STRIPE_WEBHOOK_SECRET` (server-side only)
+- `WOVO_ADMIN_EMAIL`
 - `OPENAI_API_KEY` (server-side only; used by `/api/wovo-ai/generate` and `/api/wovo-ai/generate-image`)
 
 Supabase SQL setup:

@@ -8,17 +8,20 @@ export async function GET(request: Request) {
     const { user } = await requireServerUser(request.headers.get("authorization"));
     if (isAdminEmail(user.email)) {
       return NextResponse.json({
-        status: "admin",
-        plan_key: "admin",
+        status: "active",
+        plan_key: "agency",
         credits_used_month: 0,
         credits_limit_month: 999999,
         period_end: null,
         can_generate: true,
+        weekly_limit: 999999,
+        weekly_used: 0,
+        admin_access: true,
       });
     }
     const status = await getSubscriptionStatus(user.id);
 
-    return NextResponse.json(status);
+    return NextResponse.json({ ...status, admin_access: false });
   } catch (error) {
     if (error instanceof Error && (error.message.includes("Missing bearer token") || error.message.includes("Unable to verify session"))) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -32,6 +35,9 @@ export async function GET(request: Request) {
           credits_limit_month: 0,
           period_end: null,
           can_generate: false,
+          weekly_limit: 0,
+          weekly_used: 0,
+          admin_access: false,
           warning: "Database not migrated yet",
         },
         { status: 200 },

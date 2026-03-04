@@ -15,12 +15,16 @@ const PLAN_MAP: Record<PlanName, PlanConfig> = {
 
 function getPricePlanPairs(): Array<[string, PlanName]> {
   const entries: Array<[string | undefined, PlanName]> = [
-    [process.env.NEXT_PUBLIC_STRIPE_STARTER_PRICE_ID, "starter"],
-    [process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID, "pro"],
-    [process.env.NEXT_PUBLIC_STRIPE_AGENCY_PRICE_ID, "agency"],
+    [process.env.NEXT_PUBLIC_STARTER_PRICE_ID, "starter"],
+    [process.env.NEXT_PUBLIC_PRO_PRICE_ID, "pro"],
+    [process.env.NEXT_PUBLIC_AGENCY_PRICE_ID, "agency"],
   ];
 
   return entries.filter((entry): entry is [string, PlanName] => Boolean(entry[0]));
+}
+
+export function getAllowedPriceIds(): string[] {
+  return getPricePlanPairs().map(([priceId]) => priceId);
 }
 
 export function getPriceToPlanMap(): Record<string, PlanName> {

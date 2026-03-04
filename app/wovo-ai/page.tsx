@@ -14,28 +14,35 @@ type ProfileRecord = {
   business_type: string | null;
   location: string | null;
   contact: string | null;
+  topic: string | null;
+  goal: string | null;
 };
 
 type CaptionsPayload = { facebook: string; instagram: string; tiktok: string; hashtags: string };
 type SubscriptionSummary = {
   status: string | null;
-  plan_key: "starter" | "pro" | "agency" | "admin" | null;
+  plan_key: "starter" | "pro" | "agency" | null;
   credits_used_month: number;
   credits_limit_month: number;
   period_end: string | null;
   can_generate: boolean;
+  weekly_limit: number;
+  weekly_used: number;
+  admin_access?: boolean;
   warning?: string;
+};
+
+type PlanOption = {
+  key: "starter" | "pro" | "agency";
+  label: string;
+  desc: string;
+  priceId: string;
+  popular: boolean;
 };
 
 const STORAGE_KEY = "wovo-supabase-session";
 const fieldClass =
   "w-full rounded-xl border border-white/20 bg-black/70 px-3 py-2.5 text-sm text-white outline-none transition focus:border-emerald-300/60 focus:ring-2 focus:ring-emerald-400/40";
-
-const PLAN_OPTIONS = [
-  { key: "starter", label: "$24.99 Starter", desc: "9 posts per month", priceId: process.env.NEXT_PUBLIC_STRIPE_STARTER_PRICE_ID ?? "", popular: false },
-  { key: "pro", label: "$49.99 Pro", desc: "18 posts per month", priceId: process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID ?? "", popular: false },
-  { key: "agency", label: "$99 Agency", desc: "42 posts per month", priceId: process.env.NEXT_PUBLIC_STRIPE_AGENCY_PRICE_ID ?? "", popular: true },
-] as const;
 
 function parseSessionFromHash(hash: string): Session | null {
   if (!hash.startsWith("#")) return null;
@@ -89,7 +96,16 @@ export default function WovoAiPage() {
   const [info, setInfo] = useState("");
   const [error, setError] = useState("");
 
-  const hasMissingPriceIds = useMemo(() => PLAN_OPTIONS.some((plan) => !plan.priceId), []);
+  const planOptions: PlanOption[] = useMemo(
+    () => [
+      { key: "starter", label: "$24.99 Starter", desc: "9 posts / month · 3/week", priceId: process.env.NEXT_PUBLIC_STARTER_PRICE_ID ?? "", popular: false },
+      { key: "pro", label: "$49.99 Pro", desc: "18 posts / month · 6/week", priceId: process.env.NEXT_PUBLIC_PRO_PRICE_ID ?? "", popular: false },
+      { key: "agency", label: "$99 Agency", desc: "42 posts / month · 14/week", priceId: process.env.NEXT_PUBLIC_AGENCY_PRICE_ID ?? "", popular: true },
+    ],
+    [],
+  );
+
+  const hasMissingPriceIds = useMemo(() => planOptions.some((plan) => !plan.priceId), [planOptions]);
 
   const redirectUrl = useMemo(() => {
     if (typeof window === "undefined") return "";
@@ -123,6 +139,8 @@ export default function WovoAiPage() {
     setBusinessType(payload.business_type ?? "");
     setLocation(payload.location ?? "");
     setContact(payload.contact ?? "");
+    setTopic(payload.topic ?? "");
+    setGoal(payload.goal ?? "");
   }, []);
 
   useEffect(() => {
@@ -153,7 +171,6 @@ export default function WovoAiPage() {
         if (userError || !userData.user) throw userError ?? new Error("Unable to load user.");
         const user = userData.user as SupabaseAuthUser;
         setAuthUser(user);
-        setEmail(user.email ?? "");
 
         await loadProfile(session.access_token);
         await loadSubscription(session.access_token);
@@ -178,11 +195,7 @@ export default function WovoAiPage() {
 
   const handleGoogle = async () => {
     try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo: redirectUrl },
-      });
-
+      const { data, error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: redirectUrl } });
       if (error) throw error;
       if (data.url) window.location.href = data.url;
     } catch (err: unknown) {
@@ -221,7 +234,7 @@ export default function WovoAiPage() {
       const response = await fetch("/api/wovo-ai/profile", {
         method: "POST",
         headers: withAuthHeaders(session.access_token),
-        body: JSON.stringify({ email, full_name: fullName, business_name: businessName, business_type: businessType, location, contact }),
+        body: JSON.stringify({ email, full_name: fullName, business_name: businessName, business_type: businessType, location, contact, topic, goal }),
       });
       const payload = (await response.json()) as { success?: boolean; error?: string };
       if (!response.ok) throw new Error(payload.error ?? "Unable to save profile.");
@@ -267,7 +280,7 @@ export default function WovoAiPage() {
         const fallbackText = payload.error ?? payload.message ?? responseText ?? "Unable to start checkout.";
         throw new Error(fallbackText);
       }
-      window.location.assign(payload.url);
+      window.location.href = payload.url;
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Checkout failed.");
     } finally {
@@ -276,7 +289,7 @@ export default function WovoAiPage() {
   };
 
   const openPortal = async () => {
-    if (!session?.access_token) return;
+    if (!session?.access_token || subscription?.admin_access) return;
     setOpeningPortal(true);
     setError("");
     try {
@@ -290,7 +303,7 @@ export default function WovoAiPage() {
         const fallbackText = payload.error ?? payload.message ?? responseText ?? "Unable to open billing portal.";
         throw new Error(fallbackText);
       }
-      window.location.assign(payload.url);
+      window.location.href = payload.url;
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Portal request failed.");
     } finally {
@@ -353,10 +366,10 @@ export default function WovoAiPage() {
           </section>
         )}
 
-        {!loadingSession && session && (
+        {session && (
           <>
-            <header className="rounded-2xl border border-white/15 bg-white/5 p-4">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <header className="rounded-2xl border border-white/15 bg-white/5 p-5">
+              <div className="flex items-start justify-between gap-4">
                 <div>
                   <h1 className="text-2xl font-bold">Wovo AI</h1>
                   <p className="text-sm text-white/70">{authUser?.email ?? "Signed in"}</p>
@@ -368,45 +381,48 @@ export default function WovoAiPage() {
               </div>
             </header>
 
-            {!subscription?.can_generate && (
+            {!subscription?.can_generate && !subscription?.admin_access && (
               <section className="rounded-2xl border border-white/15 bg-white/5 p-5">
                 <h2 className="text-xl font-semibold">Choose a plan to continue</h2>
-                {hasMissingPriceIds && <p className="mt-2 text-sm text-amber-300">Missing price IDs</p>}
+                {hasMissingPriceIds && <p className="mt-2 rounded-lg border border-amber-300/40 bg-amber-400/10 px-3 py-2 text-sm text-amber-200">Missing price IDs (check Vercel env vars)</p>}
                 <div className="mt-4 grid gap-3 md:grid-cols-3">
-                  {PLAN_OPTIONS.map((plan) => (
-                    <article key={plan.key} className="relative rounded-xl border border-white/20 bg-black/40 p-4">
-                      {plan.popular && <span className="absolute right-3 top-3 rounded-full bg-emerald-400 px-2 py-1 text-xs font-semibold text-black">Most popular</span>}
-                      <h3 className="font-semibold">{plan.label}</h3>
-                      <p className="mt-1 text-sm text-white/70">{plan.desc}</p>
-                      <button
-                        onClick={() => void startCheckout(plan.priceId)}
-                        disabled={submittingCheckout === plan.priceId || hasMissingPriceIds || !plan.priceId}
-                        className="mt-4 w-full rounded-lg bg-emerald-400 px-3 py-2 text-sm font-bold text-black disabled:opacity-60"
-                      >
-                        {submittingCheckout === plan.priceId
-                          ? "Starting checkout..."
-                          : plan.key === "starter"
-                            ? "Subscribe Starter"
-                            : plan.key === "pro"
-                              ? "Subscribe Pro"
-                              : "Subscribe Agency"}
-                      </button>
-                    </article>
-                  ))}
+                  {planOptions.map((plan) => {
+                    const missingPrice = !plan.priceId;
+                    const disabled = submittingCheckout === plan.priceId || missingPrice;
+                    return (
+                      <article key={plan.key} className="relative rounded-xl border border-white/20 bg-black/40 p-4">
+                        {plan.popular && <span className="absolute right-3 top-3 rounded-full bg-emerald-400 px-2 py-1 text-xs font-semibold text-black">Most popular</span>}
+                        <h3 className="font-semibold">{plan.label}</h3>
+                        <p className="mt-1 text-sm text-white/70">{plan.desc}</p>
+                        <button
+                          onClick={() => void startCheckout(plan.priceId)}
+                          disabled={disabled}
+                          title={missingPrice ? "Missing price ID for this plan" : ""}
+                          className="mt-4 w-full rounded-lg bg-emerald-400 px-3 py-2 text-sm font-bold text-black disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {submittingCheckout === plan.priceId ? "Starting checkout..." : `Subscribe ${plan.key[0].toUpperCase()}${plan.key.slice(1)}`}
+                        </button>
+                      </article>
+                    );
+                  })}
                 </div>
               </section>
             )}
 
             <section className="rounded-2xl border border-white/15 bg-white/5 p-5">
-              <h2 className="text-xl font-semibold">Dashboard</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl font-semibold">Dashboard</h2>
+                {subscription?.admin_access && <span className="rounded-full border border-emerald-300/50 bg-emerald-400/15 px-2 py-0.5 text-xs text-emerald-200">Admin access</span>}
+              </div>
               <p className="mt-2 text-sm text-white/80">Plan: {subscription?.plan_key ?? "none"}</p>
               <p className="text-sm text-white/80">Status: {subscription?.status ?? "inactive"}</p>
               <p className="text-sm text-white/80">Credits: {creditsText}</p>
+              <p className="text-sm text-white/80">Weekly usage: {subscription?.weekly_used ?? 0} / {subscription?.weekly_limit ?? 0}</p>
               <div className="mt-4 flex flex-col gap-2 sm:flex-row">
                 <button onClick={() => void handleGenerate()} disabled={generating || !subscription?.can_generate} className="rounded-lg bg-emerald-400 px-4 py-2 text-sm font-bold text-black disabled:opacity-60">
                   {generating ? "Generating..." : "Generate Post"}
                 </button>
-                <button onClick={() => void openPortal()} disabled={openingPortal} className="rounded-lg border border-white/30 px-4 py-2 text-sm disabled:opacity-60">{openingPortal ? "Opening..." : "Manage Billing"}</button>
+                <button onClick={() => void openPortal()} disabled={openingPortal || Boolean(subscription?.admin_access)} className="rounded-lg border border-white/30 px-4 py-2 text-sm disabled:opacity-60">{openingPortal ? "Opening..." : "Manage Billing"}</button>
               </div>
             </section>
 
@@ -430,9 +446,7 @@ export default function WovoAiPage() {
               </div>
             </section>
 
-            {generatedImage && (
-              <Image src={generatedImage} alt="Generated" width={1024} height={1024} unoptimized className="w-full rounded-lg border border-white/20" />
-            )}
+            {generatedImage && <Image src={generatedImage} alt="Generated" width={1024} height={1024} unoptimized className="w-full rounded-lg border border-white/20" />}
 
             {captions && (
               <section className="rounded-2xl border border-white/15 bg-white/5 p-5 text-sm">

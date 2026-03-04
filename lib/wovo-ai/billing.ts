@@ -13,7 +13,8 @@ export async function ensureStripeCustomerForUser(userId: string, email?: string
   let stripeCustomerId = rows?.[0]?.stripe_customer_id ?? null;
 
   if (!stripeCustomerId) {
-    const customer = await createStripeCustomer(email ?? "", userId);
+    const safeEmail = (email ?? "").trim() || `user-${userId}@wovo.local`;
+    const customer = await createStripeCustomer(safeEmail, userId);
     stripeCustomerId = customer.id;
 
     await supabaseServiceRoleRequest("/rest/v1/subscriptions?on_conflict=user_id", {

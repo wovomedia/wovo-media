@@ -86,3 +86,7 @@ export async function createPortalSession(customerId: string, returnUrl: string)
 export async function retrieveSubscription(subscriptionId: string): Promise<StripeSubscription> {
   return stripeRequest(`/subscriptions/${subscriptionId}`, undefined, "GET");
 }
+
+export async function cancelStripeSubscription(subscriptionId: string): Promise<void> {
+  await stripeRequest(`/subscriptions/${subscriptionId}`, undefined, "DELETE");
+}

@@ -2,7 +2,11 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { retrieveSubscription, type StripeSubscription } from "@/lib/stripe";
-import { cancelSubscriptionByCustomerId, syncSubscriptionFromStripe } from "@/lib/wovo-ai/subscription";
+import {
+  cancelSubscriptionByCustomerId,
+  cancelSubscriptionByStripeSubscriptionId,
+  syncSubscriptionFromStripe,
+} from "@/lib/wovo-ai/subscription";
 
 export const runtime = "nodejs";
 
@@ -83,6 +87,7 @@ export async function POST(request: Request) {
       }
       case "customer.subscription.deleted": {
         const subscription = event.data.object as unknown as StripeSubscription;
+        await cancelSubscriptionByStripeSubscriptionId(subscription.id);
         await cancelSubscriptionByCustomerId(String(subscription.customer));
         break;
       }
