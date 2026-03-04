@@ -55,7 +55,6 @@ type PlanOption = { key: PlanKey; name: string; price: string; priceId?: string;
 const STORAGE_KEY = "wovo-supabase-session";
 const CHAT_HISTORY_STORAGE_PREFIX = "wovo-ai-chat-history";
 const planOrder: PlanKey[] = ["starter", "pro", "agency"];
-const responsePlans = new Set<string>(["none", ...planOrder]);
 
 function createId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -273,7 +272,7 @@ export default function WovoAiPage() {
 
   const mapGenerateResponseFromApi = (payload: WovoAiApiResponse): GenerateResponse => {
     const captions = Array.isArray(payload.captions)
-      ? payload.captions.map((caption) => caption.trim()).filter(Boolean)
+      ? payload.captions.filter((caption): caption is string => typeof caption === "string").map((caption) => caption.trim()).filter(Boolean)
       : [payload.captions?.facebook, payload.captions?.instagram, payload.captions?.tiktok]
           .map((caption) => caption?.trim() ?? "")
           .filter(Boolean);
@@ -289,9 +288,11 @@ export default function WovoAiPage() {
   const getApiErrorMessage = (payload: WovoAiApiResponse) => payload.error ?? payload.message ?? "Generation failed.";
 
   const normalizeResponsePlan = (plan: string | undefined, fallback: SubscriptionPayload["plan"]) => {
-    if (!plan || !responsePlans.has(plan)) return fallback;
-    return plan as SubscriptionPayload["plan"];
+    if (plan === "none" || plan === "starter" || plan === "pro" || plan === "agency") return plan;
+    return fallback;
   };
+
+  const numericOrFallback = (value: number | undefined, fallback: number) => (typeof value === "number" ? value : fallback);
 
   const formatTimestamp = (isoDate: string) => {
     const date = new Date(isoDate);
@@ -368,10 +369,10 @@ export default function WovoAiPage() {
       setSubscription((prev) => {
         if (!prev) return prev;
 
-        const creditsRemaining = payload.updated_credits?.remaining ?? payload.remaining?.credits_remaining ?? prev.remaining.credits_remaining;
-        const weeklyUsed = payload.updated_credits?.weekly_used ?? payload.remaining?.weekly_used ?? prev.remaining.weekly_used;
-        const weeklyLimit = payload.updated_credits?.weekly_limit ?? payload.remaining?.weekly_limit ?? prev.remaining.weekly_limit;
-        const creditsTotal = payload.updated_credits?.total ?? payload.remaining?.credits_total ?? prev.remaining.credits_total;
+        const creditsRemaining = numericOrFallback(payload.updated_credits?.remaining ?? payload.remaining?.credits_remaining, prev.remaining.credits_remaining);
+        const weeklyUsed = numericOrFallback(payload.updated_credits?.weekly_used ?? payload.remaining?.weekly_used, prev.remaining.weekly_used);
+        const weeklyLimit = numericOrFallback(payload.updated_credits?.weekly_limit ?? payload.remaining?.weekly_limit, prev.remaining.weekly_limit);
+        const creditsTotal = numericOrFallback(payload.updated_credits?.total ?? payload.remaining?.credits_total, prev.remaining.credits_total);
 
         return {
           ...prev,
