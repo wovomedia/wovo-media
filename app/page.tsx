@@ -123,7 +123,7 @@ function useRevealOnScroll() {
 function Nav() {
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-black/40 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
         <a href="#home" className="font-extrabold tracking-tight text-white">
           {BRAND.name}
         </a>
@@ -183,7 +183,7 @@ function SectionHeading({
   id?: string;
 }) {
   return (
-    <div id={id} className="mx-auto max-w-6xl px-6">
+    <div id={id} className="mx-auto max-w-6xl px-4 sm:px-6">
       {kicker ? (
         <p className="text-xs font-bold tracking-widest text-white/60">{kicker}</p>
       ) : null}
@@ -284,9 +284,10 @@ export default function Home() {
       setStatus("success");
       form.reset();
       setTimeout(() => setStatus("idle"), 5000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setStatus("error");
-      setErrorMsg(err?.message || "Failed to submit. Try again.");
+      const message = err instanceof Error ? err.message : "Failed to submit. Try again.";
+      setErrorMsg(message);
     }
   }
 
@@ -350,34 +351,33 @@ export default function Home() {
 
       {/* HERO */}
       <section id="home" className="relative overflow-hidden">
-        <div className="mx-auto grid max-w-6xl items-center gap-10 px-6 py-16 md:grid-cols-2 md:py-24">
+        <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-14 sm:px-6 md:grid-cols-2 md:py-24">
           <div data-reveal>
             <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm text-white/80">
               {BRAND.legal} • Trusted by real businesses • Custom plans only
             </p>
 
-            <h1 className="mt-6 text-5xl font-extrabold leading-tight md:text-6xl">
-              Build trust online.
-              <span className="block text-emerald-300">Convert attention into customers.</span>
+            <h1 className="mt-6 text-4xl font-extrabold leading-tight sm:text-5xl md:text-6xl">
+              Grow your brand with content that sells.
+              <span className="block text-emerald-300">Wovo turns attention into booked customers.</span>
             </h1>
 
             <p className="mt-6 max-w-xl text-lg text-white/75">
-              Social media, content, websites, and lead systems built to produce calls and revenue. Serving businesses
-              in all 50 states.
+              Social media, web, AI-assisted creative, and lead systems built for local businesses that want predictable growth.
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <a
                 href="#contact"
-                className="rounded-2xl bg-emerald-400 px-6 py-4 text-center font-extrabold text-black transition hover:bg-emerald-300"
+                className="rounded-2xl bg-emerald-400 px-6 py-3.5 text-center font-extrabold text-black transition hover:bg-emerald-300"
               >
                 Request a Plan
               </a>
               <a
-                href={`sms:${BRAND.phone}`}
-                className="rounded-2xl border border-emerald-400/35 bg-emerald-400/10 px-6 py-4 text-center font-extrabold text-emerald-200 transition hover:bg-emerald-400/20"
+                href="/wovo-ai"
+                className="rounded-2xl border border-emerald-400/35 bg-emerald-400/10 px-6 py-3.5 text-center font-extrabold text-emerald-200 transition hover:bg-emerald-400/20"
               >
-                Call / Text
+                Try Wovo AI
               </a>
             </div>
 
@@ -394,7 +394,7 @@ export default function Home() {
           </div>
 
           {/* HERO RIGHT CARD */}
-          <div data-reveal className="rounded-3xl border border-white/10 bg-white/5 p-8 shadow-[0_30px_120px_rgba(0,0,0,0.35)] md:p-10">
+          <div data-reveal className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-[0_30px_120px_rgba(0,0,0,0.35)] sm:p-8 md:p-10">
             <p className="text-xs font-bold tracking-widest text-white/60">NO PUBLIC PRICING • CUSTOM PLAN</p>
             <h3 className="mt-3 text-2xl font-extrabold md:text-3xl">
               Packages built for your workload.
@@ -447,7 +447,7 @@ export default function Home() {
 
       {/* PROVEN GROWTH */}
       <section className="border-y border-white/10 bg-white/5">
-        <div className="mx-auto max-w-6xl px-6 py-10" data-reveal>
+        <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6" data-reveal>
           <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="text-sm font-semibold tracking-wide text-white/85">Proven growth snapshots</p>
@@ -474,7 +474,7 @@ export default function Home() {
           title="Built to generate attention — and convert it"
           subtitle="You can pick what you need—from monthly fly-outs to full-service management—or we can build it end-to-end."
         />
-        <div className="mx-auto mt-8 max-w-6xl px-6">
+        <div className="mx-auto mt-8 max-w-6xl px-4 sm:px-6">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {services.map((s) => (
               <div
@@ -498,7 +498,7 @@ export default function Home() {
           subtitle="We track outcomes: reach, trust, and conversions (calls, bookings, sales)."
         />
 
-        <div className="mx-auto mt-8 max-w-6xl px-6">
+        <div className="mx-auto mt-8 max-w-6xl px-4 sm:px-6">
           <div className="grid gap-4 md:grid-cols-3">
             {proofStats.map((p) => (
               <div
@@ -541,7 +541,7 @@ export default function Home() {
           title="Simple, fast, consistent"
           subtitle="Discovery → execution → optimization. Clear steps, clean delivery."
         />
-        <div className="mx-auto mt-8 max-w-6xl px-6">
+        <div className="mx-auto mt-8 max-w-6xl px-4 sm:px-6">
           <div className="grid gap-4 md:grid-cols-3">
             {[
               {
@@ -583,7 +583,7 @@ export default function Home() {
           title="Anonymized results across industries"
           subtitle="Metrics-only outcomes from recent campaigns."
         />
-        <div className="mx-auto mt-8 max-w-6xl px-6">
+        <div className="mx-auto mt-8 max-w-6xl px-4 sm:px-6">
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {provenResults.map((result) => (
               <div
@@ -607,7 +607,7 @@ export default function Home() {
           title="About Wovo Media"
           subtitle="Serving businesses in all 50 states with nationwide digital growth for local businesses."
         />
-        <div className="mx-auto mt-8 max-w-6xl px-6">
+        <div className="mx-auto mt-8 max-w-6xl px-4 sm:px-6">
           <div className="grid gap-6 md:grid-cols-2">
             <div data-reveal className="rounded-3xl border border-white/10 bg-white/5 p-6">
               <div className="text-sm font-semibold text-white/70">Who we are</div>
@@ -650,7 +650,7 @@ export default function Home() {
           subtitle="Serving all 50 states — now working with businesses nationwide."
         />
 
-        <div className="mx-auto mt-8 max-w-6xl px-6">
+        <div className="mx-auto mt-8 max-w-6xl px-4 sm:px-6">
           <div data-reveal className="rounded-3xl border border-white/10 bg-black/25 p-8 md:p-10">
             <div className="mb-6 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/70">
               Serving businesses in all 50 states. Nationwide digital growth for local businesses.
