@@ -19,7 +19,7 @@ type GenerateResponse = {
 
 type WovoAiApiResponse = {
   status?: "active" | "inactive";
-  plan?: PlanKey | "none";
+  plan?: string;
   can_generate?: boolean;
   captions?: { facebook?: string; instagram?: string; tiktok?: string } | string[];
   hashtags?: string[];
@@ -55,6 +55,7 @@ type PlanOption = { key: PlanKey; name: string; price: string; priceId?: string;
 const STORAGE_KEY = "wovo-supabase-session";
 const CHAT_HISTORY_STORAGE_PREFIX = "wovo-ai-chat-history";
 const planOrder: PlanKey[] = ["starter", "pro", "agency"];
+const responsePlans = new Set<string>(["none", ...planOrder]);
 
 function createId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -287,6 +288,11 @@ export default function WovoAiPage() {
 
   const getApiErrorMessage = (payload: WovoAiApiResponse) => payload.error ?? payload.message ?? "Generation failed.";
 
+  const normalizeResponsePlan = (plan: string | undefined, fallback: SubscriptionPayload["plan"]) => {
+    if (!plan || !responsePlans.has(plan)) return fallback;
+    return plan as SubscriptionPayload["plan"];
+  };
+
   const formatTimestamp = (isoDate: string) => {
     const date = new Date(isoDate);
     if (Number.isNaN(date.getTime())) return "";
@@ -343,6 +349,7 @@ export default function WovoAiPage() {
         headers: await authHeaders(),
         body: JSON.stringify({
           topic,
+          message: topic,
           business_name: businessName.trim(),
           business_type: businessType.trim(),
           location: location.trim(),
@@ -369,7 +376,7 @@ export default function WovoAiPage() {
         return {
           ...prev,
           status: payload.status ?? prev.status,
-          plan: (payload.plan as SubscriptionPayload["plan"] | undefined) ?? prev.plan,
+          plan: normalizeResponsePlan(payload.plan, prev.plan),
           remaining: {
             credits_total: creditsTotal,
             credits_remaining: creditsRemaining,
