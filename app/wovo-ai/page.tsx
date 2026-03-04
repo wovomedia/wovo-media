@@ -32,7 +32,13 @@ function parseSessionFromHash(hash: string): Session | null {
   const params = new URLSearchParams(hash.slice(1));
   const accessToken = params.get("access_token");
   if (!accessToken) return null;
-  return { access_token: accessToken, refresh_token: params.get("refresh_token") ?? undefined };
+  const expiresIn = params.get("expires_in");
+  return {
+    access_token: accessToken,
+    refresh_token: params.get("refresh_token") ?? undefined,
+    expires_in: expiresIn ? Number(expiresIn) : undefined,
+    token_type: params.get("token_type") ?? undefined,
+  };
 }
 
 const inputClass = "w-full rounded-xl border border-white/20 bg-black/70 px-3 py-2.5 text-sm text-white outline-none";
@@ -87,14 +93,14 @@ export default function WovoAiPage() {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(fromHash));
           window.history.replaceState({}, document.title, "/wovo-ai");
           setSession(fromHash);
-          supabase.setAccessToken(fromHash.access_token);
+          supabase.setSession(fromHash);
           return;
         }
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
           const parsed = JSON.parse(stored) as Session;
           setSession(parsed);
-          supabase.setAccessToken(parsed.access_token);
+          supabase.setSession(parsed);
         }
       } finally {
         setLoadingSession(false);
@@ -108,8 +114,16 @@ export default function WovoAiPage() {
       if (!session?.access_token) return;
       const { data, error: userError } = await supabase.auth.getUser(session.access_token);
       if (userError || !data.user) {
+        if (userError?.message === "Your session expired. Please sign in again.") {
+          signOut("Your session expired. Please sign in again.");
+          return;
+        }
         setError(mapSupabaseAuthError(userError).message);
         return;
+      }
+      if (data.session) {
+        setSession(data.session);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data.session));
       }
       setAuthUser(data.user as SupabaseAuthUser);
       setEmail(data.user.email ?? "");
@@ -137,13 +151,14 @@ export default function WovoAiPage() {
     return targetIndex > currentPlanIndex ? "Upgrade" : "Downgrade";
   };
 
-  const signOut = () => {
+  const signOut = (message?: string) => {
     localStorage.removeItem(STORAGE_KEY);
-    supabase.setAccessToken(null);
+    supabase.setSession(null);
     setSession(null);
     setAuthUser(null);
     setSubscription(null);
     setMessages([]);
+    if (message) setError(message);
   };
 
   const startCheckout = async (plan: PlanOption) => {
@@ -237,7 +252,7 @@ export default function WovoAiPage() {
               const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
               if (signInError || !data.session) return setError(mapSupabaseAuthError(signInError).message);
               localStorage.setItem(STORAGE_KEY, JSON.stringify(data.session));
-              supabase.setAccessToken(data.session.access_token);
+              supabase.setSession(data.session);
               setSession(data.session);
             }} className="rounded-xl bg-emerald-400 px-4 py-2.5 text-sm font-bold text-black">Sign in</button>
             <button onClick={async () => {

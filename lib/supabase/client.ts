@@ -19,6 +19,23 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 let currentAccessToken: string | null = null;
 let currentSession: Session | null = null;
 
+function setCurrentSession(session: Session | null) {
+  currentSession = session;
+  currentAccessToken = session?.access_token ?? null;
+}
+
+function shouldAttemptRefresh(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const message = error.message.toLowerCase();
+  return (
+    message.includes("expired") ||
+    message.includes("invalid jwt") ||
+    message.includes("jwt") ||
+    message.includes("unauthorized") ||
+    message.includes("401")
+  );
+}
+
 function defaultHeaders(): Headers {
   const headers = new Headers();
   headers.set("apikey", supabaseAnonKey);
@@ -91,23 +108,71 @@ class QueryBuilder<T extends Record<string, unknown>> {
 }
 
 export const supabase = {
+  setSession(session: Session | null) {
+    setCurrentSession(session);
+  },
   setAccessToken(token: string | null) {
-    currentAccessToken = token;
-    currentSession = token ? { access_token: token } : null;
+    setCurrentSession(token ? { access_token: token } : null);
   },
   auth: {
 
     async getSession(): Promise<AuthResult<{ session: Session | null }>> {
       return { data: { session: currentSession }, error: null };
     },
-    async getUser(accessToken?: string): Promise<AuthResult<{ user: AuthUser | null }>> {
+    async refreshSession(): Promise<AuthResult<{ session: Session | null }>> {
+      try {
+        const refreshToken = currentSession?.refresh_token;
+        if (!refreshToken) {
+          setCurrentSession(null);
+          return { data: { session: null }, error: new Error("Your session expired. Please sign in again.") };
+        }
+
+        const data = await supabaseFetch<{ access_token: string; refresh_token?: string; expires_in?: number; token_type?: string }>(
+          "/auth/v1/token?grant_type=refresh_token",
+          {
+            method: "POST",
+            body: JSON.stringify({ refresh_token: refreshToken }),
+          },
+        );
+
+        const session: Session = {
+          access_token: data.access_token,
+          refresh_token: data.refresh_token ?? refreshToken,
+          expires_in: data.expires_in,
+          token_type: data.token_type,
+        };
+        setCurrentSession(session);
+        return { data: { session }, error: null };
+      } catch {
+        setCurrentSession(null);
+        return { data: { session: null }, error: new Error("Your session expired. Please sign in again.") };
+      }
+    },
+    async getUser(accessToken?: string): Promise<AuthResult<{ user: AuthUser | null; session: Session | null }>> {
       try {
         const headers = defaultHeaders();
         if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
         const user = await supabaseFetch<AuthUser>("/auth/v1/user", { headers });
-        return { data: { user }, error: null };
+        return { data: { user, session: null }, error: null };
       } catch (error) {
-        return { data: { user: null }, error: error instanceof Error ? error : new Error("Unable to load user") };
+        if (shouldAttemptRefresh(error)) {
+          const { data: refreshData, error: refreshError } = await this.refreshSession();
+          if (refreshError || !refreshData.session) {
+            return { data: { user: null, session: null }, error: refreshError };
+          }
+
+          try {
+            const user = await supabaseFetch<AuthUser>("/auth/v1/user");
+            return { data: { user, session: refreshData.session }, error: null };
+          } catch (retryError) {
+            return {
+              data: { user: null, session: null },
+              error: retryError instanceof Error ? retryError : new Error("Unable to load user"),
+            };
+          }
+        }
+
+        return { data: { user: null, session: null }, error: error instanceof Error ? error : new Error("Unable to load user") };
       }
     },
     async signUp(payload: { email: string; password: string }): Promise<AuthResult<Record<string, unknown>>> {
@@ -136,8 +201,7 @@ export const supabase = {
           expires_in: data.expires_in,
           token_type: data.token_type,
         };
-        currentAccessToken = session.access_token;
-        currentSession = session;
+        setCurrentSession(session);
         return { data: { session }, error: null };
       } catch (error) {
         return { data: { session: null }, error: error instanceof Error ? error : new Error("Unable to sign in") };
