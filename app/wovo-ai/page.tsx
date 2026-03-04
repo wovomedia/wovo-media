@@ -26,11 +26,29 @@ type WovoAiApiResponse = {
   error?: string;
 };
 
-type ChatMessage = { id: string; role: "user" | "assistant"; text: string; result?: GenerateResponse };
+type ChatHistoryStatus = "idle" | "loading" | "ready" | "empty" | "error";
+
+type StoredChatMessage = {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  result?: GenerateResponse;
+  createdAt?: string;
+};
+
+type ChatMessage = {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  result?: GenerateResponse;
+  createdAt: string;
+  restoredFromHistory?: boolean;
+};
 
 type PlanOption = { key: PlanKey; name: string; price: string; priceId?: string; desc: string; subtext?: string; popular?: boolean };
 
 const STORAGE_KEY = "wovo-supabase-session";
+const CHAT_HISTORY_STORAGE_PREFIX = "wovo-ai-chat-history";
 const planOrder: PlanKey[] = ["starter", "pro", "agency"];
 
 function createId() {
@@ -63,6 +81,8 @@ export default function WovoAiPage() {
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const [referenceImageName, setReferenceImageName] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [historyStatus, setHistoryStatus] = useState<ChatHistoryStatus>("idle");
+  const [historyStatusMessage, setHistoryStatusMessage] = useState("");
   const [generating, setGenerating] = useState(false);
   const [submittingCheckout, setSubmittingCheckout] = useState<PlanKey | null>(null);
   const [openingPortal, setOpeningPortal] = useState(false);
@@ -70,6 +90,54 @@ export default function WovoAiPage() {
   const [info, setInfo] = useState("");
 
   const transcriptRef = useRef<HTMLDivElement | null>(null);
+
+  const withChatMessageDefaults = useCallback((message: Omit<ChatMessage, "createdAt"> & { createdAt?: string }) => ({
+    ...message,
+    createdAt: message.createdAt ?? new Date().toISOString(),
+  }), []);
+
+  const getHistoryKey = useCallback((userId: string) => `${CHAT_HISTORY_STORAGE_PREFIX}:${userId}`, []);
+
+  const loadChatHistory = useCallback((userId: string) => {
+    setHistoryStatus("loading");
+    setHistoryStatusMessage("Loading previous chats…");
+    try {
+      const raw = localStorage.getItem(getHistoryKey(userId));
+      if (!raw) {
+        setMessages([]);
+        setHistoryStatus("empty");
+        setHistoryStatusMessage("No history yet");
+        return;
+      }
+
+      const parsed = JSON.parse(raw) as StoredChatMessage[];
+      if (!Array.isArray(parsed) || parsed.length === 0) {
+        setMessages([]);
+        setHistoryStatus("empty");
+        setHistoryStatusMessage("No history yet");
+        return;
+      }
+
+      const hydrated = parsed.map((message) =>
+        withChatMessageDefaults({
+          id: message.id,
+          role: message.role,
+          text: message.text,
+          result: message.result,
+          createdAt: message.createdAt,
+          restoredFromHistory: true,
+        }),
+      );
+
+      setMessages(hydrated);
+      setHistoryStatus("ready");
+      setHistoryStatusMessage(`Restored ${hydrated.length} messages from history`);
+    } catch {
+      setMessages([]);
+      setHistoryStatus("error");
+      setHistoryStatusMessage("Could not load previous chats");
+    }
+  }, [getHistoryKey, withChatMessageDefaults]);
 
   const plans: PlanOption[] = useMemo(() => [
     { key: "starter", name: "Starter", price: "$24.99", desc: "9 credits/month · 3/week", priceId: process.env.NEXT_PUBLIC_STARTER_PRICE_ID },
@@ -178,6 +246,42 @@ export default function WovoAiPage() {
     setAuthUser(null);
     setSubscription(null);
     setMessages([]);
+    setHistoryStatus("idle");
+    setHistoryStatusMessage("");
+  };
+
+  useEffect(() => {
+    if (!authUser?.id || !session?.access_token) return;
+    loadChatHistory(authUser.id);
+  }, [authUser?.id, loadChatHistory, session?.access_token]);
+
+  useEffect(() => {
+    if (!authUser?.id || !session?.access_token || historyStatus === "loading" || historyStatus === "idle") return;
+    localStorage.setItem(getHistoryKey(authUser.id), JSON.stringify(messages));
+  }, [authUser?.id, getHistoryKey, historyStatus, messages, session?.access_token]);
+
+  const refreshHistory = () => {
+    if (!authUser?.id) return;
+    loadChatHistory(authUser.id);
+  };
+
+  const mapGenerateResponseFromApi = (payload: WovoAiApiResponse): GenerateResponse => {
+    const captions = [payload.captions?.facebook, payload.captions?.instagram, payload.captions?.tiktok]
+      .map((caption) => caption?.trim() ?? "")
+      .filter(Boolean);
+
+    return {
+      captions,
+      hashtags: payload.hashtags ?? [],
+      image_prompt: payload.image_prompt ?? "",
+      image_url: payload.image?.url ?? null,
+    };
+  };
+
+  const formatTimestamp = (isoDate: string) => {
+    const date = new Date(isoDate);
+    if (Number.isNaN(date.getTime())) return "";
+    return date.toLocaleString();
   };
 
   const startCheckout = async (plan: PlanOption) => {
@@ -218,7 +322,11 @@ export default function WovoAiPage() {
     setError("");
 
     const thinkingId = createId();
-    setMessages((prev) => [...prev, { id: createId(), role: "user", text: topic }, { id: thinkingId, role: "assistant", text: "Thinking..." }]);
+    setMessages((prev) => [
+      ...prev,
+      withChatMessageDefaults({ id: createId(), role: "user", text: topic }),
+      withChatMessageDefaults({ id: thinkingId, role: "assistant", text: "Thinking..." }),
+    ]);
 
     try {
       const response = await fetch("/api/wovo-ai", {
@@ -238,16 +346,7 @@ export default function WovoAiPage() {
       const payload = (await response.json()) as WovoAiApiResponse;
       if (!response.ok) throw new Error(payload.error ?? "Generation failed.");
 
-      const captions = [payload.captions?.facebook, payload.captions?.instagram, payload.captions?.tiktok]
-        .map((caption) => caption?.trim() ?? "")
-        .filter(Boolean);
-
-      const result: GenerateResponse = {
-        captions,
-        hashtags: payload.hashtags ?? [],
-        image_prompt: payload.image_prompt ?? "",
-        image_url: payload.image?.url ?? null,
-      };
+      const result = mapGenerateResponseFromApi(payload);
 
       setSubscription((prev) => {
         if (!prev || !payload.updated_credits) return prev;
@@ -265,10 +364,12 @@ export default function WovoAiPage() {
           can_generate: prev.admin_access ? true : creditsRemaining > 0 && (weeklyLimit <= 0 || weeklyUsed < weeklyLimit),
         };
       });
-      setMessages((prev) => prev.map((m) => (m.id === thinkingId ? { id: createId(), role: "assistant", text: "Generated response", result } : m)));
+      setMessages((prev) => prev.map((m) => (m.id === thinkingId ? withChatMessageDefaults({ id: createId(), role: "assistant", text: "Generated response", result }) : m)));
+      setHistoryStatus("ready");
+      setHistoryStatusMessage("History up to date");
       setPrompt("");
     } catch (err) {
-      setMessages((prev) => prev.map((m) => (m.id === thinkingId ? { ...m, text: "Something went wrong. Please try again." } : m)));
+      setMessages((prev) => prev.map((m) => (m.id === thinkingId ? withChatMessageDefaults({ ...m, text: "Something went wrong. Please try again." }) : m)));
       setError(err instanceof Error ? err.message : "Generation failed.");
     } finally {
       setGenerating(false);
@@ -359,9 +460,23 @@ export default function WovoAiPage() {
             </section>
 
             {canChat ? <section className="rounded-2xl border border-white/15 bg-white/5 p-4">
+              <div className="mb-2 flex items-center justify-between gap-2 px-1">
+                <p className="text-xs text-white/60">Transcript</p>
+                <button onClick={refreshHistory} disabled={historyStatus === "loading"} className="rounded-md border border-white/25 px-2 py-1 text-xs text-white/80 disabled:opacity-50">
+                  {historyStatus === "loading" ? "Refreshing..." : "Refresh history"}
+                </button>
+              </div>
+              <p className="mb-2 px-1 text-xs text-white/55">{historyStatusMessage || "Ask for caption ideas to begin."}</p>
+
               <div ref={transcriptRef} className="h-[55vh] space-y-3 overflow-y-auto rounded-xl border border-white/10 bg-black/40 p-3 md:h-[430px]">
-                {messages.length === 0 && <p className="text-sm text-white/60">Ask for caption ideas to begin.</p>}
+                {historyStatus !== "ready" && messages.length === 0 && <p className="text-sm text-white/60">{historyStatusMessage || "Ask for caption ideas to begin."}</p>}
+                {historyStatus === "ready" && messages.length === 0 && <p className="text-sm text-white/60">Ask for caption ideas to begin.</p>}
                 {messages.map((m) => <div key={m.id} className={`max-w-[92%] rounded-xl p-3 ${m.role === "user" ? "ml-auto bg-white/10" : "mr-auto border border-white/15 bg-black/50"}`}>
+                  <div className="mb-1 flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-wide text-white/50">
+                    <span>{m.role}</span>
+                    {m.restoredFromHistory && <span className="rounded-full border border-emerald-300/40 bg-emerald-300/10 px-2 py-0.5 text-emerald-200">Restored from history</span>}
+                    <span>{formatTimestamp(m.createdAt)}</span>
+                  </div>
                   <p className="text-sm whitespace-pre-wrap">{m.text}</p>
                   {m.result && <div className="mt-3 space-y-2 text-sm">
                     <div><p className="font-semibold">Captions:</p><ol className="list-decimal space-y-1 pl-5">{m.result.captions.map((c, i) => <li key={`${m.id}-${i}`}>{c}</li>)}</ol></div>
