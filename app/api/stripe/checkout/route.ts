@@ -19,8 +19,13 @@ function getOrigin(request: Request): string {
 }
 
 export async function POST(request: Request) {
+  const authorization = request.headers.get("authorization");
+  if (!authorization?.startsWith("Bearer ")) {
+    return NextResponse.json({ error: "Missing bearer token." }, { status: 401 });
+  }
+
   try {
-    const { user } = await requireServerUser(request.headers.get("authorization"));
+    const { user } = await requireServerUser(authorization);
     const body = (await request.json()) as CheckoutBody;
     const priceId = (body.priceId ?? "").trim();
 
@@ -46,7 +51,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ url: session.url });
   } catch (error) {
-    if (error instanceof Error && (error.message.includes("Missing bearer token") || error.message.includes("Unable to verify session"))) {
+    if (error instanceof Error && error.message.includes("Missing bearer token")) {
+      return NextResponse.json({ error: "Missing bearer token." }, { status: 401 });
+    }
+    if (error instanceof Error && error.message.includes("Unable to verify session")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     return NextResponse.json(

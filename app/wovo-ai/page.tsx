@@ -36,7 +36,7 @@ type PlanOption = {
   key: "starter" | "pro" | "agency";
   label: string;
   desc: string;
-  priceId: string;
+  priceId?: string;
   popular: boolean;
 };
 
@@ -90,7 +90,7 @@ export default function WovoAiPage() {
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [submittingCheckout, setSubmittingCheckout] = useState<string | null>(null);
+  const [submittingCheckout, setSubmittingCheckout] = useState<PlanOption["key"] | null>(null);
   const [openingPortal, setOpeningPortal] = useState(false);
 
   const [info, setInfo] = useState("");
@@ -98,14 +98,14 @@ export default function WovoAiPage() {
 
   const planOptions: PlanOption[] = useMemo(
     () => [
-      { key: "starter", label: "$24.99 Starter", desc: "9 posts / month · 3/week", priceId: process.env.NEXT_PUBLIC_STARTER_PRICE_ID ?? "", popular: false },
-      { key: "pro", label: "$49.99 Pro", desc: "18 posts / month · 6/week", priceId: process.env.NEXT_PUBLIC_PRO_PRICE_ID ?? "", popular: false },
-      { key: "agency", label: "$99 Agency", desc: "42 posts / month · 14/week", priceId: process.env.NEXT_PUBLIC_AGENCY_PRICE_ID ?? "", popular: true },
+      { key: "starter", label: "$24.99 Starter", desc: "9 posts / month · 3/week", priceId: process.env.NEXT_PUBLIC_STARTER_PRICE_ID, popular: false },
+      { key: "pro", label: "$49.99 Pro", desc: "18 posts / month · 6/week", priceId: process.env.NEXT_PUBLIC_PRO_PRICE_ID, popular: false },
+      { key: "agency", label: "$99 Agency", desc: "42 posts / month · 14/week", priceId: process.env.NEXT_PUBLIC_AGENCY_PRICE_ID, popular: true },
     ],
     [],
   );
 
-  const hasMissingPriceIds = useMemo(() => planOptions.some((plan) => !plan.priceId), [planOptions]);
+  const hasMissingPriceIds = useMemo(() => planOptions.some((plan) => typeof plan.priceId === "undefined"), [planOptions]);
 
   const redirectUrl = useMemo(() => {
     if (typeof window === "undefined") return "";
@@ -264,15 +264,15 @@ export default function WovoAiPage() {
     signOut();
   };
 
-  const startCheckout = async (priceId: string) => {
-    if (!session?.access_token || !priceId) return;
-    setSubmittingCheckout(priceId);
+  const startCheckout = async (plan: PlanOption) => {
+    if (!session?.access_token || !plan.priceId) return;
+    setSubmittingCheckout(plan.key);
     setError("");
     try {
       const response = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: withAuthHeaders(session.access_token),
-        body: JSON.stringify({ priceId }),
+        body: JSON.stringify({ priceId: plan.priceId }),
       });
       const responseText = await response.text();
       const payload = safeJsonParse<{ url?: string; error?: string; message?: string }>(responseText) ?? {};
@@ -388,19 +388,19 @@ export default function WovoAiPage() {
                 <div className="mt-4 grid gap-3 md:grid-cols-3">
                   {planOptions.map((plan) => {
                     const missingPrice = !plan.priceId;
-                    const disabled = submittingCheckout === plan.priceId || missingPrice;
+                    const disabled = submittingCheckout === plan.key || missingPrice;
                     return (
                       <article key={plan.key} className="relative rounded-xl border border-white/20 bg-black/40 p-4">
                         {plan.popular && <span className="absolute right-3 top-3 rounded-full bg-emerald-400 px-2 py-1 text-xs font-semibold text-black">Most popular</span>}
                         <h3 className="font-semibold">{plan.label}</h3>
                         <p className="mt-1 text-sm text-white/70">{plan.desc}</p>
                         <button
-                          onClick={() => void startCheckout(plan.priceId)}
+                          onClick={() => void startCheckout(plan)}
                           disabled={disabled}
                           title={missingPrice ? "Missing price ID for this plan" : ""}
                           className="mt-4 w-full rounded-lg bg-emerald-400 px-3 py-2 text-sm font-bold text-black disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          {submittingCheckout === plan.priceId ? "Starting checkout..." : `Subscribe ${plan.key[0].toUpperCase()}${plan.key.slice(1)}`}
+                          {submittingCheckout === plan.key ? "Starting checkout..." : `Subscribe ${plan.key[0].toUpperCase()}${plan.key.slice(1)}`}
                         </button>
                       </article>
                     );
