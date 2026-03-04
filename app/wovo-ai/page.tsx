@@ -69,6 +69,12 @@ function parseSessionFromHash(hash: string): Session | null {
 }
 
 const inputClass = "w-full rounded-xl border border-white/20 bg-black/70 px-3 py-2.5 text-sm text-white outline-none";
+const quickPromptIdeas = [
+  "Create a week of Instagram Reels ideas for my business",
+  "Write 3 high-converting captions for a local promotion",
+  "Give me a TikTok caption + hook for a behind-the-scenes post",
+  "Build a Facebook post to drive comments and shares",
+];
 
 export default function WovoAiPage() {
   const [session, setSession] = useState<Session | null>(null);
@@ -433,11 +439,18 @@ export default function WovoAiPage() {
     }
   };
 
+  const clearChat = () => {
+    setMessages([]);
+    setHistoryStatus("empty");
+    setHistoryStatusMessage("Chat cleared");
+  };
+
   return (
-    <main className="min-h-screen bg-black px-4 py-6 text-white sm:px-6 sm:py-8">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,#113126_0%,#060808_40%,#020202_100%)] px-4 py-6 text-white sm:px-6 sm:py-8">
       <div className="mx-auto w-full max-w-6xl space-y-5">
-        {!loadingSession && !session && <section className="mx-auto mt-20 max-w-md rounded-2xl border border-white/15 bg-white/5 p-6 text-center">
-          <h1 className="text-2xl font-bold">Sign in to use Wovo AI</h1>
+        {!loadingSession && !session && <section className="mx-auto mt-20 max-w-md rounded-3xl border border-emerald-200/20 bg-black/60 p-6 text-center shadow-[0_0_40px_rgba(16,185,129,0.2)] backdrop-blur">
+          <p className="text-xs uppercase tracking-[0.2em] text-emerald-200/80">Wovo AI</p>
+          <h1 className="mt-2 text-2xl font-bold">Sign in to launch better social content</h1>
           <div className="mt-4 space-y-3 text-left">
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className={inputClass} />
             <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" className={inputClass} />
@@ -460,16 +473,20 @@ export default function WovoAiPage() {
 
         {session && authUser && (
           <>
-            <header className="flex flex-col gap-2 rounded-2xl border border-white/15 bg-white/5 p-5 sm:flex-row sm:items-center sm:justify-between">
-              <div><h1 className="text-xl font-semibold">Wovo AI</h1><p className="text-sm text-white/70">Signed in as {authUser.email}</p></div>
+            <header className="flex flex-col gap-3 rounded-3xl border border-emerald-200/20 bg-black/55 p-5 shadow-[0_0_40px_rgba(16,185,129,0.16)] backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-emerald-200/80">Wovo AI</p>
+                <h1 className="text-2xl font-semibold">Content command center</h1>
+                <p className="text-sm text-white/70">Signed in as {authUser.email}</p>
+              </div>
               <div className="flex gap-2">
                 {active && !isAdmin && <button onClick={() => void openPortal()} disabled={openingPortal} className="rounded-lg border border-white/30 px-4 py-2 text-sm">{openingPortal ? "Opening..." : "Manage Billing"}</button>}
                 <button onClick={signOut} className="rounded-lg border border-white/30 px-4 py-2 text-sm">Sign out</button>
               </div>
             </header>
 
-            <section className="rounded-2xl border border-white/15 bg-white/5 p-5">
-              <h2 className="text-xl font-semibold">Choose your plan</h2>
+            <section className="rounded-3xl border border-white/15 bg-black/45 p-5 backdrop-blur">
+              <h2 className="text-xl font-semibold">Choose your Wovo AI plan</h2>
               <div className="mt-4 grid gap-4 md:grid-cols-3">
                 {plans.map((plan) => {
                   const disabled = Boolean((active && subscription?.plan === plan.key) || !plan.priceId || submittingCheckout === plan.key);
@@ -485,16 +502,29 @@ export default function WovoAiPage() {
               </div>
             </section>
 
-            {canChat ? <section className="rounded-2xl border border-white/15 bg-white/5 p-4">
-              <div className="mb-2 flex items-center justify-between gap-2 px-1">
-                <p className="text-xs text-white/60">Transcript</p>
-                <button onClick={refreshHistory} disabled={historyStatus === "loading"} className="rounded-md border border-white/25 px-2 py-1 text-xs text-white/80 disabled:opacity-50">
-                  {historyStatus === "loading" ? "Refreshing..." : "Refresh history"}
-                </button>
+            {canChat ? <section className="rounded-3xl border border-white/15 bg-black/45 p-4 backdrop-blur">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1">
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-emerald-100/60">Wovo AI chat</p>
+                  <p className="text-sm text-white/70">{historyStatusMessage || "Ask for caption ideas to begin."}</p>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={refreshHistory} disabled={historyStatus === "loading"} className="rounded-md border border-white/25 px-2 py-1 text-xs text-white/80 disabled:opacity-50">
+                    {historyStatus === "loading" ? "Refreshing..." : "Refresh history"}
+                  </button>
+                  <button onClick={clearChat} disabled={messages.length === 0} className="rounded-md border border-white/25 px-2 py-1 text-xs text-white/80 disabled:opacity-40">
+                    Clear chat
+                  </button>
+                </div>
               </div>
-              <p className="mb-2 px-1 text-xs text-white/55">{historyStatusMessage || "Ask for caption ideas to begin."}</p>
 
-              <div ref={transcriptRef} className="h-[55vh] space-y-3 overflow-y-auto rounded-xl border border-white/10 bg-black/40 p-3 md:h-[430px]">
+              <div className="mb-3 flex flex-wrap gap-2">
+                {quickPromptIdeas.map((idea) => <button key={idea} onClick={() => setPrompt(idea)} className="rounded-full border border-emerald-200/25 bg-emerald-300/10 px-3 py-1 text-xs text-emerald-100 hover:bg-emerald-300/20">
+                  {idea}
+                </button>)}
+              </div>
+
+              <div ref={transcriptRef} className="h-[55vh] space-y-3 overflow-y-auto rounded-2xl border border-white/10 bg-black/40 p-3 md:h-[430px]">
                 {historyStatus !== "ready" && messages.length === 0 && <p className="text-sm text-white/60">{historyStatusMessage || "Ask for caption ideas to begin."}</p>}
                 {historyStatus === "ready" && messages.length === 0 && <p className="text-sm text-white/60">Ask for caption ideas to begin.</p>}
                 {messages.map((m) => <div key={m.id} className={`max-w-[92%] rounded-xl p-3 ${m.role === "user" ? "ml-auto bg-white/10" : "mr-auto border border-white/15 bg-black/50"}`}>
@@ -503,7 +533,7 @@ export default function WovoAiPage() {
                     {m.restoredFromHistory && <span className="rounded-full border border-emerald-300/40 bg-emerald-300/10 px-2 py-0.5 text-emerald-200">Restored from history</span>}
                     <span>{formatTimestamp(m.createdAt)}</span>
                   </div>
-                  <p className="text-sm whitespace-pre-wrap">{m.text}</p>
+                  <p className="text-sm whitespace-pre-wrap">{m.text === "Thinking..." ? "Wovo AI is building your content strategy…" : m.text}</p>
                   {m.result && <div className="mt-3 space-y-2 text-sm">
                     <div><p className="font-semibold">Captions:</p><ol className="list-decimal space-y-1 pl-5">{m.result.captions.map((c, i) => <li key={`${m.id}-${i}`}>{c}</li>)}</ol></div>
                     <p><span className="font-semibold">Hashtags:</span> {m.result.hashtags.join(" ")}</p>
@@ -513,7 +543,7 @@ export default function WovoAiPage() {
                 </div>)}
               </div>
 
-              <div className="sticky bottom-0 mt-3 rounded-xl border border-white/10 bg-black/80 p-3">
+              <div className="sticky bottom-0 mt-3 rounded-2xl border border-emerald-200/15 bg-black/85 p-3">
                 {blocked && <p className="mb-2 text-xs text-amber-300">{subscription?.message ?? "You have reached your credit limit."}</p>}
                 <div className="mb-2 grid gap-2 sm:grid-cols-2">
                   <input value={businessName} onChange={(e) => setBusinessName(e.target.value)} className={inputClass} placeholder="Business name" disabled={generating || blocked} />
@@ -533,7 +563,7 @@ export default function WovoAiPage() {
                 <p className="mt-2 text-xs text-white/60">Enter to send • Shift+Enter for new line</p>
                 <p className="mt-1 text-xs text-white/60">Credits remaining: {remaining.credits_remaining} · Weekly remaining: {weeklyRemaining}</p>
               </div>
-            </section> : <section className="rounded-2xl border border-white/15 bg-white/5 p-5"><p className="text-white/80">Subscribe to an active plan to use the generator.</p></section>}
+            </section> : <section className="rounded-3xl border border-white/15 bg-black/45 p-5"><p className="text-white/80">Subscribe to an active plan to use Wovo AI chat + content generation.</p></section>}
           </>
         )}
 
