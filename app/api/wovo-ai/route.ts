@@ -1,6 +1,6 @@
 import OpenAI from "openai";
-import { NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 type WovoAiRequestBody = {
@@ -18,13 +18,15 @@ type PromptResult = {
   [key: string]: unknown;
 };
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
 export async function POST(request: Request) {
   try {
     if (!process.env.OPENAI_API_KEY) {
-      return NextResponse.json({ error: "Missing OPENAI_API_KEY environment variable." }, { status: 500 });
+      return Response.json({ error: "Missing OPENAI_API_KEY environment variable" }, { status: 500 });
     }
+
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
 
     const body = (await request.json()) as WovoAiRequestBody;
 
@@ -36,7 +38,7 @@ export async function POST(request: Request) {
     const goal = body.goal?.trim() ?? "";
 
     if (!business_name || !business_type || !location || !contact || !topic || !goal) {
-      return NextResponse.json(
+      return Response.json(
         {
           error:
             "Missing required fields. Please provide business_name, business_type, location, contact, topic, and goal.",
@@ -62,7 +64,7 @@ export async function POST(request: Request) {
     const rawText = response.output_text?.trim() ?? "";
 
     if (!rawText) {
-      return NextResponse.json({ error: "OpenAI returned an empty response." }, { status: 502 });
+      return Response.json({ error: "OpenAI returned an empty response." }, { status: 502 });
     }
 
     let parsed: PromptResult | null = null;
@@ -70,7 +72,7 @@ export async function POST(request: Request) {
     try {
       parsed = JSON.parse(rawText) as PromptResult;
     } catch {
-      return NextResponse.json(
+      return Response.json(
         {
           captions: { raw: rawText },
           generated_image_data: null,
@@ -80,7 +82,7 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json(
+    return Response.json(
       {
         captions: parsed.captions ?? null,
         generated_image_data: parsed.generated_image_data ?? null,
@@ -89,7 +91,7 @@ export async function POST(request: Request) {
       { status: 200 },
     );
   } catch (error) {
-    return NextResponse.json(
+    return Response.json(
       {
         error: error instanceof Error ? error.message : "Unexpected server error.",
       },
