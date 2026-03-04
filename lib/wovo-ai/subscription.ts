@@ -1,4 +1,5 @@
 import { supabaseServiceRoleRequest } from "@/lib/supabase/server";
+import { type UnifiedSubscriptionResponse } from "@/lib/wovo-ai/contracts";
 import { getPlanConfig, getPlanFromPriceId, isPaidStatus, type PlanName } from "@/lib/wovo-ai/plans";
 import type { StripeSubscription } from "@/lib/stripe";
 
@@ -16,38 +17,42 @@ type SubscriptionRow = {
   week_start: string | null;
 };
 
-export type SubscriptionStatusPayload = {
-  status: string | null;
-  plan_key: PlanName | null;
-  credits_used_month: number;
-  credits_limit_month: number;
-  period_end: string | null;
-  can_generate: boolean;
-  weekly_limit: number;
-  weekly_used: number;
-};
+function getDefaultRemaining(plan: PlanName | "none") {
+  if (plan === "none") {
+    return { credits_total: 0, credits_remaining: 0, weekly_limit: 0, weekly_used: 0 };
+  }
 
-function toStatusPayload(row: SubscriptionRow | null): SubscriptionStatusPayload {
-  const creditsTotal = row?.credits_total ?? 0;
-  const creditsRemaining = row?.credits_remaining ?? 0;
-  const creditsUsed = Math.max(creditsTotal - creditsRemaining, 0);
-  const status = row?.status ?? null;
-  const weeklyLimit = row?.weekly_limit ?? 0;
-  const weeklyUsed = row?.weekly_used ?? 0;
-
+  const config = getPlanConfig(plan);
   return {
-    status,
-    plan_key: row?.plan ?? null,
-    credits_used_month: creditsUsed,
-    credits_limit_month: creditsTotal,
-    period_end: row?.current_period_end ?? null,
-    can_generate: isPaidStatus(status) && creditsRemaining > 0 && (weeklyLimit <= 0 || weeklyUsed < weeklyLimit),
-    weekly_limit: weeklyLimit,
-    weekly_used: weeklyUsed,
+    credits_total: config.monthlyCredits,
+    credits_remaining: config.monthlyCredits,
+    weekly_limit: config.weeklyLimit,
+    weekly_used: 0,
   };
 }
 
-export async function getSubscriptionStatus(userId: string): Promise<SubscriptionStatusPayload> {
+function toStatusPayload(row: SubscriptionRow | null): UnifiedSubscriptionResponse {
+  const plan = row?.plan ?? "none";
+  const defaults = getDefaultRemaining(plan);
+  const remaining = {
+    credits_total: row?.credits_total ?? defaults.credits_total,
+    credits_remaining: row?.credits_remaining ?? row?.credits_total ?? defaults.credits_remaining,
+    weekly_limit: row?.weekly_limit ?? defaults.weekly_limit,
+    weekly_used: row?.weekly_used ?? defaults.weekly_used,
+  };
+
+  const status: "active" | "inactive" = isPaidStatus(row?.status) ? "active" : "inactive";
+  const weeklyAllowed = remaining.weekly_limit <= 0 || remaining.weekly_used < remaining.weekly_limit;
+
+  return {
+    status,
+    plan,
+    remaining,
+    can_generate: status === "active" && remaining.credits_remaining > 0 && weeklyAllowed,
+  };
+}
+
+export async function getSubscriptionStatus(userId: string): Promise<UnifiedSubscriptionResponse> {
   const rows = await supabaseServiceRoleRequest<SubscriptionRow[]>(
     `/rest/v1/subscriptions?select=user_id,plan,status,current_period_start,current_period_end,credits_total,credits_remaining,weekly_limit,weekly_used,week_start,stripe_customer_id&user_id=eq.${userId}&limit=1`,
   );

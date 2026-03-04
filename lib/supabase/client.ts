@@ -17,6 +17,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 
 let currentAccessToken: string | null = null;
+let currentSession: Session | null = null;
 
 function defaultHeaders(): Headers {
   const headers = new Headers();
@@ -92,8 +93,13 @@ class QueryBuilder<T extends Record<string, unknown>> {
 export const supabase = {
   setAccessToken(token: string | null) {
     currentAccessToken = token;
+    currentSession = token ? { access_token: token } : null;
   },
   auth: {
+
+    async getSession(): Promise<AuthResult<{ session: Session | null }>> {
+      return { data: { session: currentSession }, error: null };
+    },
     async getUser(accessToken?: string): Promise<AuthResult<{ user: AuthUser | null }>> {
       try {
         const headers = defaultHeaders();
@@ -131,6 +137,7 @@ export const supabase = {
           token_type: data.token_type,
         };
         currentAccessToken = session.access_token;
+        currentSession = session;
         return { data: { session }, error: null };
       } catch (error) {
         return { data: { session: null }, error: error instanceof Error ? error : new Error("Unable to sign in") };

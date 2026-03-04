@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { createCheckoutSession } from "@/lib/stripe";
+import { createCheckoutSession, createPortalSession } from "@/lib/stripe";
 import { requireServerUser } from "@/lib/supabase/server";
 import { ensureStripeCustomerForUser } from "@/lib/wovo-ai/billing";
-import { getAllowedPriceIds, getPlanFromPriceId, isPaidStatus } from "@/lib/wovo-ai/plans";
+import { getAllowedPriceIds, isPaidStatus } from "@/lib/wovo-ai/plans";
 import { getRawSubscription } from "@/lib/wovo-ai/subscription";
 
 type CheckoutBody = {
@@ -39,14 +39,14 @@ export async function POST(request: Request) {
     }
 
     const existing = await getRawSubscription(user.id);
-    const requestedPlan = getPlanFromPriceId(priceId);
-    if (requestedPlan && existing?.plan === requestedPlan && isPaidStatus(existing.status)) {
-      return NextResponse.json({ error: "You are already subscribed to this plan." }, { status: 409 });
+    const siteUrl = getSiteUrlFromRequest(request);
+
+    if (isPaidStatus(existing?.status) && existing?.stripe_customer_id) {
+      const portal = await createPortalSession(existing.stripe_customer_id, `${siteUrl}/wovo-ai`);
+      return NextResponse.json({ url: portal.url });
     }
 
     const stripeCustomerId = await ensureStripeCustomerForUser(user.id, user.email);
-    const siteUrl = getSiteUrlFromRequest(request);
-
     const session = await createCheckoutSession({
       customerId: stripeCustomerId,
       priceId,
