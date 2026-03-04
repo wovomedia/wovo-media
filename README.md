@@ -37,11 +37,34 @@ Required environment variables:
 
 Supabase SQL setup:
 
-1. Run your existing profile/auth SQL setup.
-2. Run `supabase/wovo-ai-schema.sql` to create:
+1. Apply all SQL migration files in `supabase/migrations/` (in order).
+2. Then apply `supabase/wovo-ai-schema.sql` if needed for:
    - `public.business_settings`
    - `public.generations`
    - RLS policies for both tables.
+
+Validation query (run in Supabase SQL editor):
+
+```sql
+-- 1) Confirm subscriptions table exists
+select to_regclass('public.subscriptions') as subscriptions_table;
+
+-- 2) Confirm consume_generation_credit(uuid) function exists
+select
+  n.nspname as schema,
+  p.proname as function_name,
+  pg_get_function_identity_arguments(p.oid) as args
+from pg_proc p
+join pg_namespace n on n.oid = p.pronamespace
+where n.nspname = 'public'
+  and p.proname = 'consume_generation_credit'
+  and pg_get_function_identity_arguments(p.oid) = 'uuid';
+
+-- 3) Confirm generations table exists
+select to_regclass('public.generations') as generations_table;
+```
+
+Applying migrations before calling `/api/wovo-ai/generate` or `/api/wovo-ai` prevents the `PGRST202` runtime failure shown in the UI.
 
 ## Learn More
 
