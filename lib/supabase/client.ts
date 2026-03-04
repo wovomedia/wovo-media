@@ -25,6 +25,13 @@ export type SupabaseSession = {
   };
 };
 
+type SupabaseAuthErrorPayload = {
+  error?: string;
+  error_code?: string;
+  msg?: string;
+  message?: string;
+};
+
 const buildUrl = (path: string) => `${supabaseUrl}${path}`;
 
 export const supabaseClient = {
@@ -51,6 +58,55 @@ export const supabaseClient = {
       }
 
       return response.json();
+    },
+    async signUpWithPassword(email: string, password: string) {
+      const response = await fetch(buildUrl("/auth/v1/signup"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: supabaseAnonKey,
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as SupabaseAuthErrorPayload | null;
+        throw payload ?? { message: "Unable to create account." };
+      }
+
+      return response.json();
+    },
+    async signInWithPassword(email: string, password: string): Promise<SupabaseSession> {
+      const response = await fetch(buildUrl("/auth/v1/token?grant_type=password"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: supabaseAnonKey,
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as SupabaseAuthErrorPayload | null;
+        throw payload ?? { message: "Unable to sign in." };
+      }
+
+      return (await response.json()) as SupabaseSession;
+    },
+    async sendPasswordReset(email: string, redirectTo: string) {
+      const response = await fetch(buildUrl("/auth/v1/recover"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: supabaseAnonKey,
+        },
+        body: JSON.stringify({ email, redirect_to: redirectTo }),
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as SupabaseAuthErrorPayload | null;
+        throw payload ?? { message: "Unable to send password reset email." };
+      }
     },
   },
   from(table: string) {
