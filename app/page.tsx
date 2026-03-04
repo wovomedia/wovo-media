@@ -14,7 +14,6 @@ import React, { useEffect, useState } from "react";
 const BRAND = {
   name: "Wovo Media",
   legal: "Wovo Media LLC",
-  url: "https://wovomedia.com",
   email: "Support@wovomedia.com",
   phone: "931-458-3255",
 };
@@ -98,6 +97,8 @@ const proofStats = [
 /** Scroll reveal hook (no libraries) */
 function useRevealOnScroll() {
   useEffect(() => {
+    document.documentElement.classList.add("js");
+
     const nodes = Array.from(document.querySelectorAll<HTMLElement>("[data-reveal]"));
     if (!nodes.length) return;
 
@@ -115,61 +116,13 @@ function useRevealOnScroll() {
 
     nodes.forEach((n) => io.observe(n));
 
-    return () => io.disconnect();
+    return () => {
+      io.disconnect();
+      document.documentElement.classList.remove("js");
+    };
   }, []);
 }
 
-
-function Nav() {
-  return (
-    <header className="sticky top-0 z-50 border-b border-white/10 bg-black/40 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
-        <a href="#home" className="font-extrabold tracking-tight text-white">
-          {BRAND.name}
-        </a>
-
-        <nav className="hidden items-center gap-6 text-sm font-semibold text-white/80 md:flex">
-          <a className="transition hover:text-white" href="/wovo-ai">
-            Wovo AI
-          </a>
-          <a className="transition hover:text-white" href="#services">
-            Services
-          </a>
-          <a className="transition hover:text-white" href="#results">
-            Results
-          </a>
-          <a className="transition hover:text-white" href="#process">
-            Process
-          </a>
-          <a className="transition hover:text-white" href="#growth">
-            Proven Growth
-          </a>
-          <a className="transition hover:text-white" href="#about">
-            About
-          </a>
-          <a className="transition hover:text-white" href="#contact">
-            Contact
-          </a>
-        </nav>
-
-        <div className="flex items-center gap-3">
-          <a
-            href={`sms:${BRAND.phone}`}
-            className="hidden rounded-xl border border-emerald-400/35 bg-emerald-400/10 px-4 py-2 text-sm font-bold text-emerald-200 transition hover:bg-emerald-400/20 sm:inline-flex"
-          >
-            Text
-          </a>
-          <a
-            href="#contact"
-            className="rounded-xl bg-emerald-400 px-4 py-2 text-sm font-extrabold text-black transition hover:bg-emerald-300"
-          >
-            Book a Call
-          </a>
-        </div>
-      </div>
-    </header>
-  );
-}
 
 function SectionHeading({
   kicker,
@@ -293,7 +246,6 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-black text-white">
-      <Nav />
       <MobileCtaBar />
 
       {/* Animated emerald gradient backdrop */}
@@ -336,13 +288,17 @@ export default function Home() {
             0% { transform: translateX(-10%); }
             100% { transform: translateX(10%); }
           }
-          /* Scroll reveal */
+          /* Scroll reveal: default visible for no-JS fallback */
           [data-reveal] {
-            opacity: 0;
-            transform: translateY(18px);
+            opacity: 1;
+            transform: translateY(0);
             transition: opacity 700ms ease, transform 700ms ease;
           }
-          [data-reveal][data-revealed="true"] {
+          .js [data-reveal] {
+            opacity: 0;
+            transform: translateY(18px);
+          }
+          .js [data-reveal][data-revealed="true"] {
             opacity: 1;
             transform: translateY(0);
           }
@@ -445,27 +401,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* PROVEN GROWTH */}
-      <section className="border-y border-white/10 bg-white/5">
-        <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6" data-reveal>
-          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="text-sm font-semibold tracking-wide text-white/85">Proven growth snapshots</p>
-              <p className="mt-1 text-xs text-white/55">Serving businesses in all 50 states.</p>
-            </div>
-          </div>
 
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {provenResults.map((result) => (
-              <div key={result.label} className="rounded-3xl border border-white/10 bg-black/20 p-5">
-                <div className="text-xs font-semibold uppercase tracking-widest text-white/60">{result.label}</div>
-                <div className="mt-3 text-2xl font-extrabold text-emerald-300">{result.metric}</div>
-                <div className="mt-2 text-sm text-white/65">{result.detail}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* SERVICES */}
       <section id="services" className="py-14">
@@ -642,6 +578,59 @@ export default function Home() {
         </div>
       </section>
 
+
+      {/* ABOUT WOVO AI */}
+      <section id="about-ai" className="border-y border-white/10 bg-white/5 py-14">
+        <SectionHeading
+          kicker="WOVO AI"
+          title="About Wovo AI"
+          subtitle="AI-powered caption and creative support built for speed, consistency, and conversion-focused content."
+        />
+        <div className="mx-auto mt-8 max-w-6xl px-4 sm:px-6">
+          <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
+            <div data-reveal className="rounded-3xl border border-white/10 bg-black/25 p-6">
+              <h3 className="text-2xl font-extrabold text-white">Built for teams that need content now.</h3>
+              <p className="mt-3 text-white/70">
+                Wovo AI helps businesses create platform-ready captions and creative direction in minutes. It uses your
+                saved business context so output stays relevant to your market, audience, and goals.
+              </p>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                {[
+                  "Fast caption generation for multiple platforms",
+                  "Profile-aware prompts for more relevant output",
+                  "Cleaner workflow for weekly content planning",
+                  "Designed to support real lead-generation campaigns",
+                ].map((item) => (
+                  <div key={item} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/75">
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div data-reveal className="rounded-3xl border border-white/10 bg-black/20 p-6">
+              <div className="text-sm font-semibold text-white/70">Inside Wovo AI</div>
+              <div className="mt-4 space-y-3">
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="text-sm font-semibold text-white">Sign in + save business profile</div>
+                  <p className="mt-1 text-sm text-white/65">Keep your business details ready so outputs stay consistent.</p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="text-sm font-semibold text-white">Generate captions + concepts</div>
+                  <p className="mt-1 text-sm text-white/65">Create content ideas for Facebook, Instagram, and TikTok quickly.</p>
+                </div>
+                <a
+                  href="/wovo-ai"
+                  className="inline-flex w-full items-center justify-center rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-extrabold text-black transition hover:bg-emerald-300"
+                >
+                  Open Wovo AI
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* CONTACT */}
       <section id="contact" className="py-16">
         <SectionHeading
@@ -747,12 +736,6 @@ export default function Home() {
             </form>
           </div>
 
-          <footer className="mt-10 border-t border-white/10 pt-6 text-center text-xs text-white/55">
-            © {new Date().getFullYear()} {BRAND.legal} •{" "}
-            <a className="underline" href={BRAND.url} target="_blank" rel="noreferrer">
-              {BRAND.url.replace("https://", "")}
-            </a>
-          </footer>
         </div>
 
         {/* Spacer so the mobile sticky bar doesn't cover footer */}
