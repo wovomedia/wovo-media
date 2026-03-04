@@ -13,8 +13,13 @@ function getOrigin(request: Request): string {
 }
 
 export async function POST(request: Request) {
+  const authorization = request.headers.get("authorization");
+  if (!authorization?.startsWith("Bearer ")) {
+    return NextResponse.json({ error: "Missing bearer token." }, { status: 401 });
+  }
+
   try {
-    const { user } = await requireServerUser(request.headers.get("authorization"));
+    const { user } = await requireServerUser(authorization);
     const rows = await supabaseServiceRoleRequest<Array<{ stripe_customer_id: string | null }>>(
       `/rest/v1/subscriptions?select=stripe_customer_id&user_id=eq.${user.id}&limit=1`,
     );
@@ -27,7 +32,10 @@ export async function POST(request: Request) {
     const session = await createPortalSession(stripeCustomerId, `${getOrigin(request)}/wovo-ai`);
     return NextResponse.json({ url: session.url });
   } catch (error) {
-    if (error instanceof Error && (error.message.includes("Missing bearer token") || error.message.includes("Unable to verify session"))) {
+    if (error instanceof Error && error.message.includes("Missing bearer token")) {
+      return NextResponse.json({ error: "Missing bearer token." }, { status: 401 });
+    }
+    if (error instanceof Error && error.message.includes("Unable to verify session")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     return NextResponse.json(
