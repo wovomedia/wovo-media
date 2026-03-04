@@ -66,6 +66,55 @@ select to_regclass('public.generations') as generations_table;
 
 Applying migrations before calling `/api/wovo-ai/generate` or `/api/wovo-ai` prevents the `PGRST202` runtime failure shown in the UI.
 
+## DB migration required (before Wovo AI API deploys)
+
+For any release that includes Wovo AI API changes, run this migration gate in CI/CD **before** the deploy step.
+
+1. Apply all SQL files in `supabase/migrations/` in lexical order.
+2. Run the validation queries below.
+3. Fail the pipeline immediately if any query does not pass.
+
+Example CI/CD gate:
+
+```bash
+set -euo pipefail
+
+# 1) Apply migrations in order.
+for migration in $(find supabase/migrations -maxdepth 1 -type f -name '*.sql' | sort); do
+  psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f "$migration"
+done
+
+# 2) Validation checks (must all pass).
+psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 <<'SQL'
+do $$
+begin
+  -- Check function signature: consume_generation_credit(uuid)
+  if not exists (
+    select 1
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.proname = 'consume_generation_credit'
+      and pg_get_function_identity_arguments(p.oid) = 'uuid'
+  ) then
+    raise exception 'Missing function public.consume_generation_credit(uuid)';
+  end if;
+
+  -- Check required tables.
+  if to_regclass('public.subscriptions') is null then
+    raise exception 'Missing table public.subscriptions';
+  end if;
+
+  if to_regclass('public.generations') is null then
+    raise exception 'Missing table public.generations';
+  end if;
+end
+$$;
+SQL
+```
+
+If the migration gate fails, block deployment until the schema is corrected.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
