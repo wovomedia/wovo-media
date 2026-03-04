@@ -18,11 +18,16 @@ type GenerateResponse = {
 };
 
 type WovoAiApiResponse = {
-  captions?: { facebook?: string; instagram?: string; tiktok?: string };
+  status?: "active" | "inactive";
+  plan?: PlanKey | "none";
+  can_generate?: boolean;
+  captions?: { facebook?: string; instagram?: string; tiktok?: string } | string[];
   hashtags?: string[];
   image_prompt?: string;
   image?: { url?: string } | null;
+  remaining?: { credits_remaining?: number; credits_total?: number; weekly_used?: number; weekly_limit?: number };
   updated_credits?: { remaining?: number; total?: number; weekly_used?: number; weekly_limit?: number };
+  message?: string;
   error?: string;
 };
 
@@ -266,9 +271,11 @@ export default function WovoAiPage() {
   };
 
   const mapGenerateResponseFromApi = (payload: WovoAiApiResponse): GenerateResponse => {
-    const captions = [payload.captions?.facebook, payload.captions?.instagram, payload.captions?.tiktok]
-      .map((caption) => caption?.trim() ?? "")
-      .filter(Boolean);
+    const captions = Array.isArray(payload.captions)
+      ? payload.captions.map((caption) => caption.trim()).filter(Boolean)
+      : [payload.captions?.facebook, payload.captions?.instagram, payload.captions?.tiktok]
+          .map((caption) => caption?.trim() ?? "")
+          .filter(Boolean);
 
     return {
       captions,
@@ -277,6 +284,8 @@ export default function WovoAiPage() {
       image_url: payload.image?.url ?? null,
     };
   };
+
+  const getApiErrorMessage = (payload: WovoAiApiResponse) => payload.error ?? payload.message ?? "Generation failed.";
 
   const formatTimestamp = (isoDate: string) => {
     const date = new Date(isoDate);
@@ -341,27 +350,36 @@ export default function WovoAiPage() {
           goal: goal.trim(),
           include_image: Boolean(referenceImage),
           image_base64: referenceImage,
+          reference_image: referenceImage,
         }),
       });
       const payload = (await response.json()) as WovoAiApiResponse;
-      if (!response.ok) throw new Error(payload.error ?? "Generation failed.");
+      if (!response.ok) throw new Error(getApiErrorMessage(payload));
 
       const result = mapGenerateResponseFromApi(payload);
 
       setSubscription((prev) => {
-        if (!prev || !payload.updated_credits) return prev;
-        const creditsRemaining = payload.updated_credits.remaining ?? prev.remaining.credits_remaining;
-        const weeklyUsed = payload.updated_credits.weekly_used ?? prev.remaining.weekly_used;
-        const weeklyLimit = payload.updated_credits.weekly_limit ?? prev.remaining.weekly_limit;
+        if (!prev) return prev;
+
+        const creditsRemaining = payload.updated_credits?.remaining ?? payload.remaining?.credits_remaining ?? prev.remaining.credits_remaining;
+        const weeklyUsed = payload.updated_credits?.weekly_used ?? payload.remaining?.weekly_used ?? prev.remaining.weekly_used;
+        const weeklyLimit = payload.updated_credits?.weekly_limit ?? payload.remaining?.weekly_limit ?? prev.remaining.weekly_limit;
+        const creditsTotal = payload.updated_credits?.total ?? payload.remaining?.credits_total ?? prev.remaining.credits_total;
+
         return {
           ...prev,
+          status: payload.status ?? prev.status,
+          plan: (payload.plan as SubscriptionPayload["plan"] | undefined) ?? prev.plan,
           remaining: {
-            credits_total: payload.updated_credits.total ?? prev.remaining.credits_total,
+            credits_total: creditsTotal,
             credits_remaining: creditsRemaining,
             weekly_used: weeklyUsed,
             weekly_limit: weeklyLimit,
           },
-          can_generate: prev.admin_access ? true : creditsRemaining > 0 && (weeklyLimit <= 0 || weeklyUsed < weeklyLimit),
+          can_generate: prev.admin_access
+            ? true
+            : payload.can_generate ?? (creditsRemaining > 0 && (weeklyLimit <= 0 || weeklyUsed < weeklyLimit)),
+          message: payload.message ?? prev.message,
         };
       });
       setMessages((prev) => prev.map((m) => (m.id === thinkingId ? withChatMessageDefaults({ id: createId(), role: "assistant", text: "Generated response", result }) : m)));
