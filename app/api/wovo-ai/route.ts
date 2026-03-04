@@ -47,15 +47,15 @@ export async function POST(request: Request) {
     const isAdmin = isAdminEmail(user.email);
     const subscription = isAdmin
       ? {
-          status: "admin",
-          plan_key: "admin" as const,
+          status: "active",
+          plan_key: "agency" as const,
           credits_used_month: 0,
           credits_limit_month: 999999,
           period_end: null,
           can_generate: true,
         }
       : await getSubscriptionStatus(user.id);
-    const currentPlan = subscription.plan_key === "admin" ? null : subscription.plan_key;
+    const currentPlan = subscription.plan_key;
 
     if (!isAdmin && !isPaidStatus(subscription.status)) {
       return blockedResponse("An active subscription is required to generate posts.", currentPlan);
@@ -184,7 +184,7 @@ export async function POST(request: Request) {
         data: parsed,
         credits_used_month: consume.credits_used_month,
         credits_limit_month: consume.credits_limit_month,
-        current_plan_limit: subscription.plan_key && subscription.plan_key !== "admin" ? getPlanConfig(subscription.plan_key).monthlyCredits : null,
+        current_plan_limit: subscription.plan_key ? getPlanConfig(subscription.plan_key).monthlyCredits : null,
       },
       { status: 200 },
     );
