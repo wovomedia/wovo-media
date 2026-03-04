@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { mapSupabaseAuthError } from "@/lib/supabase/auth-errors";
 import { supabaseClient, type SupabaseSession } from "@/lib/supabase/client";
 
 type UserRecord = {
@@ -38,7 +39,11 @@ export default function WovoAiPage() {
   const [session, setSession] = useState<SupabaseSession | null>(null);
   const [authUser, setAuthUser] = useState<Record<string, unknown> | null>(null);
   const [userRecord, setUserRecord] = useState<UserRecord | null>(null);
-  const [error, setError] = useState<string>("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [info, setInfo] = useState("");
+  const [error, setError] = useState("");
+  const [debugCode, setDebugCode] = useState("");
 
   const redirectUrl = useMemo(() => {
     if (typeof window === "undefined") return "";
@@ -48,11 +53,27 @@ export default function WovoAiPage() {
   useEffect(() => {
     const load = async () => {
       try {
+        const url = new URL(window.location.href);
+        const callbackError =
+          url.searchParams.get("error") ??
+          url.searchParams.get("error_description") ??
+          url.searchParams.get("error_code");
+
+        if (callbackError) {
+          const mapped = mapSupabaseAuthError({
+            code: url.searchParams.get("error_code") ?? undefined,
+            message: url.searchParams.get("error_description") ?? callbackError,
+          });
+          setError(mapped.message);
+          setDebugCode(mapped.debugCode ?? "");
+        }
+
         const fromHash = parseSessionFromHash(window.location.hash);
 
         if (fromHash) {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(fromHash));
-          window.history.replaceState({}, document.title, "/wovo-ai");
+          const preserved = window.location.search;
+          window.history.replaceState({}, document.title, `/wovo-ai${preserved}`);
           setSession(fromHash);
         } else {
           const stored = localStorage.getItem(STORAGE_KEY);
@@ -61,7 +82,9 @@ export default function WovoAiPage() {
           }
         }
       } catch {
-        setError("Unable to restore your session.");
+        const mapped = mapSupabaseAuthError({ message: "Unable to restore your session." });
+        setError(mapped.message);
+        setDebugCode(mapped.debugCode ?? "");
       } finally {
         setLoading(false);
       }
@@ -78,16 +101,18 @@ export default function WovoAiPage() {
         const user = await supabaseClient.auth.getUser(session.access_token);
         setAuthUser(user);
 
-        const email = typeof user?.email === "string" ? user.email : "";
+        const emailAddress = typeof user?.email === "string" ? user.email : "";
 
-        if (email) {
+        if (emailAddress) {
           const profile = (await supabaseClient
             .from("users")
-            .selectByEmail(session.access_token, email)) as UserRecord | null;
+            .selectByEmail(session.access_token, emailAddress)) as UserRecord | null;
           setUserRecord(profile);
         }
-      } catch {
-        setError("Unable to load user data from Supabase.");
+      } catch (err: unknown) {
+        const mapped = mapSupabaseAuthError(err);
+        setError(mapped.message);
+        setDebugCode(mapped.debugCode ?? "");
       }
     };
 
@@ -99,7 +124,81 @@ export default function WovoAiPage() {
     setSession(null);
     setAuthUser(null);
     setUserRecord(null);
+    setInfo("");
     setError("");
+    setDebugCode("");
+
+    const params = new URLSearchParams(window.location.search);
+    const currentError = params.get("error");
+    const currentErrorCode = params.get("error_code");
+
+    const nextParams = new URLSearchParams();
+    if (currentError) nextParams.set("error", currentError);
+    if (currentErrorCode) nextParams.set("error_code", currentErrorCode);
+
+    const nextQuery = nextParams.toString();
+    window.history.replaceState({}, document.title, nextQuery ? `/wovo-ai?${nextQuery}` : "/wovo-ai");
+  };
+
+  const handleGoogle = () => {
+    setInfo("");
+    setError("");
+    setDebugCode("");
+
+    try {
+      const signInUrl = supabaseClient.auth.signInWithGoogle(redirectUrl);
+      window.location.href = signInUrl;
+    } catch (err: unknown) {
+      const mapped = mapSupabaseAuthError(err);
+      setError(mapped.message);
+      setDebugCode(mapped.debugCode ?? "");
+    }
+  };
+
+  const handleSignUp = async () => {
+    setInfo("");
+    setError("");
+    setDebugCode("");
+
+    try {
+      await supabaseClient.auth.signUpWithPassword(email, password);
+      setInfo("Check your email to confirm your account.");
+    } catch (err: unknown) {
+      const mapped = mapSupabaseAuthError(err);
+      setError(mapped.message);
+      setDebugCode(mapped.debugCode ?? "");
+    }
+  };
+
+  const submitSignIn = async () => {
+    setInfo("");
+    setError("");
+    setDebugCode("");
+
+    try {
+      const nextSession = await supabaseClient.auth.signInWithPassword(email, password);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSession));
+      setSession(nextSession);
+    } catch (err: unknown) {
+      const mapped = mapSupabaseAuthError(err);
+      setError(mapped.message);
+      setDebugCode(mapped.debugCode ?? "");
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    setInfo("");
+    setError("");
+    setDebugCode("");
+
+    try {
+      await supabaseClient.auth.sendPasswordReset(email, redirectUrl);
+      setInfo("Password reset email sent.");
+    } catch (err: unknown) {
+      const mapped = mapSupabaseAuthError(err);
+      setError(mapped.message);
+      setDebugCode(mapped.debugCode ?? "");
+    }
   };
 
   return (
@@ -111,12 +210,64 @@ export default function WovoAiPage() {
         {loading ? <p>Loading session...</p> : null}
 
         {!loading && !session ? (
-          <a
-            href={supabaseClient.auth.signInWithGoogle(redirectUrl)}
-            className="inline-flex rounded-lg bg-emerald-400 px-4 py-2 font-semibold text-black"
-          >
-            Sign in with Google
-          </a>
+          <div className="space-y-4">
+            <button
+              type="button"
+              onClick={handleGoogle}
+              className="inline-flex rounded-lg bg-emerald-400 px-4 py-2 font-semibold text-black"
+            >
+              Sign in with Google
+            </button>
+
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                void handleSignUp();
+              }}
+              className="space-y-3 rounded-lg border border-white/15 p-4"
+            >
+              <h2 className="font-semibold">Email sign-up / sign-in</h2>
+              <input
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="Email"
+                className="w-full rounded border border-white/20 bg-black px-3 py-2"
+                required
+              />
+              <input
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="Password"
+                className="w-full rounded border border-white/20 bg-black px-3 py-2"
+                required
+              />
+              <div className="flex flex-wrap gap-2">
+                <button type="submit" className="rounded border border-white/30 px-3 py-1 text-sm">
+                  Sign up
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void submitSignIn();
+                  }}
+                  className="rounded border border-white/30 px-3 py-1 text-sm"
+                >
+                  Sign in
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void handleForgotPassword();
+                  }}
+                  className="rounded border border-white/30 px-3 py-1 text-sm"
+                >
+                  Forgot password
+                </button>
+              </div>
+            </form>
+          </div>
         ) : null}
 
         {!loading && session ? (
@@ -143,7 +294,13 @@ export default function WovoAiPage() {
           </div>
         ) : null}
 
-        {error ? <p className="text-red-300">{error}</p> : null}
+        {info ? <p className="text-emerald-300">{info}</p> : null}
+        {error ? (
+          <p className="text-red-300">
+            {error}
+            {debugCode ? <span className="ml-2 text-xs text-red-200/80">({debugCode})</span> : null}
+          </p>
+        ) : null}
       </div>
     </main>
   );
