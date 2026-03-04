@@ -1,5 +1,4 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { retrieveSubscription, type StripeSubscription } from "@/lib/stripe";
 import {
@@ -44,20 +43,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing STRIPE_WEBHOOK_SECRET" }, { status: 500 });
   }
 
-  const signature = (await headers()).get("stripe-signature");
-
+  const signature = request.headers.get("stripe-signature");
   if (!signature) {
     return NextResponse.json({ error: "Missing stripe-signature header." }, { status: 400 });
   }
 
   const body = await request.text();
-
   if (!verifySignature(body, signature, webhookSecret)) {
     return NextResponse.json({ error: "Invalid webhook signature." }, { status: 400 });
   }
 
   let event: StripeEvent;
-
   try {
     event = JSON.parse(body) as StripeEvent;
   } catch {
@@ -68,7 +64,6 @@ export async function POST(request: Request) {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as {
-          customer?: string;
           subscription?: string;
           metadata?: { userId?: string };
         };
@@ -89,6 +84,14 @@ export async function POST(request: Request) {
         const subscription = event.data.object as unknown as StripeSubscription;
         await cancelSubscriptionByStripeSubscriptionId(subscription.id);
         await cancelSubscriptionByCustomerId(String(subscription.customer));
+        break;
+      }
+      case "invoice.paid": {
+        const invoice = event.data.object as { subscription?: string | null };
+        if (invoice.subscription) {
+          const subscription = await retrieveSubscription(String(invoice.subscription));
+          await syncSubscriptionFromStripe(subscription);
+        }
         break;
       }
       default:

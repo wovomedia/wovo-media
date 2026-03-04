@@ -9,11 +9,11 @@ type SubscriptionRow = {
   status: string | null;
   current_period_start: string | null;
   current_period_end: string | null;
-  monthly_credits_total: number | null;
-  monthly_credits_remaining: number | null;
+  credits_total: number | null;
+  credits_remaining: number | null;
   weekly_limit: number | null;
   weekly_used: number | null;
-  weekly_window_start: string | null;
+  week_start: string | null;
 };
 
 export type SubscriptionStatusPayload = {
@@ -28,8 +28,8 @@ export type SubscriptionStatusPayload = {
 };
 
 function toStatusPayload(row: SubscriptionRow | null): SubscriptionStatusPayload {
-  const creditsTotal = row?.monthly_credits_total ?? 0;
-  const creditsRemaining = row?.monthly_credits_remaining ?? 0;
+  const creditsTotal = row?.credits_total ?? 0;
+  const creditsRemaining = row?.credits_remaining ?? 0;
   const creditsUsed = Math.max(creditsTotal - creditsRemaining, 0);
   const status = row?.status ?? null;
   const weeklyLimit = row?.weekly_limit ?? 0;
@@ -49,10 +49,17 @@ function toStatusPayload(row: SubscriptionRow | null): SubscriptionStatusPayload
 
 export async function getSubscriptionStatus(userId: string): Promise<SubscriptionStatusPayload> {
   const rows = await supabaseServiceRoleRequest<SubscriptionRow[]>(
-    `/rest/v1/subscriptions?select=user_id,plan,status,current_period_start,current_period_end,monthly_credits_total,monthly_credits_remaining,weekly_limit,weekly_used,weekly_window_start,stripe_customer_id&user_id=eq.${userId}&limit=1`,
+    `/rest/v1/subscriptions?select=user_id,plan,status,current_period_start,current_period_end,credits_total,credits_remaining,weekly_limit,weekly_used,week_start,stripe_customer_id&user_id=eq.${userId}&limit=1`,
   );
 
   return toStatusPayload(rows?.[0] ?? null);
+}
+
+export async function getRawSubscription(userId: string): Promise<SubscriptionRow | null> {
+  const rows = await supabaseServiceRoleRequest<SubscriptionRow[]>(
+    `/rest/v1/subscriptions?select=*&user_id=eq.${userId}&limit=1`,
+  );
+  return rows?.[0] ?? null;
 }
 
 export async function findUserIdByCustomerId(customerId: string): Promise<string | null> {
@@ -101,50 +108,33 @@ export async function syncSubscriptionFromStripe(subscription: StripeSubscriptio
       plan: planKey,
       current_period_start: currentPeriodStart,
       current_period_end: currentPeriodEnd,
-      monthly_credits_total: planConfig.monthlyCredits,
-      monthly_credits_remaining: resetMonthly ? planConfig.monthlyCredits : undefined,
+      credits_total: planConfig.monthlyCredits,
+      credits_remaining: resetMonthly ? planConfig.monthlyCredits : undefined,
       weekly_limit: planConfig.weeklyLimit,
       weekly_used: resetMonthly ? 0 : undefined,
-      weekly_window_start: resetMonthly ? currentPeriodStart : undefined,
+      week_start: resetMonthly ? new Date().toISOString().slice(0, 10) : undefined,
       updated_at: new Date().toISOString(),
     }),
   });
 }
 
-
-export async function cancelSubscriptionByStripeSubscriptionId(subscriptionId: string): Promise<void> {
-  await supabaseServiceRoleRequest(`/rest/v1/subscriptions?stripe_subscription_id=eq.${subscriptionId}`, {
+async function markInactive(filter: string): Promise<void> {
+  await supabaseServiceRoleRequest(`/rest/v1/subscriptions?${filter}`, {
     method: "PATCH",
     headers: {
       Prefer: "return=minimal",
     },
     body: JSON.stringify({
-      status: "canceled",
-      monthly_credits_total: 0,
-      monthly_credits_remaining: 0,
-      weekly_limit: 0,
-      weekly_used: 0,
+      status: "inactive",
       updated_at: new Date().toISOString(),
     }),
   });
+}
+
+export async function cancelSubscriptionByStripeSubscriptionId(subscriptionId: string): Promise<void> {
+  await markInactive(`stripe_subscription_id=eq.${subscriptionId}`);
 }
 
 export async function cancelSubscriptionByCustomerId(customerId: string): Promise<void> {
-  const userId = await findUserIdByCustomerId(customerId);
-  if (!userId) return;
-
-  await supabaseServiceRoleRequest(`/rest/v1/subscriptions?user_id=eq.${userId}`, {
-    method: "PATCH",
-    headers: {
-      Prefer: "return=minimal",
-    },
-    body: JSON.stringify({
-      status: "canceled",
-      monthly_credits_total: 0,
-      monthly_credits_remaining: 0,
-      weekly_limit: 0,
-      weekly_used: 0,
-      updated_at: new Date().toISOString(),
-    }),
-  });
+  await markInactive(`stripe_customer_id=eq.${customerId}`);
 }

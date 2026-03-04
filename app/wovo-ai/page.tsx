@@ -7,17 +7,11 @@ import { mapSupabaseAuthError } from "@/lib/supabase/auth-errors";
 import { supabase, type Session } from "@/lib/supabase/client";
 
 type SupabaseAuthUser = { id: string; email?: string };
-
-type GeneratedResult = {
-  captions: { facebook: string; instagram: string; tiktok: string };
-  hashtags: string[];
-  image_prompt: string;
-  image?: { url?: string } | null;
-};
+type PlanKey = "starter" | "pro" | "agency";
 
 type SubscriptionSummary = {
   status: string | null;
-  plan_key: "starter" | "pro" | "agency" | null;
+  plan_key: PlanKey | null;
   credits_used_month: number;
   credits_limit_month: number;
   period_end: string | null;
@@ -28,17 +22,30 @@ type SubscriptionSummary = {
   warning?: string;
 };
 
+type ChatMessage = {
+  role: "user" | "assistant";
+  text: string;
+  result?: {
+    captions: { facebook: string; instagram: string; tiktok: string };
+    hashtags: string[];
+    image?: { url?: string } | null;
+  };
+};
+
 type PlanOption = {
-  key: "starter" | "pro" | "agency";
-  label: string;
+  key: PlanKey;
+  name: string;
+  price: string;
   desc: string;
+  subtext?: string;
   priceId?: string;
-  popular: boolean;
+  popular?: boolean;
 };
 
 const STORAGE_KEY = "wovo-supabase-session";
 const fieldClass =
   "w-full rounded-xl border border-white/20 bg-black/70 px-3 py-2.5 text-sm text-white outline-none transition focus:border-emerald-300/60 focus:ring-2 focus:ring-emerald-400/40";
+const planOrder: PlanKey[] = ["starter", "pro", "agency"];
 
 function parseSessionFromHash(hash: string): Session | null {
   if (!hash.startsWith("#")) return null;
@@ -52,15 +59,6 @@ function parseSessionFromHash(hash: string): Session | null {
     expires_in: params.get("expires_in") ? Number(params.get("expires_in")) : undefined,
     token_type: params.get("token_type") ?? undefined,
   };
-}
-
-function safeJsonParse<T>(raw: string): T | null {
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return null;
-  }
 }
 
 function toDataUrl(file: File): Promise<string> {
@@ -81,56 +79,47 @@ export default function WovoAiPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const [topic, setTopic] = useState("");
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [prompt, setPrompt] = useState("");
   const [businessName, setBusinessName] = useState("");
   const [businessType, setBusinessType] = useState("");
   const [location, setLocation] = useState("");
   const [contact, setContact] = useState("");
   const [goal, setGoal] = useState("");
+  const [showDetails, setShowDetails] = useState(false);
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
   const [imageName, setImageName] = useState<string>("");
 
   const [generating, setGenerating] = useState(false);
-  const [result, setResult] = useState<GeneratedResult | null>(null);
-  const [activeTab, setActiveTab] = useState<"facebook" | "instagram" | "tiktok">("facebook");
-
-  const [submittingCheckout, setSubmittingCheckout] = useState<PlanOption["key"] | null>(null);
+  const [submittingCheckout, setSubmittingCheckout] = useState<PlanKey | null>(null);
   const [openingPortal, setOpeningPortal] = useState(false);
-
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deleteConfirmText, setDeleteConfirmText] = useState("");
-  const [deletingAccount, setDeletingAccount] = useState(false);
-
   const [info, setInfo] = useState("");
   const [error, setError] = useState("");
 
   const planOptions: PlanOption[] = useMemo(
     () => [
-      { key: "starter", label: "$24.99 Starter", desc: "9 posts / month · 3/week", priceId: process.env.NEXT_PUBLIC_STARTER_PRICE_ID, popular: false },
-      { key: "pro", label: "$49.99 Pro", desc: "18 posts / month · 6/week", priceId: process.env.NEXT_PUBLIC_PRO_PRICE_ID, popular: false },
-      { key: "agency", label: "$99 Agency", desc: "42 posts / month · 14/week", priceId: process.env.NEXT_PUBLIC_AGENCY_PRICE_ID, popular: true },
+      { key: "starter", name: "Starter", price: "$24.99", desc: "9 credits/month · 3/week", priceId: process.env.NEXT_PUBLIC_STARTER_PRICE_ID },
+      { key: "pro", name: "Pro", price: "$49.99", desc: "18 credits/month · 6/week", priceId: process.env.NEXT_PUBLIC_PRO_PRICE_ID },
+      {
+        key: "agency",
+        name: "Agency",
+        price: "$99",
+        desc: "42 credits/month · 14/week",
+        subtext: "Best for teams & daily posting",
+        priceId: process.env.NEXT_PUBLIC_AGENCY_PRICE_ID,
+        popular: true,
+      },
     ],
     [],
   );
 
-  const hasMissingPriceIds = useMemo(() => planOptions.some((plan) => typeof plan.priceId === "undefined"), [planOptions]);
-
-  const redirectUrl = useMemo(() => {
-    if (typeof window === "undefined") return "";
-    return `${window.location.origin}/wovo-ai`;
-  }, []);
-
-  const withAuthHeaders = (token: string) => ({
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
-  });
+  const withAuthHeaders = (token: string) => ({ "Content-Type": "application/json", Authorization: `Bearer ${token}` });
 
   const loadSubscription = useCallback(async (token: string) => {
     const response = await fetch("/api/wovo-ai/subscription", { headers: { Authorization: `Bearer ${token}` } });
     const payload = (await response.json()) as SubscriptionSummary & { error?: string };
     if (!response.ok) throw new Error(payload.error ?? "Unable to load subscription.");
     setSubscription(payload);
-    if (payload.warning) setInfo(payload.warning);
   }, []);
 
   useEffect(() => {
@@ -150,7 +139,6 @@ export default function WovoAiPage() {
         setLoadingSession(false);
       }
     };
-
     void load();
   }, []);
 
@@ -171,7 +159,6 @@ export default function WovoAiPage() {
         setError(mapSupabaseAuthError(err).message);
       }
     };
-
     void hydrate();
   }, [loadSubscription, session]);
 
@@ -181,10 +168,12 @@ export default function WovoAiPage() {
     setSession(null);
     setAuthUser(null);
     setSubscription(null);
-    setResult(null);
+    setMessages([]);
     setInfo("");
     setError("");
   };
+
+  const redirectUrl = typeof window === "undefined" ? "" : `${window.location.origin}/wovo-ai`;
 
   const handleGoogle = async () => {
     try {
@@ -210,7 +199,6 @@ export default function WovoAiPage() {
     try {
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
       if (signInError || !signInData.session) throw signInError ?? new Error("Unable to sign in.");
-
       localStorage.setItem(STORAGE_KEY, JSON.stringify(signInData.session));
       setSession(signInData.session);
     } catch (err: unknown) {
@@ -218,8 +206,17 @@ export default function WovoAiPage() {
     }
   };
 
+  const currentPlanIndex = subscription?.plan_key ? planOrder.indexOf(subscription.plan_key) : -1;
+
+  const getPlanButtonLabel = (plan: PlanOption): string => {
+    if (subscription?.plan_key === plan.key) return "Current plan";
+    if (currentPlanIndex === -1) return `Subscribe ${plan.name}`;
+    const targetIndex = planOrder.indexOf(plan.key);
+    return targetIndex > currentPlanIndex ? `Upgrade to ${plan.name}` : `Downgrade to ${plan.name}`;
+  };
+
   const startCheckout = async (plan: PlanOption) => {
-    if (!session?.access_token || !plan.priceId) return;
+    if (!session?.access_token || !plan.priceId || subscription?.plan_key === plan.key) return;
     setSubmittingCheckout(plan.key);
     setError("");
 
@@ -229,13 +226,8 @@ export default function WovoAiPage() {
         headers: withAuthHeaders(session.access_token),
         body: JSON.stringify({ priceId: plan.priceId }),
       });
-      const responseText = await response.text();
-      const payload = safeJsonParse<{ url?: string; error?: string; message?: string }>(responseText) ?? {};
-
-      if (!response.ok || !payload.url) {
-        throw new Error(payload.error ?? payload.message ?? responseText ?? "Unable to start checkout.");
-      }
-
+      const payload = (await response.json()) as { url?: string; error?: string };
+      if (!response.ok || !payload.url) throw new Error(payload.error ?? "Unable to start checkout.");
       window.location.href = payload.url;
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Checkout failed.");
@@ -254,89 +246,13 @@ export default function WovoAiPage() {
         method: "POST",
         headers: withAuthHeaders(session.access_token),
       });
-      const responseText = await response.text();
-      const payload = safeJsonParse<{ url?: string; error?: string; message?: string }>(responseText) ?? {};
-
-      if (!response.ok || !payload.url) {
-        throw new Error(payload.error ?? payload.message ?? responseText ?? "Unable to open billing portal.");
-      }
-
+      const payload = (await response.json()) as { url?: string; error?: string };
+      if (!response.ok || !payload.url) throw new Error(payload.error ?? "Unable to open billing portal.");
       window.location.href = payload.url;
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Portal request failed.");
     } finally {
       setOpeningPortal(false);
-    }
-  };
-
-  const creditsRemaining = Math.max((subscription?.credits_limit_month ?? 0) - (subscription?.credits_used_month ?? 0), 0);
-  const isSubscriptionActive = subscription?.status === "active";
-  const withinWeeklyLimit = (subscription?.weekly_limit ?? 0) <= 0 || (subscription?.weekly_used ?? 0) < (subscription?.weekly_limit ?? 0);
-  const canGenerate = Boolean(isSubscriptionActive && creditsRemaining > 0 && withinWeeklyLimit && topic.trim().length > 0);
-
-  const handleGenerate = async () => {
-    if (!session?.access_token || !canGenerate) return;
-
-    setGenerating(true);
-    setInfo("");
-    setError("");
-
-    try {
-      const response = await fetch("/api/wovo-ai", {
-        method: "POST",
-        headers: withAuthHeaders(session.access_token),
-        body: JSON.stringify({
-          business_name: businessName.trim() || undefined,
-          business_type: businessType.trim() || undefined,
-          location: location.trim() || undefined,
-          contact: contact.trim() || undefined,
-          goal: goal.trim() || undefined,
-          topic: topic.trim(),
-          include_image: Boolean(imageDataUrl),
-          image_base64: imageDataUrl,
-        }),
-      });
-
-      const payload = (await response.json()) as {
-        captions?: { facebook?: string; instagram?: string; tiktok?: string };
-        hashtags?: string[];
-        image_prompt?: string;
-        image?: { url?: string } | null;
-        updated_credits?: { remaining: number; total: number; weekly_used: number; weekly_limit: number };
-        error?: string;
-      };
-
-      if (!response.ok) throw new Error(payload.error ?? "Failed to generate content.");
-
-      setResult({
-        captions: {
-          facebook: payload.captions?.facebook ?? "",
-          instagram: payload.captions?.instagram ?? "",
-          tiktok: payload.captions?.tiktok ?? "",
-        },
-        hashtags: payload.hashtags ?? [],
-        image_prompt: payload.image_prompt ?? "",
-        image: payload.image ?? null,
-      });
-
-      if (subscription && payload.updated_credits) {
-        setSubscription({
-          ...subscription,
-          credits_limit_month: payload.updated_credits.total,
-          credits_used_month: Math.max(payload.updated_credits.total - payload.updated_credits.remaining, 0),
-          weekly_used: payload.updated_credits.weekly_used,
-          weekly_limit: payload.updated_credits.weekly_limit,
-          can_generate:
-            subscription.status === "active" &&
-            payload.updated_credits.remaining > 0 &&
-            (payload.updated_credits.weekly_limit <= 0 || payload.updated_credits.weekly_used < payload.updated_credits.weekly_limit),
-        });
-      }
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Unable to generate right now.");
-      await loadSubscription(session.access_token);
-    } finally {
-      setGenerating(false);
     }
   };
 
@@ -366,109 +282,150 @@ export default function WovoAiPage() {
     }
   };
 
-  const deleteAccount = async () => {
-    if (!session?.access_token) return;
-    if (deleteConfirmText !== "DELETE") {
-      setError("Type DELETE to confirm account removal.");
-      return;
-    }
+  const handleGenerate = async () => {
+    if (!session?.access_token || !prompt.trim() || generating) return;
 
-    setDeletingAccount(true);
+    setGenerating(true);
     setError("");
+    setInfo("");
+
+    const userMessage: ChatMessage = { role: "user", text: prompt.trim() };
+    setMessages((prev) => [...prev, userMessage]);
 
     try {
-      const response = await fetch("/api/account/delete", {
+      const response = await fetch("/api/wovo-ai/generate", {
         method: "POST",
         headers: withAuthHeaders(session.access_token),
+        body: JSON.stringify({
+          message: prompt.trim(),
+          business_name: businessName.trim() || undefined,
+          business_type: businessType.trim() || undefined,
+          location: location.trim() || undefined,
+          contact: contact.trim() || undefined,
+          goal: goal.trim() || undefined,
+          image_base64: imageDataUrl,
+        }),
       });
-      const payload = (await response.json()) as { success?: boolean; error?: string };
-      if (!response.ok || !payload.success) throw new Error(payload.error ?? "Unable to delete account.");
 
-      signOut();
-      window.location.href = "/";
+      const payload = (await response.json()) as {
+        captions?: { facebook?: string; instagram?: string; tiktok?: string };
+        hashtags?: string[];
+        image?: { url?: string } | null;
+        remaining?: { credits_remaining: number; credits_total: number; weekly_used: number; weekly_limit: number };
+        error?: string;
+      };
+
+      if (!response.ok) throw new Error(payload.error ?? "Failed to generate content.");
+
+      const assistantMessage: ChatMessage = {
+        role: "assistant",
+        text: "Generated your captions and promo concept.",
+        result: {
+          captions: {
+            facebook: payload.captions?.facebook ?? "",
+            instagram: payload.captions?.instagram ?? "",
+            tiktok: payload.captions?.tiktok ?? "",
+          },
+          hashtags: payload.hashtags ?? [],
+          image: payload.image ?? null,
+        },
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
+      setPrompt("");
+
+      if (subscription && payload.remaining) {
+        setSubscription({
+          ...subscription,
+          credits_limit_month: payload.remaining.credits_total,
+          credits_used_month: Math.max(payload.remaining.credits_total - payload.remaining.credits_remaining, 0),
+          weekly_used: payload.remaining.weekly_used,
+          weekly_limit: payload.remaining.weekly_limit,
+          can_generate:
+            (subscription.status === "active" || Boolean(subscription.admin_access)) &&
+            payload.remaining.credits_remaining > 0 &&
+            payload.remaining.weekly_used < payload.remaining.weekly_limit,
+        });
+      }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Unable to delete account.");
+      setError(err instanceof Error ? err.message : "Unable to generate right now.");
+      setMessages((prev) => prev.slice(0, Math.max(0, prev.length - 1)));
     } finally {
-      setDeletingAccount(false);
-      setShowDeleteModal(false);
-      setDeleteConfirmText("");
+      setGenerating(false);
     }
   };
 
-  const creditsText = `${subscription?.credits_used_month ?? 0} / ${subscription?.credits_limit_month ?? 0}`;
+  const creditsRemaining = Math.max((subscription?.credits_limit_month ?? 0) - (subscription?.credits_used_month ?? 0), 0);
+  const activeSubscription = subscription?.status === "active";
+  const canAccessGenerator = Boolean(subscription?.admin_access || activeSubscription);
+  const isOutOfCredits = !subscription?.admin_access && (!creditsRemaining || (subscription?.weekly_used ?? 0) >= (subscription?.weekly_limit ?? 0));
 
   return (
     <main className="min-h-screen bg-black px-4 py-6 text-white sm:px-6 sm:py-8">
-      <div className="mx-auto w-full max-w-5xl space-y-5">
+      <div className="mx-auto w-full max-w-6xl space-y-5">
         {!loadingSession && !session && (
-          <section className="mx-auto max-w-md rounded-2xl border border-white/15 bg-white/5 p-6">
-            <h1 className="text-2xl font-bold">Sign in to Wovo AI</h1>
-            <div className="mt-4 space-y-3">
+          <section className="mx-auto mt-20 max-w-md rounded-2xl border border-white/15 bg-white/5 p-6 text-center">
+            <h1 className="text-2xl font-bold">Sign in to use Wovo AI</h1>
+            <p className="mt-2 text-sm text-white/75">Generate social captions + promo graphics with subscription access.</p>
+            <div className="mt-4 space-y-3 text-left">
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className={fieldClass} />
               <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" className={fieldClass} />
             </div>
             <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <button onClick={() => void handleSignIn()} className="rounded-xl bg-emerald-400 px-4 py-2.5 text-sm font-bold text-black">
-                Sign in
-              </button>
-              <button onClick={() => void handleSignUp()} className="rounded-xl border border-white/30 px-4 py-2.5 text-sm">
-                Sign up
-              </button>
+              <button onClick={() => void handleSignIn()} className="rounded-xl bg-emerald-400 px-4 py-2.5 text-sm font-bold text-black">Sign in</button>
+              <button onClick={() => void handleSignUp()} className="rounded-xl border border-white/35 px-4 py-2.5 text-sm">Sign up</button>
             </div>
-            <button onClick={handleGoogle} className="mt-3 w-full rounded-xl border border-white/30 px-4 py-2.5 text-sm">
-              Continue with Google
-            </button>
+            <button onClick={() => void handleGoogle()} className="mt-2 w-full rounded-xl border border-white/35 px-4 py-2.5 text-sm">Continue with Google</button>
           </section>
         )}
 
-        {session && (
+        {session && authUser && (
           <>
-            <header className="rounded-2xl border border-white/15 bg-white/5 p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h1 className="text-2xl font-bold">Wovo AI</h1>
-                  <p className="text-sm text-white/70">{authUser?.email ?? "Signed in"}</p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Link href="/" className="rounded-lg border border-white/20 px-3 py-2 text-xs">
-                    Home
-                  </Link>
-                  <button
-                    onClick={() => setShowDeleteModal(true)}
-                    disabled={generating || deletingAccount}
-                    className="rounded-lg border border-red-500/70 px-3 py-2 text-xs text-red-200 disabled:opacity-60"
-                  >
-                    Delete account
+            <header className="flex flex-col gap-2 rounded-2xl border border-white/15 bg-white/5 p-5 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h1 className="text-xl font-semibold">Wovo AI</h1>
+                <p className="text-sm text-white/70">Signed in as {authUser.email}</p>
+              </div>
+              <div className="flex gap-2">
+                {!subscription?.admin_access && (
+                  <button onClick={() => void openPortal()} disabled={openingPortal} className="rounded-lg border border-white/30 px-4 py-2 text-sm disabled:opacity-60">
+                    {openingPortal ? "Opening..." : "Manage Billing"}
                   </button>
-                  <button onClick={signOut} disabled={generating || deletingAccount} className="rounded-lg border border-white/30 px-3 py-2 text-xs disabled:opacity-60">
-                    Sign out
-                  </button>
-                </div>
+                )}
+                <button onClick={signOut} className="rounded-lg border border-white/30 px-4 py-2 text-sm">Sign out</button>
               </div>
             </header>
 
-            {!subscription?.can_generate && !subscription?.admin_access && (
+            {subscription?.admin_access && <p className="inline-block rounded-full border border-emerald-300/50 bg-emerald-400/15 px-3 py-1 text-xs text-emerald-200">Admin mode</p>}
+
+            {!canAccessGenerator && (
               <section className="rounded-2xl border border-white/15 bg-white/5 p-5">
-                <h2 className="text-xl font-semibold">Choose a plan to continue</h2>
-                {hasMissingPriceIds && (
-                  <p className="mt-2 rounded-lg border border-amber-300/40 bg-amber-400/10 px-3 py-2 text-sm text-amber-200">Missing price IDs (check Vercel env vars)</p>
-                )}
-                <div className="mt-4 grid gap-3 md:grid-cols-3">
+                <h2 className="text-xl font-semibold">Choose your plan</h2>
+                <p className="mt-1 text-sm text-white/70">Subscribe to unlock the caption + promo graphic generator.</p>
+                <div className="mt-4 grid gap-4 md:grid-cols-3">
                   {planOptions.map((plan) => {
-                    const missingPrice = !plan.priceId;
-                    const disabled = submittingCheckout === plan.key || missingPrice;
+                    const disabled = !plan.priceId || subscription?.plan_key === plan.key;
+                    const emphasized = Boolean(plan.popular);
+
                     return (
-                      <article key={plan.key} className="relative rounded-xl border border-white/20 bg-black/40 p-4">
-                        {plan.popular && <span className="absolute right-3 top-3 rounded-full bg-emerald-400 px-2 py-1 text-xs font-semibold text-black">Most popular</span>}
-                        <h3 className="font-semibold">{plan.label}</h3>
+                      <article
+                        key={plan.key}
+                        className={`rounded-2xl border p-4 ${
+                          emphasized
+                            ? "scale-[1.02] border-emerald-300/70 bg-emerald-400/10 shadow-[0_0_30px_rgba(16,185,129,0.2)]"
+                            : "border-white/20 bg-black/30"
+                        }`}
+                      >
+                        {emphasized && <p className="mb-2 inline-block rounded-full bg-emerald-400 px-2 py-0.5 text-xs font-bold text-black">Most popular</p>}
+                        <h3 className="text-lg font-semibold">{plan.name}</h3>
+                        <p className="text-2xl font-bold">{plan.price}</p>
                         <p className="mt-1 text-sm text-white/70">{plan.desc}</p>
+                        {plan.subtext && <p className="mt-1 text-xs text-emerald-200">{plan.subtext}</p>}
                         <button
                           onClick={() => void startCheckout(plan)}
-                          disabled={disabled}
-                          title={missingPrice ? "Missing price ID for this plan" : ""}
+                          disabled={disabled || submittingCheckout === plan.key}
                           className="mt-4 w-full rounded-lg bg-emerald-400 px-3 py-2 text-sm font-bold text-black disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          {submittingCheckout === plan.key ? "Starting checkout..." : `Subscribe ${plan.key[0].toUpperCase()}${plan.key.slice(1)}`}
+                          {submittingCheckout === plan.key ? "Starting checkout..." : getPlanButtonLabel(plan)}
                         </button>
                       </article>
                     );
@@ -477,122 +434,95 @@ export default function WovoAiPage() {
               </section>
             )}
 
-            <section className="rounded-2xl border border-white/15 bg-white/5 p-5">
-              <div className="flex items-center gap-2">
-                <h2 className="text-xl font-semibold">Dashboard</h2>
-                {subscription?.admin_access && <span className="rounded-full border border-emerald-300/50 bg-emerald-400/15 px-2 py-0.5 text-xs text-emerald-200">Admin access</span>}
-              </div>
-              <p className="mt-2 text-sm text-white/80">Plan: {subscription?.plan_key ?? "none"}</p>
-              <p className="text-sm text-white/80">Status: {subscription?.status ?? "inactive"}</p>
-              <p className="text-sm text-white/80">Credits: {creditsText}</p>
-              <p className="text-sm text-white/80">Remaining: {creditsRemaining}</p>
-              <p className="text-sm text-white/80">
-                Weekly usage: {subscription?.weekly_used ?? 0} / {subscription?.weekly_limit ?? 0}
-              </p>
-              <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-                <button onClick={() => void openPortal()} disabled={openingPortal || Boolean(subscription?.admin_access) || generating} className="rounded-lg border border-white/30 px-4 py-2 text-sm disabled:opacity-60">
-                  {openingPortal ? "Opening..." : "Manage Billing"}
-                </button>
-              </div>
-            </section>
+            {canAccessGenerator && (
+              <section className="grid gap-4 lg:grid-cols-[300px,1fr]">
+                <aside className="rounded-2xl border border-white/15 bg-white/5 p-4 text-sm">
+                  <h2 className="text-lg font-semibold">Dashboard</h2>
+                  <p className="mt-2 text-white/80">Plan: {subscription?.plan_key ?? "none"}</p>
+                  <p className="text-white/80">Status: {subscription?.status ?? "inactive"}</p>
+                  <p className="text-white/80">Credits: {subscription?.credits_used_month ?? 0} / {subscription?.credits_limit_month ?? 0}</p>
+                  <p className="text-white/80">Weekly: {subscription?.weekly_used ?? 0} / {subscription?.weekly_limit ?? 0}</p>
+                  {isOutOfCredits && (
+                    <div className="mt-3 rounded-xl border border-amber-400/40 bg-amber-400/10 p-3 text-amber-100">
+                      <p className="text-xs">You hit your monthly/weekly limit.</p>
+                      {!subscription?.admin_access && (
+                        <button onClick={() => void openPortal()} className="mt-2 rounded-lg border border-amber-200/50 px-3 py-1 text-xs">Upgrade plan</button>
+                      )}
+                    </div>
+                  )}
+                </aside>
 
-            <section className="rounded-2xl border border-white/15 bg-white/5 p-5">
-              <h2 className="text-lg font-semibold">Generate</h2>
-              <div className="mt-4 space-y-3">
-                <textarea
-                  value={topic}
-                  onChange={(e) => setTopic(e.target.value)}
-                  placeholder="What are you posting about?"
-                  required
-                  rows={4}
-                  className={fieldClass}
-                />
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <input value={businessName} onChange={(e) => setBusinessName(e.target.value)} placeholder="Business name (optional)" className={fieldClass} />
-                  <input value={businessType} onChange={(e) => setBusinessType(e.target.value)} placeholder="Business type (optional)" className={fieldClass} />
-                  <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Location (optional)" className={fieldClass} />
-                  <input value={contact} onChange={(e) => setContact(e.target.value)} placeholder="Contact (optional)" className={fieldClass} />
-                  <input value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="Goal (optional)" className={fieldClass} />
-                </div>
-                <div className="rounded-xl border border-white/20 bg-black/30 p-3">
-                  <label className="text-sm text-white/80">Reference image (optional, 1 image)</label>
-                  <input type="file" accept="image/*" onChange={(e) => void handlePickImage(e)} disabled={generating} className="mt-2 block w-full text-xs text-white/70" />
-                  {imageName && <p className="mt-2 text-xs text-white/60">Selected: {imageName}</p>}
-                </div>
-                <button
-                  onClick={() => void handleGenerate()}
-                  disabled={!canGenerate || generating}
-                  className="rounded-lg bg-emerald-400 px-4 py-2 text-sm font-bold text-black disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {generating ? "Generating..." : "Generate"}
-                </button>
-              </div>
-            </section>
-
-            {result && (
-              <section className="rounded-2xl border border-white/15 bg-white/5 p-5">
-                <h2 className="text-lg font-semibold">Results</h2>
-                <div className="mt-3 flex gap-2">
-                  {(["facebook", "instagram", "tiktok"] as const).map((tab) => (
-                    <button
-                      key={tab}
-                      onClick={() => setActiveTab(tab)}
-                      className={`rounded-lg px-3 py-1.5 text-xs capitalize ${
-                        activeTab === tab ? "bg-emerald-400 text-black" : "border border-white/25 text-white"
-                      }`}
-                    >
-                      {tab === "facebook" ? "FB" : tab === "instagram" ? "IG" : "TikTok"}
-                    </button>
-                  ))}
-                </div>
-                <div className="mt-3 rounded-xl border border-white/20 bg-black/40 p-4 text-sm">
-                  <p>{result.captions[activeTab]}</p>
-                  <button
-                    onClick={() => void copyText(result.captions[activeTab], `${activeTab} caption copied.`)}
-                    className="mt-3 rounded-lg border border-white/30 px-3 py-1.5 text-xs"
-                  >
-                    Copy
-                  </button>
-                </div>
-                <div className="mt-3 rounded-xl border border-white/20 bg-black/40 p-4 text-sm">
-                  <p className="text-white/90">{result.hashtags.join(" ")}</p>
-                  <button onClick={() => void copyText(result.hashtags.join(" "), "Hashtags copied.")} className="mt-3 rounded-lg border border-white/30 px-3 py-1.5 text-xs">
-                    Copy hashtags
-                  </button>
-                </div>
-                {result.image?.url && (
-                  <div className="mt-4 overflow-hidden rounded-xl border border-white/20">
-                    <Image src={result.image.url} alt="Generated promo" width={1024} height={1024} unoptimized className="aspect-square w-full object-cover" />
+                <div className="rounded-2xl border border-white/15 bg-white/5 p-4">
+                  <div className="max-h-[420px] space-y-3 overflow-y-auto rounded-xl border border-white/10 bg-black/40 p-3">
+                    {messages.length === 0 && <p className="text-sm text-white/60">Ask for a promotion caption and design concept to begin.</p>}
+                    {messages.map((msg, idx) => (
+                      <div key={`${msg.role}-${idx}`} className={`rounded-xl p-3 ${msg.role === "user" ? "ml-8 bg-white/10" : "mr-8 border border-white/15 bg-black/50"}`}>
+                        <p className="mb-1 text-xs uppercase text-white/60">{msg.role}</p>
+                        <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
+                        {msg.result && (() => {
+                          const result = msg.result;
+                          return (
+                            <div className="mt-3 space-y-3 text-sm">
+                              {(["facebook", "instagram", "tiktok"] as const).map((platform) => (
+                                <div key={platform} className="rounded-lg border border-white/15 bg-black/40 p-3">
+                                  <div className="flex items-center justify-between">
+                                    <p className="font-semibold capitalize">{platform}</p>
+                                    <button onClick={() => void copyText(result.captions[platform], `${platform} copied.`)} className="rounded border border-white/25 px-2 py-1 text-xs">Copy</button>
+                                  </div>
+                                  <p className="mt-2 whitespace-pre-wrap text-white/90">{result.captions[platform]}</p>
+                                </div>
+                              ))}
+                              <div className="rounded-lg border border-white/15 bg-black/40 p-3">
+                                <div className="flex items-center justify-between">
+                                  <p className="font-semibold">Hashtags</p>
+                                  <button onClick={() => void copyText(result.hashtags.join(" "), "Hashtags copied.")} className="rounded border border-white/25 px-2 py-1 text-xs">Copy</button>
+                                </div>
+                                <p className="mt-2 text-white/90">{result.hashtags.join(" ")}</p>
+                              </div>
+                              {result.image?.url && (
+                                <div className="rounded-lg border border-white/15 bg-black/40 p-3">
+                                  <Image src={result.image.url} alt="Generated promo graphic" width={1024} height={1024} unoptimized className="aspect-square w-full rounded-lg object-cover" />
+                                  <a href={result.image.url} download="wovo-promo.png" className="mt-2 inline-block rounded border border-white/25 px-2 py-1 text-xs">Download image</a>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    ))}
                   </div>
-                )}
-                <p className="mt-3 text-xs text-white/70">Remaining credits: {creditsRemaining}</p>
+
+                  <div className="mt-3">
+                    <button onClick={() => setShowDetails((prev) => !prev)} className="text-xs text-emerald-300 underline">{showDetails ? "Hide" : "Show"} details</button>
+                    {showDetails && (
+                      <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                        <input value={businessName} onChange={(e) => setBusinessName(e.target.value)} placeholder="Business name" className={fieldClass} />
+                        <input value={businessType} onChange={(e) => setBusinessType(e.target.value)} placeholder="Business type" className={fieldClass} />
+                        <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Location" className={fieldClass} />
+                        <input value={contact} onChange={(e) => setContact(e.target.value)} placeholder="Contact" className={fieldClass} />
+                        <input value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="Goal" className={fieldClass} />
+                        <div className="rounded-xl border border-white/20 bg-black/30 p-3">
+                          <label className="text-xs text-white/80">Reference image (optional)</label>
+                          <input type="file" accept="image/*" onChange={(e) => void handlePickImage(e)} className="mt-1 block w-full text-xs text-white/70" />
+                          {imageName && <p className="mt-1 text-xs text-white/60">{imageName}</p>}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mt-3 flex gap-2">
+                    <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="Describe the promo you want..." rows={3} className={fieldClass} />
+                    <button onClick={() => void handleGenerate()} disabled={generating || !prompt.trim() || isOutOfCredits} className="rounded-xl bg-emerald-400 px-4 py-2 text-sm font-bold text-black disabled:opacity-60">
+                      {generating ? "Generating..." : "Send"}
+                    </button>
+                  </div>
+                </div>
               </section>
             )}
           </>
         )}
 
-        {showDeleteModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-            <div className="w-full max-w-md rounded-2xl border border-white/20 bg-zinc-950 p-5">
-              <h3 className="text-lg font-semibold">Delete account</h3>
-              <p className="mt-2 text-sm text-white/70">Type DELETE to confirm</p>
-              <input value={deleteConfirmText} onChange={(e) => setDeleteConfirmText(e.target.value)} placeholder="DELETE" className={`${fieldClass} mt-3`} />
-              <div className="mt-4 flex justify-end gap-2">
-                <button onClick={() => setShowDeleteModal(false)} disabled={deletingAccount} className="rounded-lg border border-white/30 px-3 py-2 text-xs">
-                  Cancel
-                </button>
-                <button
-                  onClick={() => void deleteAccount()}
-                  disabled={deletingAccount || generating}
-                  className="rounded-lg border border-red-500/70 px-3 py-2 text-xs text-red-200 disabled:opacity-60"
-                >
-                  {deletingAccount ? "Deleting..." : "Delete account"}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
+        <p className="text-center text-xs text-white/40">Need help? <Link className="underline" href="/">Back home</Link></p>
         {info && <p className="text-sm text-emerald-300">{info}</p>}
         {error && <p className="text-sm text-red-300">{error}</p>}
       </div>
