@@ -10,11 +10,12 @@ type SubscriptionRow = {
   status: string | null;
   current_period_start: string | null;
   current_period_end: string | null;
-  credits_total: number | null;
-  credits_remaining: number | null;
+};
+
+type ProfileCreditsRow = {
+  credits: number | null;
+  weekly_usage: number | null;
   weekly_limit: number | null;
-  weekly_used: number | null;
-  week_start: string | null;
 };
 
 function getDefaultRemaining(plan: PlanName | "none") {
@@ -31,14 +32,14 @@ function getDefaultRemaining(plan: PlanName | "none") {
   };
 }
 
-function toStatusPayload(row: SubscriptionRow | null): UnifiedSubscriptionResponse {
+function toStatusPayload(row: SubscriptionRow | null, profile: ProfileCreditsRow | null): UnifiedSubscriptionResponse {
   const plan = row?.plan ?? "none";
   const defaults = getDefaultRemaining(plan);
   const remaining = {
-    credits_total: row?.credits_total ?? defaults.credits_total,
-    credits_remaining: row?.credits_remaining ?? row?.credits_total ?? defaults.credits_remaining,
-    weekly_limit: row?.weekly_limit ?? defaults.weekly_limit,
-    weekly_used: row?.weekly_used ?? defaults.weekly_used,
+    credits_total: defaults.credits_total,
+    credits_remaining: profile?.credits ?? defaults.credits_remaining,
+    weekly_limit: profile?.weekly_limit ?? defaults.weekly_limit,
+    weekly_used: profile?.weekly_usage ?? defaults.weekly_used,
   };
 
   const status: "active" | "inactive" = isPaidStatus(row?.status) ? "active" : "inactive";
@@ -53,11 +54,16 @@ function toStatusPayload(row: SubscriptionRow | null): UnifiedSubscriptionRespon
 }
 
 export async function getSubscriptionStatus(userId: string): Promise<UnifiedSubscriptionResponse> {
-  const rows = await supabaseServiceRoleRequest<SubscriptionRow[]>(
-    `/rest/v1/subscriptions?select=user_id,plan,status,current_period_start,current_period_end,credits_total,credits_remaining,weekly_limit,weekly_used,week_start,stripe_customer_id&user_id=eq.${userId}&limit=1`,
-  );
+  const [subscriptionRows, profileRows] = await Promise.all([
+    supabaseServiceRoleRequest<SubscriptionRow[]>(
+      `/rest/v1/subscriptions?select=user_id,plan,status,current_period_start,current_period_end,stripe_customer_id&user_id=eq.${userId}&limit=1`,
+    ),
+    supabaseServiceRoleRequest<ProfileCreditsRow[]>(
+      `/rest/v1/profiles?select=credits,weekly_usage,weekly_limit&user_id=eq.${userId}&limit=1`,
+    ),
+  ]);
 
-  return toStatusPayload(rows?.[0] ?? null);
+  return toStatusPayload(subscriptionRows?.[0] ?? null, profileRows?.[0] ?? null);
 }
 
 export async function getRawSubscription(userId: string): Promise<SubscriptionRow | null> {
@@ -94,12 +100,6 @@ export async function syncSubscriptionFromStripe(subscription: StripeSubscriptio
   const currentPeriodStart = getPeriodIso(subscription.current_period_start);
   const currentPeriodEnd = getPeriodIso(subscription.current_period_end);
 
-  const rows = await supabaseServiceRoleRequest<Array<{ current_period_start: string | null }>>(
-    `/rest/v1/subscriptions?select=current_period_start&user_id=eq.${userId}&limit=1`,
-  );
-  const existingPeriodStart = rows?.[0]?.current_period_start ?? null;
-  const resetMonthly = Boolean(currentPeriodStart) && existingPeriodStart !== currentPeriodStart;
-
   await supabaseServiceRoleRequest("/rest/v1/subscriptions?on_conflict=user_id", {
     method: "POST",
     headers: {
@@ -113,11 +113,20 @@ export async function syncSubscriptionFromStripe(subscription: StripeSubscriptio
       plan: planKey,
       current_period_start: currentPeriodStart,
       current_period_end: currentPeriodEnd,
-      credits_total: planConfig.monthlyCredits,
-      credits_remaining: resetMonthly ? planConfig.monthlyCredits : undefined,
+      updated_at: new Date().toISOString(),
+    }),
+  });
+
+  await supabaseServiceRoleRequest("/rest/v1/profiles?on_conflict=user_id", {
+    method: "POST",
+    headers: {
+      Prefer: "resolution=merge-duplicates,return=minimal",
+    },
+    body: JSON.stringify({
+      user_id: userId,
+      credits: planConfig.monthlyCredits,
       weekly_limit: planConfig.weeklyLimit,
-      weekly_used: resetMonthly ? 0 : undefined,
-      week_start: resetMonthly ? new Date().toISOString().slice(0, 10) : undefined,
+      weekly_usage: 0,
       updated_at: new Date().toISOString(),
     }),
   });
