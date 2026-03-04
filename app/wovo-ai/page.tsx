@@ -108,9 +108,20 @@ export default function WovoAiPage() {
       if (!session?.access_token) return;
       const { data, error: userError } = await supabase.auth.getUser(session.access_token);
       if (userError || !data.user) {
-        setError(mapSupabaseAuthError(userError).message);
+        localStorage.removeItem(STORAGE_KEY);
+        supabase.setAccessToken(null);
+        setSession(null);
+        setAuthUser(null);
+        setSubscription(null);
+        setMessages([]);
+        setError("Your session expired. Please sign in again.");
         return;
       }
+
+      if (!session?.access_token) {
+        return;
+      }
+
       setAuthUser(data.user as SupabaseAuthUser);
       setEmail(data.user.email ?? "");
       await loadSubscription();
