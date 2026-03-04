@@ -1,5 +1,6 @@
 import { requireServerUser, supabaseServiceRoleRequest } from "@/lib/supabase/server";
-import { isActiveSubscription } from "@/lib/wovo-ai/plans";
+import { getPlanConfig, getUpgradeSuggestion, isPaidStatus } from "@/lib/wovo-ai/plans";
+import { getSubscriptionStatus } from "@/lib/wovo-ai/subscription";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -19,14 +20,21 @@ type PromptResult = {
   [key: string]: unknown;
 };
 
-type UserSubscriptionRow = {
-  plan: string | null;
-  credits_remaining: number | null;
-  weekly_limit: number | null;
-  subscription_status: string | null;
+type CreditConsumeResponse = {
+  consumed: boolean;
+  credits_used_month: number;
+  credits_limit_month: number;
 };
 
-type GenerationRow = { id: string };
+function blockedResponse(message: string, currentPlan: "starter" | "pro" | "agency" | null) {
+  return Response.json(
+    {
+      error: message,
+      suggested_plan: getUpgradeSuggestion(currentPlan),
+    },
+    { status: 402 },
+  );
+}
 
 export async function POST(request: Request) {
   try {
@@ -35,43 +43,15 @@ export async function POST(request: Request) {
     }
 
     const { user } = await requireServerUser(request.headers.get("authorization"));
+    const subscription = await getSubscriptionStatus(user.id);
 
-    const userRows = await supabaseServiceRoleRequest<UserSubscriptionRow[]>(
-      `/rest/v1/users?select=plan,credits_remaining,weekly_limit,subscription_status&id=eq.${user.id}&limit=1`,
-    );
-
-    const subscription = userRows?.[0] ?? null;
-
-    if (!subscription?.plan || !isActiveSubscription(subscription.subscription_status)) {
-      return Response.json({ error: "Upgrade plan to generate more posts" }, { status: 402 });
+    if (!isPaidStatus(subscription.status)) {
+      return blockedResponse("An active subscription is required to generate posts.", subscription.plan_key);
     }
 
-    const creditsRemaining = subscription.credits_remaining ?? 0;
-    const weeklyLimit = subscription.weekly_limit ?? 0;
-
-    if (creditsRemaining <= 0) {
-      return Response.json({ error: "Upgrade plan to generate more posts" }, { status: 402 });
+    if (subscription.credits_used_month >= subscription.credits_limit_month) {
+      return blockedResponse("Monthly credits exhausted. Upgrade to continue generating.", subscription.plan_key);
     }
-
-    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    const usageRows = await supabaseServiceRoleRequest<GenerationRow[]>(
-      `/rest/v1/generations?select=id&user_id=eq.${user.id}&created_at=gte.${encodeURIComponent(since)}`,
-    );
-
-    const postsUsedThisWeek = usageRows?.length ?? 0;
-    if (postsUsedThisWeek >= weeklyLimit) {
-      return Response.json({ error: "Weekly generation limit reached" }, { status: 429 });
-    }
-
-    await supabaseServiceRoleRequest(`/rest/v1/users?id=eq.${user.id}`, {
-      method: "PATCH",
-      headers: {
-        Prefer: "return=minimal",
-      },
-      body: JSON.stringify({
-        credits_remaining: creditsRemaining - 1,
-      }),
-    });
 
     const body = (await request.json()) as WovoAiRequestBody;
 
@@ -130,14 +110,24 @@ export async function POST(request: Request) {
     try {
       parsed = JSON.parse(rawText) as PromptResult;
     } catch {
-      return Response.json(
-        {
-          captions: { raw: rawText },
-          generated_image_data: null,
-          raw_response: payload,
-        },
-        { status: 200 },
-      );
+      parsed = {
+        captions: { raw: rawText },
+        generated_image_data: null,
+      };
+    }
+
+    const consumeRows = await supabaseServiceRoleRequest<CreditConsumeResponse[]>(
+      "/rest/v1/rpc/consume_generation_credit",
+      {
+        method: "POST",
+        body: JSON.stringify({ p_user_id: user.id }),
+      },
+    );
+
+    const consume = consumeRows?.[0];
+
+    if (!consume?.consumed) {
+      return blockedResponse("Monthly credits exhausted. Upgrade to continue generating.", subscription.plan_key);
     }
 
     await supabaseServiceRoleRequest("/rest/v1/generations", {
@@ -164,6 +154,9 @@ export async function POST(request: Request) {
         captions: parsed.captions ?? null,
         generated_image_data: parsed.generated_image_data ?? null,
         data: parsed,
+        credits_used_month: consume.credits_used_month,
+        credits_limit_month: consume.credits_limit_month,
+        current_plan_limit: subscription.plan_key ? getPlanConfig(subscription.plan_key).monthlyCredits : null,
       },
       { status: 200 },
     );

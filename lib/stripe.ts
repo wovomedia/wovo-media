@@ -8,7 +8,7 @@ function getStripeSecretKey(): string {
   return key;
 }
 
-type StripeRequestBody = Record<string, string | number | undefined | null>;
+type StripeRequestBody = Record<string, string | number | boolean | undefined | null>;
 
 async function stripeRequest<T>(path: string, body?: StripeRequestBody, method = "POST"): Promise<T> {
   const headers = new Headers();
@@ -37,13 +37,16 @@ async function stripeRequest<T>(path: string, body?: StripeRequestBody, method =
   return payload;
 }
 
-export type StripeCheckoutSession = { url: string | null; id: string };
+export type StripeCheckoutSession = { url: string | null; id: string; customer?: string; subscription?: string };
 export type StripePortalSession = { url: string; id: string };
 
 export type StripeSubscription = {
   id: string;
   status: string;
   customer: string;
+  cancel_at_period_end: boolean;
+  current_period_start: number;
+  current_period_end: number;
   items?: { data?: Array<{ price?: { id?: string | null } }> };
 };
 
@@ -69,6 +72,7 @@ export async function createCheckoutSession(args: {
     success_url: args.successUrl,
     cancel_url: args.cancelUrl,
     "metadata[userId]": args.userId,
+    "subscription_data[metadata][userId]": args.userId,
   });
 }
 

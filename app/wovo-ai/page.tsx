@@ -2,13 +2,13 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { mapSupabaseAuthError } from "@/lib/supabase/auth-errors";
 import { supabase, type Session } from "@/lib/supabase/client";
 
 type SupabaseAuthUser = { id: string; email?: string };
 type ProfileRecord = {
-  id: string;
+  email: string | null;
   full_name: string | null;
   business_name: string | null;
   business_type: string | null;
@@ -18,11 +18,12 @@ type ProfileRecord = {
 
 type CaptionsPayload = { facebook: string; instagram: string; tiktok: string; hashtags: string };
 type SubscriptionSummary = {
-  subscribed: boolean;
-  currentPlan: string | null;
-  creditsRemaining: number;
-  weeklyLimit: number;
-  postsUsedThisWeek: number;
+  status: string | null;
+  plan_key: "starter" | "pro" | "agency" | null;
+  credits_used_month: number;
+  credits_limit_month: number;
+  period_end: string | null;
+  can_generate: boolean;
 };
 
 const STORAGE_KEY = "wovo-supabase-session";
@@ -30,10 +31,10 @@ const fieldClass =
   "w-full rounded-xl border border-white/20 bg-black/70 px-3 py-2.5 text-sm text-white outline-none transition focus:border-emerald-300/60 focus:ring-2 focus:ring-emerald-400/40";
 
 const PLAN_OPTIONS = [
-  { key: "starter", label: "$24.99 Starter", desc: "9 posts per month", priceId: process.env.NEXT_PUBLIC_STARTER_PRICE_ID ?? "" },
-  { key: "pro", label: "$49.99 Pro", desc: "18 posts per month", priceId: process.env.NEXT_PUBLIC_PRO_PRICE_ID ?? "" },
-  { key: "agency", label: "$99 Agency", desc: "42 posts per month", priceId: process.env.NEXT_PUBLIC_AGENCY_PRICE_ID ?? "" },
-];
+  { key: "starter", label: "$24.99 Starter", desc: "9 posts per month", priceId: process.env.NEXT_PUBLIC_STRIPE_STARTER_PRICE_ID ?? "", popular: false },
+  { key: "pro", label: "$49.99 Pro", desc: "18 posts per month", priceId: process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID ?? "", popular: false },
+  { key: "agency", label: "$99 Agency", desc: "42 posts per month", priceId: process.env.NEXT_PUBLIC_STRIPE_AGENCY_PRICE_ID ?? "", popular: true },
+] as const;
 
 function parseSessionFromHash(hash: string): Session | null {
   if (!hash.startsWith("#")) return null;
@@ -60,6 +61,7 @@ export default function WovoAiPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
   const [businessName, setBusinessName] = useState("");
   const [businessType, setBusinessType] = useState("");
   const [location, setLocation] = useState("");
@@ -86,12 +88,26 @@ export default function WovoAiPage() {
     Authorization: `Bearer ${token}`,
   });
 
-  const loadSubscription = async (token: string) => {
+  const loadSubscription = useCallback(async (token: string) => {
     const response = await fetch("/api/wovo-ai/subscription", { headers: { Authorization: `Bearer ${token}` } });
     const payload = (await response.json()) as SubscriptionSummary & { error?: string };
     if (!response.ok) throw new Error(payload.error ?? "Unable to load subscription.");
     setSubscription(payload);
-  };
+  }, []);
+
+  const loadProfile = useCallback(async (token: string) => {
+    const response = await fetch("/api/wovo-ai/profile", { headers: { Authorization: `Bearer ${token}` } });
+    const payload = (await response.json()) as (ProfileRecord & { error?: string }) | null;
+    if (!response.ok) throw new Error(payload && "error" in payload ? payload.error ?? "Unable to load profile." : "Unable to load profile.");
+    if (!payload) return;
+
+    setEmail(payload.email ?? "");
+    setFullName(payload.full_name ?? "");
+    setBusinessName(payload.business_name ?? "");
+    setBusinessType(payload.business_type ?? "");
+    setLocation(payload.location ?? "");
+    setContact(payload.contact ?? "");
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -121,29 +137,16 @@ export default function WovoAiPage() {
         if (userError || !userData.user) throw userError ?? new Error("Unable to load user.");
         const user = userData.user as SupabaseAuthUser;
         setAuthUser(user);
+        setEmail(user.email ?? "");
 
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("id, full_name, business_name, business_type, location, contact")
-          .eq("id", user.id)
-          .maybeSingle<ProfileRecord>();
-
-        if (profileError) throw profileError;
-
-        if (profile) {
-          setBusinessName(profile.business_name ?? "");
-          setBusinessType(profile.business_type ?? "");
-          setLocation(profile.location ?? "");
-          setContact(profile.contact ?? "");
-        }
-
+        await loadProfile(session.access_token);
         await loadSubscription(session.access_token);
       } catch (err: unknown) {
         setError(mapSupabaseAuthError(err).message);
       }
     };
     void hydrate();
-  }, [session]);
+  }, [loadProfile, loadSubscription, session]);
 
   const signOut = () => {
     localStorage.removeItem(STORAGE_KEY);
@@ -194,25 +197,42 @@ export default function WovoAiPage() {
   };
 
   const saveProfile = async () => {
-    if (!session?.access_token || !authUser?.id) return;
+    if (!session?.access_token) return;
     setSavingProfile(true);
+    setInfo("");
+    setError("");
     try {
-      const { error: upsertError } = await supabase.from("profiles").upsert({
-        id: authUser.id,
-        business_name: businessName || null,
-        business_type: businessType || null,
-        location: location || null,
-        contact: contact || null,
-        updated_at: new Date().toISOString(),
+      const response = await fetch("/api/wovo-ai/profile", {
+        method: "POST",
+        headers: withAuthHeaders(session.access_token),
+        body: JSON.stringify({ email, full_name: fullName, business_name: businessName, business_type: businessType, location, contact }),
       });
-
-      if (upsertError) throw upsertError;
-      setInfo("Profile saved.");
+      const payload = (await response.json()) as { success?: boolean; error?: string };
+      if (!response.ok) throw new Error(payload.error ?? "Unable to save profile.");
+      setInfo("Profile saved. If email changed, check your inbox for confirmation.");
     } catch (err: unknown) {
       setError(mapSupabaseAuthError(err).message);
     } finally {
       setSavingProfile(false);
     }
+  };
+
+  const deleteAccount = async () => {
+    if (!session?.access_token) return;
+    if (!window.confirm("Delete your account permanently? This cannot be undone.")) return;
+
+    const response = await fetch("/api/wovo-ai/delete-account", {
+      method: "POST",
+      headers: withAuthHeaders(session.access_token),
+    });
+
+    const payload = (await response.json()) as { success?: boolean; error?: string };
+    if (!response.ok) {
+      setError(payload.error ?? "Unable to delete account.");
+      return;
+    }
+
+    signOut();
   };
 
   const startCheckout = async (priceId: string) => {
@@ -250,7 +270,7 @@ export default function WovoAiPage() {
   };
 
   const handleGenerate = async () => {
-    if (!session?.access_token) return;
+    if (!session?.access_token || !subscription?.can_generate) return;
     setGenerating(true);
     setError("");
     try {
@@ -284,6 +304,8 @@ export default function WovoAiPage() {
     }
   };
 
+  const creditsText = `${subscription?.credits_used_month ?? 0} / ${subscription?.credits_limit_month ?? 0}`;
+
   return (
     <main className="min-h-screen bg-black px-4 py-6 text-white sm:px-6 sm:py-8">
       <div className="mx-auto w-full max-w-5xl space-y-5">
@@ -294,7 +316,7 @@ export default function WovoAiPage() {
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className={fieldClass} />
               <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" className={fieldClass} />
             </div>
-            <div className="mt-4 grid grid-cols-2 gap-2">
+            <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
               <button onClick={() => void handleSignIn()} className="rounded-xl bg-emerald-400 px-4 py-2.5 text-sm font-bold text-black">Sign in</button>
               <button onClick={() => void handleSignUp()} className="rounded-xl border border-white/30 px-4 py-2.5 text-sm">Sign up</button>
             </div>
@@ -305,24 +327,25 @@ export default function WovoAiPage() {
         {!loadingSession && session && (
           <>
             <header className="rounded-2xl border border-white/15 bg-white/5 p-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h1 className="text-2xl font-bold">Wovo AI</h1>
                   <p className="text-sm text-white/70">{authUser?.email ?? "Signed in"}</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Link href="/" className="rounded-lg border border-white/20 px-3 py-2 text-xs">Home</Link>
                   <button onClick={signOut} className="rounded-lg border border-white/30 px-3 py-2 text-xs">Sign out</button>
                 </div>
               </div>
             </header>
 
-            {!subscription?.subscribed && (
+            {!subscription?.can_generate && (
               <section className="rounded-2xl border border-white/15 bg-white/5 p-5">
                 <h2 className="text-xl font-semibold">Choose a plan to continue</h2>
                 <div className="mt-4 grid gap-3 md:grid-cols-3">
                   {PLAN_OPTIONS.map((plan) => (
-                    <article key={plan.key} className="rounded-xl border border-white/20 bg-black/40 p-4">
+                    <article key={plan.key} className="relative rounded-xl border border-white/20 bg-black/40 p-4">
+                      {plan.popular && <span className="absolute right-3 top-3 rounded-full bg-emerald-400 px-2 py-1 text-xs font-semibold text-black">Most popular</span>}
                       <h3 className="font-semibold">{plan.label}</h3>
                       <p className="mt-1 text-sm text-white/70">{plan.desc}</p>
                       <button
@@ -338,24 +361,24 @@ export default function WovoAiPage() {
               </section>
             )}
 
-            {subscription?.subscribed && (
-              <section className="rounded-2xl border border-white/15 bg-white/5 p-5">
-                <h2 className="text-xl font-semibold">Dashboard</h2>
-                <p className="mt-2 text-sm text-white/80">Current plan: {subscription.currentPlan}</p>
-                <p className="text-sm text-white/80">Credits remaining: {subscription.creditsRemaining}</p>
-                <p className="text-sm text-white/80">Posts used this week: {subscription.postsUsedThisWeek}</p>
-                <div className="mt-4 flex gap-2">
-                  <button onClick={() => void handleGenerate()} disabled={generating} className="rounded-lg bg-emerald-400 px-4 py-2 text-sm font-bold text-black">
-                    {generating ? "Generating..." : "Generate Post"}
-                  </button>
-                  <button onClick={() => void openPortal()} className="rounded-lg border border-white/30 px-4 py-2 text-sm">Manage Subscription</button>
-                </div>
-              </section>
-            )}
+            <section className="rounded-2xl border border-white/15 bg-white/5 p-5">
+              <h2 className="text-xl font-semibold">Dashboard</h2>
+              <p className="mt-2 text-sm text-white/80">Plan: {subscription?.plan_key ?? "none"}</p>
+              <p className="text-sm text-white/80">Status: {subscription?.status ?? "inactive"}</p>
+              <p className="text-sm text-white/80">Credits: {creditsText}</p>
+              <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                <button onClick={() => void handleGenerate()} disabled={generating || !subscription?.can_generate} className="rounded-lg bg-emerald-400 px-4 py-2 text-sm font-bold text-black disabled:opacity-60">
+                  {generating ? "Generating..." : "Generate Post"}
+                </button>
+                <button onClick={() => void openPortal()} className="rounded-lg border border-white/30 px-4 py-2 text-sm">Manage Billing</button>
+              </div>
+            </section>
 
             <section className="rounded-2xl border border-white/15 bg-white/5 p-5">
               <h2 className="text-lg font-semibold">Profile + content input</h2>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className={fieldClass} />
+                <input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Full Name" className={fieldClass} />
                 <input value={businessName} onChange={(e) => setBusinessName(e.target.value)} placeholder="Business Name" className={fieldClass} />
                 <input value={businessType} onChange={(e) => setBusinessType(e.target.value)} placeholder="Business Type" className={fieldClass} />
                 <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Location" className={fieldClass} />
@@ -363,13 +386,16 @@ export default function WovoAiPage() {
                 <input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Topic" className={fieldClass} />
                 <input value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="Goal" className={fieldClass} />
               </div>
-              <button onClick={() => void saveProfile()} disabled={savingProfile} className="mt-4 rounded-lg border border-white/30 px-4 py-2 text-sm">
-                {savingProfile ? "Saving..." : "Save Profile"}
-              </button>
+              <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                <button onClick={() => void saveProfile()} disabled={savingProfile} className="rounded-lg border border-white/30 px-4 py-2 text-sm">
+                  {savingProfile ? "Saving..." : "Save Profile"}
+                </button>
+                <button onClick={() => void deleteAccount()} className="rounded-lg border border-red-400/60 px-4 py-2 text-sm text-red-200">Delete Account</button>
+              </div>
             </section>
 
             {generatedImage && (
-              <Image src={generatedImage} alt="Generated" width={1024} height={1024} unoptimized className="rounded-lg border border-white/20" />
+              <Image src={generatedImage} alt="Generated" width={1024} height={1024} unoptimized className="w-full rounded-lg border border-white/20" />
             )}
 
             {captions && (

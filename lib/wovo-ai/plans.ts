@@ -13,29 +13,37 @@ const PLAN_MAP: Record<PlanName, PlanConfig> = {
   agency: { name: "agency", label: "Agency", monthlyCredits: 42, weeklyLimit: 14 },
 };
 
-const PRICE_TO_PLAN_ENTRIES = [
-  [process.env.NEXT_PUBLIC_STARTER_PRICE_ID, "starter"],
-  [process.env.NEXT_PUBLIC_PRO_PRICE_ID, "pro"],
-  [process.env.NEXT_PUBLIC_AGENCY_PRICE_ID, "agency"],
-] as const;
+function getPricePlanPairs(): Array<[string, PlanName]> {
+  const entries: Array<[string | undefined, PlanName]> = [
+    [process.env.NEXT_PUBLIC_STRIPE_STARTER_PRICE_ID, "starter"],
+    [process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID, "pro"],
+    [process.env.NEXT_PUBLIC_STRIPE_AGENCY_PRICE_ID, "agency"],
+  ];
 
-export const PRICE_TO_PLAN: Record<string, PlanName> = PRICE_TO_PLAN_ENTRIES.reduce<Record<string, PlanName>>(
-  (acc, [priceId, plan]) => {
-    if (priceId) acc[priceId] = plan;
+  return entries.filter((entry): entry is [string, PlanName] => Boolean(entry[0]));
+}
+
+export function getPriceToPlanMap(): Record<string, PlanName> {
+  return getPricePlanPairs().reduce<Record<string, PlanName>>((acc, [priceId, plan]) => {
+    acc[priceId] = plan;
     return acc;
-  },
-  {},
-);
+  }, {});
+}
 
 export function getPlanFromPriceId(priceId: string | null | undefined): PlanName | null {
   if (!priceId) return null;
-  return PRICE_TO_PLAN[priceId] ?? null;
+  return getPriceToPlanMap()[priceId] ?? null;
 }
 
 export function getPlanConfig(plan: PlanName): PlanConfig {
   return PLAN_MAP[plan];
 }
 
-export function isActiveSubscription(status: string | null | undefined): boolean {
-  return ["active", "trialing", "past_due"].includes(status ?? "");
+export function isPaidStatus(status: string | null | undefined): boolean {
+  return ["active", "trialing"].includes(status ?? "");
+}
+
+export function getUpgradeSuggestion(currentPlan: PlanName | null): PlanName {
+  if (currentPlan === "starter") return "pro";
+  return "agency";
 }
