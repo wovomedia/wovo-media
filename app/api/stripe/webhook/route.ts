@@ -2,19 +2,13 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { retrieveSubscription, type StripeSubscription } from "@/lib/stripe";
-import { supabaseServiceRoleRequest } from "@/lib/supabase/server";
-import { getPlanConfig, getPlanFromPriceId } from "@/lib/wovo-ai/plans";
+import { cancelSubscriptionByCustomerId, syncSubscriptionFromStripe } from "@/lib/wovo-ai/subscription";
 
 export const runtime = "nodejs";
 
 type StripeEvent = {
   type: string;
   data: { object: Record<string, unknown> };
-};
-
-type UserRow = {
-  id: string;
-  stripe_customer_id: string | null;
 };
 
 function verifySignature(payload: string, signatureHeader: string, secret: string): boolean {
@@ -37,40 +31,6 @@ function verifySignature(payload: string, signatureHeader: string, secret: strin
   }
 
   return timingSafeEqual(expectedBuffer, actualBuffer);
-}
-
-async function resolveUserIdFromCustomer(customerId: string): Promise<string | null> {
-  const users = await supabaseServiceRoleRequest<UserRow[]>(
-    `/rest/v1/users?select=id,stripe_customer_id&stripe_customer_id=eq.${customerId}&limit=1`,
-  );
-
-  return users?.[0]?.id ?? null;
-}
-
-async function updateUserFromSubscription(subscription: StripeSubscription) {
-  const priceId = subscription.items?.data?.[0]?.price?.id ?? null;
-  const planName = getPlanFromPriceId(priceId);
-  const customerId = String(subscription.customer);
-
-  const userId = await resolveUserIdFromCustomer(customerId);
-  if (!userId || !planName) return;
-
-  const plan = getPlanConfig(planName);
-
-  await supabaseServiceRoleRequest(`/rest/v1/users?id=eq.${userId}`, {
-    method: "PATCH",
-    headers: {
-      Prefer: "return=minimal",
-    },
-    body: JSON.stringify({
-      subscription_status: subscription.status,
-      subscription_id: subscription.id,
-      price_id: priceId,
-      plan: plan.name,
-      credits_remaining: plan.monthlyCredits,
-      weekly_limit: plan.weeklyLimit,
-    }),
-  });
 }
 
 export async function POST(request: Request) {
@@ -107,58 +67,23 @@ export async function POST(request: Request) {
           customer?: string;
           subscription?: string;
           metadata?: { userId?: string };
-          customer_details?: { email?: string };
         };
 
-        if (session.customer && session.subscription) {
+        if (session.subscription) {
           const subscription = await retrieveSubscription(String(session.subscription));
-          const userId = session.metadata?.userId ?? null;
-
-          if (userId) {
-            await supabaseServiceRoleRequest("/rest/v1/users?on_conflict=id", {
-              method: "POST",
-              headers: {
-                Prefer: "resolution=merge-duplicates,return=minimal",
-              },
-              body: JSON.stringify({
-                id: userId,
-                email: session.customer_details?.email ?? "",
-                stripe_customer_id: String(session.customer),
-              }),
-            });
-          }
-
-          await updateUserFromSubscription(subscription);
+          await syncSubscriptionFromStripe(subscription, session.metadata?.userId);
         }
         break;
       }
       case "customer.subscription.created":
       case "customer.subscription.updated": {
         const subscription = event.data.object as unknown as StripeSubscription;
-        await updateUserFromSubscription(subscription);
+        await syncSubscriptionFromStripe(subscription);
         break;
       }
       case "customer.subscription.deleted": {
         const subscription = event.data.object as unknown as StripeSubscription;
-        const customerId = String(subscription.customer);
-        const userId = await resolveUserIdFromCustomer(customerId);
-
-        if (userId) {
-          await supabaseServiceRoleRequest(`/rest/v1/users?id=eq.${userId}`, {
-            method: "PATCH",
-            headers: {
-              Prefer: "return=minimal",
-            },
-            body: JSON.stringify({
-              subscription_status: "canceled",
-              subscription_id: null,
-              price_id: null,
-              plan: null,
-              credits_remaining: 0,
-              weekly_limit: 0,
-            }),
-          });
-        }
+        await cancelSubscriptionByCustomerId(String(subscription.customer));
         break;
       }
       default:

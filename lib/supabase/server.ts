@@ -129,3 +129,22 @@ export async function supabaseServiceRoleRequest<T = unknown>(
   if (response.status === 204) return null;
   return (await response.json()) as T;
 }
+
+export async function updateAuthEmail(accessToken: string, email: string) {
+  const headers = new Headers();
+  headers.set("apikey", getSupabaseAnonKey());
+  headers.set("Authorization", `Bearer ${accessToken}`);
+  headers.set("Content-Type", "application/json");
+
+  const response = await fetch(`${getSupabaseUrl()}/auth/v1/user`, {
+    method: "PUT",
+    headers,
+    body: JSON.stringify({ email }),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || "Unable to update email.");
+  }
+}

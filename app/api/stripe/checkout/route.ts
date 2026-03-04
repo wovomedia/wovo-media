@@ -7,9 +7,7 @@ type CheckoutBody = {
   priceId?: string;
 };
 
-type UserSubscriptionRow = {
-  id: string;
-  email: string;
+type SubscriptionRow = {
   stripe_customer_id: string | null;
 };
 
@@ -17,42 +15,42 @@ export async function POST(request: Request) {
   try {
     const { user } = await requireServerUser(request.headers.get("authorization"));
     const body = (await request.json()) as CheckoutBody;
+    const priceId = body.priceId ?? "";
 
-    if (!body.priceId || !getPlanFromPriceId(body.priceId)) {
+    if (!priceId || !getPlanFromPriceId(priceId)) {
       return NextResponse.json({ error: "Invalid priceId." }, { status: 400 });
     }
 
-    const rows = await supabaseServiceRoleRequest<UserSubscriptionRow[]>(
-      `/rest/v1/users?select=id,email,stripe_customer_id&id=eq.${user.id}&limit=1`,
+    const rows = await supabaseServiceRoleRequest<SubscriptionRow[]>(
+      `/rest/v1/subscriptions?select=stripe_customer_id&user_id=eq.${user.id}&limit=1`,
     );
 
-    const existing = rows?.[0] ?? null;
-    let customerId = existing?.stripe_customer_id ?? null;
+    let stripeCustomerId = rows?.[0]?.stripe_customer_id ?? null;
 
-    if (!customerId) {
-      const customer = await createStripeCustomer(user.email ?? existing?.email ?? "", user.id);
-      customerId = customer.id;
+    if (!stripeCustomerId) {
+      const customer = await createStripeCustomer(user.email ?? "", user.id);
+      stripeCustomerId = customer.id;
 
-      await supabaseServiceRoleRequest("/rest/v1/users?on_conflict=id", {
+      await supabaseServiceRoleRequest("/rest/v1/subscriptions?on_conflict=user_id", {
         method: "POST",
         headers: {
           Prefer: "resolution=merge-duplicates,return=minimal",
         },
         body: JSON.stringify({
-          id: user.id,
-          email: user.email ?? existing?.email ?? "",
-          stripe_customer_id: customerId,
+          user_id: user.id,
+          stripe_customer_id: stripeCustomerId,
+          updated_at: new Date().toISOString(),
         }),
       });
     }
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
     const session = await createCheckoutSession({
-      customerId,
-      priceId: body.priceId,
+      customerId: stripeCustomerId,
+      priceId,
       userId: user.id,
-      successUrl: `${siteUrl}/wovo-ai?success=true`,
-      cancelUrl: `${siteUrl}/wovo-ai?canceled=true`,
+      successUrl: `${appUrl}/wovo-ai?stripe=success`,
+      cancelUrl: `${appUrl}/wovo-ai?stripe=cancel`,
     });
 
     return NextResponse.json({ url: session.url });
