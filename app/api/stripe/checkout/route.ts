@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { stripe } from "@/lib/stripe";
+import { createCheckoutSession, createStripeCustomer } from "@/lib/stripe";
 import { requireServerUser, supabaseServiceRoleRequest } from "@/lib/supabase/server";
 import { getPlanFromPriceId } from "@/lib/wovo-ai/plans";
 
@@ -27,15 +27,10 @@ export async function POST(request: Request) {
     );
 
     const existing = rows?.[0] ?? null;
-
     let customerId = existing?.stripe_customer_id ?? null;
 
     if (!customerId) {
-      const customer = await stripe.customers.create({
-        email: user.email,
-        metadata: { userId: user.id },
-      });
-
+      const customer = await createStripeCustomer(user.email ?? existing?.email ?? "", user.id);
       customerId = customer.id;
 
       await supabaseServiceRoleRequest("/rest/v1/users?on_conflict=id", {
@@ -51,20 +46,13 @@ export async function POST(request: Request) {
       });
     }
 
-    const session = await stripe.checkout.sessions.create({
-      mode: "subscription",
-      customer: customerId,
-      line_items: [
-        {
-          price: body.priceId,
-          quantity: 1,
-        },
-      ],
-      success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/wovo-ai?success=true`,
-      cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/wovo-ai?canceled=true`,
-      metadata: {
-        userId: user.id,
-      },
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+    const session = await createCheckoutSession({
+      customerId,
+      priceId: body.priceId,
+      userId: user.id,
+      successUrl: `${siteUrl}/wovo-ai?success=true`,
+      cancelUrl: `${siteUrl}/wovo-ai?canceled=true`,
     });
 
     return NextResponse.json({ url: session.url });

@@ -13,11 +13,19 @@ const PLAN_MAP: Record<PlanName, PlanConfig> = {
   agency: { name: "agency", label: "Agency", monthlyCredits: 42, weeklyLimit: 14 },
 };
 
-export const PRICE_TO_PLAN: Record<string, PlanName> = {
-  [process.env.STARTER_PRICE_ID ?? ""]: "starter",
-  [process.env.PRO_PRICE_ID ?? ""]: "pro",
-  [process.env.AGENCY_PRICE_ID ?? ""]: "agency",
-};
+const PRICE_TO_PLAN_ENTRIES = [
+  [process.env.NEXT_PUBLIC_STARTER_PRICE_ID, "starter"],
+  [process.env.NEXT_PUBLIC_PRO_PRICE_ID, "pro"],
+  [process.env.NEXT_PUBLIC_AGENCY_PRICE_ID, "agency"],
+] as const;
+
+export const PRICE_TO_PLAN: Record<string, PlanName> = PRICE_TO_PLAN_ENTRIES.reduce<Record<string, PlanName>>(
+  (acc, [priceId, plan]) => {
+    if (priceId) acc[priceId] = plan;
+    return acc;
+  },
+  {},
+);
 
 export function getPlanFromPriceId(priceId: string | null | undefined): PlanName | null {
   if (!priceId) return null;

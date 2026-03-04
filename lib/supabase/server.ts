@@ -6,8 +6,13 @@ function getRequiredEnv(value: string | undefined, name: string): string {
   return value;
 }
 
-const url = getRequiredEnv(process.env.NEXT_PUBLIC_SUPABASE_URL, "NEXT_PUBLIC_SUPABASE_URL");
-const anonKey = getRequiredEnv(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, "NEXT_PUBLIC_SUPABASE_ANON_KEY");
+function getSupabaseUrl() {
+  return getRequiredEnv(process.env.NEXT_PUBLIC_SUPABASE_URL, "NEXT_PUBLIC_SUPABASE_URL");
+}
+
+function getSupabaseAnonKey() {
+  return getRequiredEnv(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, "NEXT_PUBLIC_SUPABASE_ANON_KEY");
+}
 
 export type AuthUser = {
   id: string;
@@ -27,10 +32,10 @@ export async function requireServerUser(authHeader: string | null): Promise<{ us
   }
 
   const headers = new Headers();
-  headers.set("apikey", anonKey);
+  headers.set("apikey", getSupabaseAnonKey());
   headers.set("Authorization", `Bearer ${accessToken}`);
 
-  const response = await fetch(`${url}/auth/v1/user`, {
+  const response = await fetch(`${getSupabaseUrl()}/auth/v1/user`, {
     headers,
     cache: "no-store",
   });
@@ -50,7 +55,7 @@ export async function deleteAuthUserById(userId: string) {
   headers.set("apikey", serviceRoleKey);
   headers.set("Authorization", `Bearer ${serviceRoleKey}`);
 
-  const response = await fetch(`${url}/auth/v1/admin/users/${userId}`, {
+  const response = await fetch(`${getSupabaseUrl()}/auth/v1/admin/users/${userId}`, {
     method: "DELETE",
     headers,
     cache: "no-store",
@@ -80,11 +85,11 @@ export async function supabaseRestRequest<T = unknown>(
   init?: RequestInit,
 ): Promise<T | null> {
   const headers = mergeHeaders(init?.headers);
-  headers.set("apikey", anonKey);
+  headers.set("apikey", getSupabaseAnonKey());
   headers.set("Authorization", `Bearer ${accessToken}`);
   headers.set("Content-Type", "application/json");
 
-  const response = await fetch(`${url}${path}`, {
+  const response = await fetch(`${getSupabaseUrl()}${path}`, {
     ...init,
     headers,
     cache: "no-store",
@@ -99,7 +104,6 @@ export async function supabaseRestRequest<T = unknown>(
   return (await response.json()) as T;
 }
 
-
 export async function supabaseServiceRoleRequest<T = unknown>(
   path: string,
   init?: RequestInit,
@@ -111,7 +115,7 @@ export async function supabaseServiceRoleRequest<T = unknown>(
   headers.set("Authorization", `Bearer ${serviceRoleKey}`);
   headers.set("Content-Type", "application/json");
 
-  const response = await fetch(`${url}${path}`, {
+  const response = await fetch(`${getSupabaseUrl()}${path}`, {
     ...init,
     headers,
     cache: "no-store",

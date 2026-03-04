@@ -4,8 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { mapSupabaseAuthError } from "@/lib/supabase/auth-errors";
-import type { Session } from "@supabase/supabase-js";
-import { supabase } from "@/lib/supabase/client";
+import { supabase, type Session } from "@/lib/supabase/client";
 
 type SupabaseAuthUser = { id: string; email?: string };
 type ProfileRecord = {
@@ -117,6 +116,7 @@ export default function WovoAiPage() {
     const hydrate = async () => {
       if (!session?.access_token) return;
       try {
+        supabase.setAccessToken(session.access_token);
         const { data: userData, error: userError } = await supabase.auth.getUser(session.access_token);
         if (userError || !userData.user) throw userError ?? new Error("Unable to load user.");
         const user = userData.user as SupabaseAuthUser;
@@ -147,6 +147,7 @@ export default function WovoAiPage() {
 
   const signOut = () => {
     localStorage.removeItem(STORAGE_KEY);
+    supabase.setAccessToken(null);
     setSession(null);
     setAuthUser(null);
     setSubscription(null);
