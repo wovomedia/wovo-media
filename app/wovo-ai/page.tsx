@@ -333,6 +333,13 @@ export default function WovoAiPage() {
   const creditsExhausted = !subscription?.admin_access && creditsRemaining <= 0;
   const composerDisabled = generating || !canAccessGenerator || creditsExhausted || weeklyLimitHit;
 
+  const creditsRemaining = Math.max((subscription?.credits_limit_month ?? 0) - (subscription?.credits_used_month ?? 0), 0);
+  const activeSubscription = subscription?.status === "active";
+  const canAccessGenerator = Boolean(subscription?.admin_access || activeSubscription);
+  const weeklyLimitHit = !subscription?.admin_access && (subscription?.weekly_used ?? 0) >= (subscription?.weekly_limit ?? 0);
+  const creditsExhausted = !subscription?.admin_access && creditsRemaining <= 0;
+  const composerDisabled = generating || !canAccessGenerator || creditsExhausted || weeklyLimitHit;
+
   const handleGenerate = async () => {
     const trimmedPrompt = prompt.trim();
     if (!session?.access_token || !trimmedPrompt || composerDisabled) return;
@@ -385,6 +392,15 @@ export default function WovoAiPage() {
         hashtags: (payload.hashtags ?? []).join(" "),
         imagePrompt: payload.image_prompt ?? "",
       };
+
+      const result = {
+        facebook: payload.captions?.facebook ?? "",
+        instagram: payload.captions?.instagram ?? "",
+        tiktok: payload.captions?.tiktok ?? "",
+        hashtags: Array.isArray(payload.hashtags) ? payload.hashtags.join(" ") : (payload.hashtags ?? ""),
+        imagePrompt: payload.image_prompt,
+      };
+      const imageUrl = payload.image?.url ?? (payload.image?.base64 ? `data:image/png;base64,${payload.image.base64}` : undefined);
 
       const assistantMessage: ChatMessage = {
         id: createMessageId(),
