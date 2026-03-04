@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { createPortalSession } from "@/lib/stripe";
 import { requireServerUser, supabaseServiceRoleRequest } from "@/lib/supabase/server";
 
-function getOrigin(request: Request): string {
+function getSiteUrlFromRequest(request: Request): string {
+  const envUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (envUrl) return envUrl.replace(/\/$/, "");
+
   const url = new URL(request.url);
   const forwardedHost = request.headers.get("x-forwarded-host");
   const forwardedProto = request.headers.get("x-forwarded-proto") ?? "https";
@@ -26,15 +29,12 @@ export async function POST(request: Request) {
 
     const stripeCustomerId = rows?.[0]?.stripe_customer_id ?? null;
     if (!stripeCustomerId) {
-      return NextResponse.json({ error: "No customer yet" }, { status: 400 });
+      return NextResponse.json({ error: "No Stripe customer found for this account." }, { status: 400 });
     }
 
-    const session = await createPortalSession(stripeCustomerId, `${getOrigin(request)}/wovo-ai`);
+    const session = await createPortalSession(stripeCustomerId, `${getSiteUrlFromRequest(request)}/wovo-ai`);
     return NextResponse.json({ url: session.url });
   } catch (error) {
-    if (error instanceof Error && error.message.includes("Missing bearer token")) {
-      return NextResponse.json({ error: "Missing bearer token." }, { status: 401 });
-    }
     if (error instanceof Error && error.message.includes("Unable to verify session")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
