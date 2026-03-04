@@ -5,7 +5,7 @@ import type { StripeSubscription } from "@/lib/stripe";
 type SubscriptionRow = {
   user_id: string;
   stripe_customer_id: string | null;
-  current_period_start: string | null;
+  period_start: string | null;
 };
 
 export type SubscriptionStatusPayload = {
@@ -18,8 +18,8 @@ export type SubscriptionStatusPayload = {
 };
 
 export async function getSubscriptionStatus(userId: string): Promise<SubscriptionStatusPayload> {
-  const subscriptionRows = await supabaseServiceRoleRequest<Array<{ status: string | null; plan_key: PlanName | null; current_period_end: string | null }>>(
-    `/rest/v1/subscriptions?select=status,plan_key,current_period_end&user_id=eq.${userId}&limit=1`,
+  const subscriptionRows = await supabaseServiceRoleRequest<Array<{ status: string | null; plan_key: PlanName | null; period_end: string | null }>>(
+    `/rest/v1/subscriptions?select=status,plan_key,period_end&user_id=eq.${userId}&limit=1`,
   );
 
   const usageRows = await supabaseServiceRoleRequest<Array<{ credits_used_month: number | null; credits_limit_month: number | null }>>(
@@ -38,14 +38,14 @@ export async function getSubscriptionStatus(userId: string): Promise<Subscriptio
     plan_key: subscription?.plan_key ?? null,
     credits_used_month: creditsUsed,
     credits_limit_month: creditsLimit,
-    period_end: subscription?.current_period_end ?? null,
+    period_end: subscription?.period_end ?? null,
     can_generate: paidStatus && creditsUsed < creditsLimit,
   };
 }
 
 export async function findUserIdByCustomerId(customerId: string): Promise<string | null> {
   const rows = await supabaseServiceRoleRequest<SubscriptionRow[]>(
-    `/rest/v1/subscriptions?select=user_id,stripe_customer_id,current_period_start&stripe_customer_id=eq.${customerId}&limit=1`,
+    `/rest/v1/subscriptions?select=user_id,stripe_customer_id,period_start&stripe_customer_id=eq.${customerId}&limit=1`,
   );
 
   return rows?.[0]?.user_id ?? null;
@@ -88,8 +88,8 @@ export async function syncSubscriptionFromStripe(subscription: StripeSubscriptio
       status: subscription.status,
       plan_key: planKey,
       price_id: priceId,
-      current_period_start: currentPeriodStart,
-      current_period_end: currentPeriodEnd,
+      period_start: currentPeriodStart,
+      period_end: currentPeriodEnd,
       cancel_at_period_end: subscription.cancel_at_period_end,
       updated_at: new Date().toISOString(),
     }),
