@@ -4,22 +4,25 @@ export type PlanConfig = {
   name: PlanName;
   label: string;
   monthlyCredits: number;
+  monthlyPrice: string;
+};
+
+export const WOVO_AI_PRICES: Record<PlanName, string | undefined> = {
+  starter: process.env.STRIPE_PRICE_STARTER,
+  pro: process.env.STRIPE_PRICE_PRO,
+  business: process.env.STRIPE_PRICE_BUSINESS,
 };
 
 const PLAN_MAP: Record<PlanName, PlanConfig> = {
-  starter: { name: "starter", label: "Starter", monthlyCredits: 25 },
-  pro: { name: "pro", label: "Pro", monthlyCredits: 50 },
-  business: { name: "business", label: "Business", monthlyCredits: 100 },
+  starter: { name: "starter", label: "Starter", monthlyCredits: 25, monthlyPrice: "$24.99/month" },
+  pro: { name: "pro", label: "Pro", monthlyCredits: 50, monthlyPrice: "$49.99/month" },
+  business: { name: "business", label: "Business", monthlyCredits: 100, monthlyPrice: "$99/month" },
 };
 
 function getPricePlanPairs(): Array<[string, PlanName]> {
-  const entries: Array<[string | undefined, PlanName]> = [
-    [process.env.NEXT_PUBLIC_STARTER_PRICE_ID, "starter"],
-    [process.env.NEXT_PUBLIC_PRO_PRICE_ID, "pro"],
-    [process.env.NEXT_PUBLIC_BUSINESS_PRICE_ID, "business"],
-  ];
-
-  return entries.filter((entry): entry is [string, PlanName] => Boolean(entry[0]));
+  return Object.entries(WOVO_AI_PRICES)
+    .filter(([, priceId]) => Boolean(priceId))
+    .map(([plan, priceId]) => [priceId as string, plan as PlanName]);
 }
 
 export function getAllowedSubscriptionPriceIds(): string[] {
