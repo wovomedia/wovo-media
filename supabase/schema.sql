@@ -2,8 +2,23 @@ create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text,
   full_name text,
-  created_at timestamptz default now()
+  business_name text,
+  business_type text,
+  location text,
+  contact text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
 );
+
+alter table public.profiles
+  add column if not exists email text,
+  add column if not exists full_name text,
+  add column if not exists business_name text,
+  add column if not exists business_type text,
+  add column if not exists location text,
+  add column if not exists contact text,
+  add column if not exists created_at timestamptz default now(),
+  add column if not exists updated_at timestamptz default now();
 
 alter table public.profiles enable row level security;
 
@@ -38,7 +53,11 @@ set search_path = public
 as $$
 begin
   insert into public.profiles (id, email, full_name)
-  values (new.id, new.email, new.raw_user_meta_data ->> 'full_name');
+  values (new.id, new.email, new.raw_user_meta_data ->> 'full_name')
+  on conflict (id) do update
+  set email = excluded.email,
+      full_name = coalesce(excluded.full_name, public.profiles.full_name),
+      updated_at = now();
   return new;
 end;
 $$;

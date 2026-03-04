@@ -20,6 +20,11 @@ html, body {
   color: var(--fg);
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   scroll-behavior: smooth;
+  overflow-x: hidden;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 /* =====================
