@@ -345,7 +345,7 @@ export default function WovoAiPage() {
     ]);
 
     try {
-      const response = await fetch("/api/wovo-ai", {
+      const response = await fetch("/api/wovo-ai/generate", {
         method: "POST",
         headers: await authHeaders(),
         body: JSON.stringify({
