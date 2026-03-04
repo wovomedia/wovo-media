@@ -130,10 +130,13 @@ export const supabaseClient = {
     };
 
     return {
-      async selectByEmail(accessToken: string, email: string) {
+      async selectById(accessToken: string, id: string) {
+        return this.selectOneByColumn(accessToken, "id", id);
+      },
+      async selectOneByColumn(accessToken: string, column: string, value: string) {
         const url = new URL(buildUrl(`/rest/v1/${table}`));
         url.searchParams.set("select", "*");
-        url.searchParams.set("email", `eq.${email}`);
+        url.searchParams.set(column, `eq.${value}`);
         url.searchParams.set("limit", "1");
 
         const rows = (await request(url.toString(), {
@@ -144,19 +147,17 @@ export const supabaseClient = {
 
         return rows[0] ?? null;
       },
-      async selectById(accessToken: string, id: string) {
+      async selectMany(accessToken: string, query: Record<string, string>) {
         const url = new URL(buildUrl(`/rest/v1/${table}`));
-        url.searchParams.set("select", "*");
-        url.searchParams.set("id", `eq.${id}`);
-        url.searchParams.set("limit", "1");
+        Object.entries(query).forEach(([key, value]) => {
+          url.searchParams.set(key, value);
+        });
 
-        const rows = (await request(url.toString(), {
+        return (await request(url.toString(), {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
         })) as Record<string, unknown>[];
-
-        return rows[0] ?? null;
       },
       async insert(accessToken: string, values: Record<string, unknown>) {
         const url = buildUrl(`/rest/v1/${table}`);
@@ -170,9 +171,22 @@ export const supabaseClient = {
           body: JSON.stringify(values),
         });
       },
-      async updateById(accessToken: string, id: string, values: Record<string, unknown>) {
+      async upsert(accessToken: string, values: Record<string, unknown>, onConflict: string) {
         const url = new URL(buildUrl(`/rest/v1/${table}`));
-        url.searchParams.set("id", `eq.${id}`);
+        url.searchParams.set("on_conflict", onConflict);
+        await request(url.toString(), {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+            Prefer: "resolution=merge-duplicates,return=minimal",
+          },
+          body: JSON.stringify(values),
+        });
+      },
+      async updateByColumn(accessToken: string, column: string, value: string, values: Record<string, unknown>) {
+        const url = new URL(buildUrl(`/rest/v1/${table}`));
+        url.searchParams.set(column, `eq.${value}`);
 
         await request(url.toString(), {
           method: "PATCH",
