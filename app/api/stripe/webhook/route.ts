@@ -14,12 +14,18 @@ type StripeEvent = {
   data: { object: Record<string, unknown> };
 };
 
+function isValidHexSignature(value: string): boolean {
+  return value.length > 0 && value.length % 2 === 0 && /^[0-9a-fA-F]+$/.test(value);
+}
+
 function verifySignature(payload: string, signatureHeader: string, secret: string): boolean {
   const elements = signatureHeader.split(",").map((entry) => entry.trim());
   const timestamp = elements.find((part) => part.startsWith("t="))?.slice(2);
-  const signature = elements.find((part) => part.startsWith("v1="))?.slice(3);
+  const signatures = elements
+    .filter((part) => part.startsWith("v1="))
+    .map((part) => part.slice(3));
 
-  if (!timestamp || !signature) {
+  if (!timestamp || signatures.length === 0) {
     return false;
   }
 
@@ -27,13 +33,41 @@ function verifySignature(payload: string, signatureHeader: string, secret: strin
   const expected = createHmac("sha256", secret).update(signedPayload, "utf8").digest("hex");
 
   const expectedBuffer = Buffer.from(expected, "hex");
-  const actualBuffer = Buffer.from(signature, "hex");
 
-  if (expectedBuffer.length !== actualBuffer.length) {
-    return false;
-  }
+  return signatures.some((signature) => {
+    if (!isValidHexSignature(signature)) {
+      return false;
+    }
 
-  return timingSafeEqual(expectedBuffer, actualBuffer);
+    const actualBuffer = Buffer.from(signature, "hex");
+    if (expectedBuffer.length !== actualBuffer.length) {
+      return false;
+    }
+
+    return timingSafeEqual(expectedBuffer, actualBuffer);
+  });
+}
+
+export function verifySignatureTestHarness(): {
+  singleSignaturePasses: boolean;
+  secondSignaturePasses: boolean;
+  malformedSignaturesFail: boolean;
+} {
+  const payload = '{"id":"evt_test"}';
+  const secret = "whsec_test";
+  const timestamp = "1730000000";
+  const signedPayload = `${timestamp}.${payload}`;
+  const correctSignature = createHmac("sha256", secret).update(signedPayload, "utf8").digest("hex");
+
+  const singleSignatureHeader = `t=${timestamp},v1=${correctSignature}`;
+  const secondSignatureHeader = `t=${timestamp},v1=${"0".repeat(64)},v1=${correctSignature}`;
+  const malformedSignatureHeader = `t=${timestamp},v1=not-hex-value,v1=abcd`;
+
+  return {
+    singleSignaturePasses: verifySignature(payload, singleSignatureHeader, secret),
+    secondSignaturePasses: verifySignature(payload, secondSignatureHeader, secret),
+    malformedSignaturesFail: !verifySignature(payload, malformedSignatureHeader, secret),
+  };
 }
 
 export async function POST(request: Request) {
