@@ -4,16 +4,18 @@ import { useEffect, useMemo, useState } from "react";
 import { mapSupabaseAuthError } from "@/lib/supabase/auth-errors";
 import { supabaseClient, type SupabaseSession } from "@/lib/supabase/client";
 
-type UserRecord = {
+type SupabaseAuthUser = {
   id: string;
-  email: string;
-  name?: string | null;
-  image?: string | null;
-  stripe_customer_id?: string | null;
-  subscription_status?: string | null;
-  subscription_id?: string | null;
-  price_id?: string | null;
+  email?: string;
+};
+
+type ProfileRecord = {
+  id: string;
+  email: string | null;
+  full_name: string | null;
+  business_name: string | null;
   created_at?: string | null;
+  updated_at?: string | null;
 };
 
 const STORAGE_KEY = "wovo-supabase-session";
@@ -34,11 +36,30 @@ function parseSessionFromHash(hash: string): SupabaseSession | null {
   };
 }
 
+function toReadableError(err: unknown): string {
+  if (typeof err === "string") return err;
+  if (err instanceof Error) return err.message;
+
+  if (err && typeof err === "object") {
+    const payload = err as { message?: string; error?: string; code?: string; error_code?: string };
+    const base = payload.message ?? payload.error ?? "Unknown Supabase error";
+    const code = payload.code ?? payload.error_code;
+    return code ? `${base} (${code})` : base;
+  }
+
+  return "Unknown Supabase error";
+}
+
 export default function WovoAiPage() {
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<SupabaseSession | null>(null);
-  const [authUser, setAuthUser] = useState<Record<string, unknown> | null>(null);
-  const [userRecord, setUserRecord] = useState<UserRecord | null>(null);
+  const [authUser, setAuthUser] = useState<SupabaseAuthUser | null>(null);
+  const [profile, setProfile] = useState<ProfileRecord | null>(null);
+  const [profileEmail, setProfileEmail] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [businessName, setBusinessName] = useState("");
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileError, setProfileError] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [info, setInfo] = useState("");
@@ -94,36 +115,52 @@ export default function WovoAiPage() {
   }, []);
 
   useEffect(() => {
-    const hydrateUser = async () => {
+    const hydrateUserAndProfile = async () => {
       if (!session?.access_token) return;
 
+      setProfileError("");
+
       try {
-        const user = await supabaseClient.auth.getUser(session.access_token);
+        const user = (await supabaseClient.auth.getUser(session.access_token)) as SupabaseAuthUser;
         setAuthUser(user);
 
-        const emailAddress = typeof user?.email === "string" ? user.email : "";
+        const row = await supabaseClient.from("profiles").selectById(session.access_token, user.id);
 
-        if (emailAddress) {
-          const profile = (await supabaseClient
-            .from("users")
-            .selectByEmail(session.access_token, emailAddress)) as UserRecord | null;
-          setUserRecord(profile);
+        if (!row) {
+          await supabaseClient.from("profiles").insert(session.access_token, {
+            id: user.id,
+            email: user.email ?? null,
+          });
         }
+
+        const nextProfile = (await supabaseClient
+          .from("profiles")
+          .selectById(session.access_token, user.id)) as ProfileRecord | null;
+
+        setProfile(nextProfile);
+        setProfileEmail(nextProfile?.email ?? user.email ?? "");
+        setFullName(nextProfile?.full_name ?? "");
+        setBusinessName(nextProfile?.business_name ?? "");
       } catch (err: unknown) {
         const mapped = mapSupabaseAuthError(err);
         setError(mapped.message);
         setDebugCode(mapped.debugCode ?? "");
+        setProfileError(toReadableError(err));
       }
     };
 
-    void hydrateUser();
+    void hydrateUserAndProfile();
   }, [session]);
 
   const signOut = () => {
     localStorage.removeItem(STORAGE_KEY);
     setSession(null);
     setAuthUser(null);
-    setUserRecord(null);
+    setProfile(null);
+    setProfileEmail("");
+    setFullName("");
+    setBusinessName("");
+    setProfileError("");
     setInfo("");
     setError("");
     setDebugCode("");
@@ -201,6 +238,39 @@ export default function WovoAiPage() {
     }
   };
 
+  const handleSaveProfile = async () => {
+    if (!session?.access_token || !authUser?.id) return;
+
+    setInfo("");
+    setError("");
+    setDebugCode("");
+    setProfileError("");
+    setSavingProfile(true);
+
+    try {
+      await supabaseClient.from("profiles").updateById(session.access_token, authUser.id, {
+        full_name: fullName || null,
+        business_name: businessName || null,
+        email: profileEmail || null,
+        updated_at: new Date().toISOString(),
+      });
+
+      const nextProfile = (await supabaseClient
+        .from("profiles")
+        .selectById(session.access_token, authUser.id)) as ProfileRecord | null;
+
+      setProfile(nextProfile);
+      setInfo("Profile saved.");
+    } catch (err: unknown) {
+      const mapped = mapSupabaseAuthError(err);
+      setError(mapped.message);
+      setDebugCode(mapped.debugCode ?? "");
+      setProfileError(toReadableError(err));
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
   return (
     <main className="min-h-screen bg-black px-6 py-16 text-white">
       <div className="mx-auto max-w-2xl space-y-6 rounded-2xl border border-white/10 bg-white/5 p-8">
@@ -271,29 +341,67 @@ export default function WovoAiPage() {
         ) : null}
 
         {!loading && session ? (
-          <div className="space-y-4">
-            <div className="rounded-lg border border-white/15 p-4">
-              <h2 className="mb-2 text-lg font-semibold">Authenticated User</h2>
-              <pre className="overflow-x-auto text-xs text-white/80">
-                {JSON.stringify(authUser, null, 2)}
-              </pre>
+          <div className="space-y-4 rounded-lg border border-white/15 p-4">
+            <h2 className="text-lg font-semibold">Authenticated User</h2>
+            <p className="text-sm text-white/80">
+              <span className="text-white/60">Email:</span> {authUser?.email ?? "Unknown"}
+            </p>
+
+            <div className="space-y-3">
+              <label className="block text-sm">
+                <span className="mb-1 block text-white/70">Business Name</span>
+                <input
+                  type="text"
+                  value={businessName}
+                  onChange={(event) => setBusinessName(event.target.value)}
+                  className="w-full rounded border border-white/20 bg-black px-3 py-2"
+                  placeholder="Business Name"
+                />
+              </label>
+
+              <label className="block text-sm">
+                <span className="mb-1 block text-white/70">Full Name</span>
+                <input
+                  type="text"
+                  value={fullName}
+                  onChange={(event) => setFullName(event.target.value)}
+                  className="w-full rounded border border-white/20 bg-black px-3 py-2"
+                  placeholder="Full Name"
+                />
+              </label>
             </div>
-            <div className="rounded-lg border border-white/15 p-4">
-              <h2 className="mb-2 text-lg font-semibold">users table row</h2>
-              <pre className="overflow-x-auto text-xs text-white/80">
-                {JSON.stringify(userRecord, null, 2)}
-              </pre>
+
+            <div className="flex flex-wrap gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  void handleSaveProfile();
+                }}
+                className="rounded-lg border border-white/20 px-4 py-2 text-sm"
+                disabled={savingProfile}
+              >
+                {savingProfile ? "Saving..." : "Save"}
+              </button>
+              <button
+                type="button"
+                onClick={signOut}
+                className="rounded-lg border border-white/20 px-4 py-2 text-sm"
+              >
+                Sign out
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={signOut}
-              className="rounded-lg border border-white/20 px-4 py-2 text-sm"
-            >
-              Sign out
-            </button>
+
+            {profile ? (
+              <p className="text-xs text-white/60">Profile row id: {profile.id}</p>
+            ) : (
+              <p className="text-xs text-white/60">Profile row not loaded.</p>
+            )}
           </div>
         ) : null}
 
+        {profileError ? (
+          <p className="text-sm text-red-300">Profile query error: {profileError}</p>
+        ) : null}
         {info ? <p className="text-emerald-300">{info}</p> : null}
         {error ? (
           <p className="text-red-300">
