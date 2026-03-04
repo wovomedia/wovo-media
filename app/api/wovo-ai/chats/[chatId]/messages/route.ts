@@ -39,6 +39,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ cha
     const { user } = await requireServerUser(request.headers.get("authorization"));
     const { chatId } = await params;
 
+    const chatRows = await supabaseServiceRoleRequest<Array<{ id: string }>>(
+      `/rest/v1/chats?select=id&id=eq.${encodeChatId(chatId)}&user_id=eq.${user.id}&limit=1`,
+    );
+    if (!chatRows?.[0]) {
+      return NextResponse.json({ error: "Chat not found." }, { status: 404 });
+    }
+
     const body = (await request.json()) as { role?: "user" | "assistant"; content?: string };
     const role = body.role === "assistant" ? "assistant" : "user";
     const content = body.content?.trim() ?? "";
