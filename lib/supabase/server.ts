@@ -98,3 +98,30 @@ export async function supabaseRestRequest<T = unknown>(
   if (response.status === 204) return null;
   return (await response.json()) as T;
 }
+
+
+export async function supabaseServiceRoleRequest<T = unknown>(
+  path: string,
+  init?: RequestInit,
+): Promise<T | null> {
+  const serviceRoleKey = getRequiredEnv(process.env.SUPABASE_SERVICE_ROLE_KEY, "SUPABASE_SERVICE_ROLE_KEY");
+
+  const headers = mergeHeaders(init?.headers);
+  headers.set("apikey", serviceRoleKey);
+  headers.set("Authorization", `Bearer ${serviceRoleKey}`);
+  headers.set("Content-Type", "application/json");
+
+  const response = await fetch(`${url}${path}`, {
+    ...init,
+    headers,
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const payload = await response.text();
+    throw new Error(payload || `Supabase service-role request failed (${response.status}).`);
+  }
+
+  if (response.status === 204) return null;
+  return (await response.json()) as T;
+}
