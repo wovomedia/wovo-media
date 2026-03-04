@@ -1,14 +1,13 @@
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+function getRequiredEnv(value: string | undefined, name: string): string {
+  if (!value) {
+    throw new Error(`Missing ${name}`);
+  }
 
-if (!supabaseUrl) {
-  throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL");
+  return value;
 }
 
-if (!supabaseAnonKey) {
-  throw new Error("Missing NEXT_PUBLIC_SUPABASE_ANON_KEY");
-}
+const url = getRequiredEnv(process.env.NEXT_PUBLIC_SUPABASE_URL, "NEXT_PUBLIC_SUPABASE_URL");
+const anonKey = getRequiredEnv(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, "NEXT_PUBLIC_SUPABASE_ANON_KEY");
 
 export type AuthUser = {
   id: string;
@@ -27,11 +26,12 @@ export async function requireServerUser(authHeader: string | null): Promise<{ us
     throw new Error("Missing bearer token.");
   }
 
-  const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
-    headers: {
-      apikey: supabaseAnonKey,
-      Authorization: `Bearer ${accessToken}`,
-    },
+  const headers = new Headers();
+  headers.set("apikey", anonKey);
+  headers.set("Authorization", `Bearer ${accessToken}`);
+
+  const response = await fetch(`${url}/auth/v1/user`, {
+    headers,
     cache: "no-store",
   });
 
@@ -44,16 +44,15 @@ export async function requireServerUser(authHeader: string | null): Promise<{ us
 }
 
 export async function deleteAuthUserById(userId: string) {
-  if (!supabaseServiceRoleKey) {
-    throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY");
-  }
+  const serviceRoleKey = getRequiredEnv(process.env.SUPABASE_SERVICE_ROLE_KEY, "SUPABASE_SERVICE_ROLE_KEY");
 
-  const response = await fetch(`${supabaseUrl}/auth/v1/admin/users/${userId}`, {
+  const headers = new Headers();
+  headers.set("apikey", serviceRoleKey);
+  headers.set("Authorization", `Bearer ${serviceRoleKey}`);
+
+  const response = await fetch(`${url}/auth/v1/admin/users/${userId}`, {
     method: "DELETE",
-    headers: {
-      apikey: supabaseServiceRoleKey,
-      Authorization: `Bearer ${supabaseServiceRoleKey}`,
-    },
+    headers,
     cache: "no-store",
   });
 
@@ -62,19 +61,32 @@ export async function deleteAuthUserById(userId: string) {
   }
 }
 
+function mergeHeaders(initHeaders?: HeadersInit): Headers {
+  const headers = new Headers();
+
+  if (initHeaders) {
+    const normalizedHeaders = new Headers(initHeaders);
+    normalizedHeaders.forEach((value, key) => {
+      headers.set(key, value);
+    });
+  }
+
+  return headers;
+}
+
 export async function supabaseRestRequest<T = unknown>(
   path: string,
   accessToken: string,
   init?: RequestInit,
 ): Promise<T | null> {
-  const response = await fetch(`${supabaseUrl}${path}`, {
+  const headers = mergeHeaders(init?.headers);
+  headers.set("apikey", anonKey);
+  headers.set("Authorization", `Bearer ${accessToken}`);
+  headers.set("Content-Type", "application/json");
+
+  const response = await fetch(`${url}${path}`, {
     ...init,
-    headers: {
-      apikey: supabaseAnonKey,
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
-    },
+    headers,
     cache: "no-store",
   });
 
