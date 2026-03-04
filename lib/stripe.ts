@@ -63,16 +63,18 @@ export async function createCheckoutSession(args: {
   userId: string;
   successUrl: string;
   cancelUrl: string;
+  mode: "subscription" | "payment";
 }): Promise<StripeCheckoutSession> {
   return stripeRequest("/checkout/sessions", {
-    mode: "subscription",
+    mode: args.mode,
     customer: args.customerId,
     "line_items[0][price]": args.priceId,
     "line_items[0][quantity]": 1,
     success_url: args.successUrl,
     cancel_url: args.cancelUrl,
     "metadata[userId]": args.userId,
-    "subscription_data[metadata][userId]": args.userId,
+    "metadata[purchaseType]": args.mode === "payment" ? "extra_credits" : "subscription",
+    ...(args.mode === "subscription" ? { "subscription_data[metadata][userId]": args.userId } : {}),
   });
 }
 

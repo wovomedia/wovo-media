@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createCheckoutSession, createPortalSession } from "@/lib/stripe";
 import { requireServerUser } from "@/lib/supabase/server";
 import { ensureStripeCustomerForUser } from "@/lib/wovo-ai/billing";
-import { getAllowedPriceIds, isPaidStatus } from "@/lib/wovo-ai/plans";
+import { EXTRA_CREDITS_PRICE_ID, getAllowedSubscriptionPriceIds, isPaidStatus } from "@/lib/wovo-ai/plans";
 import { getRawSubscription } from "@/lib/wovo-ai/subscription";
 
 type CheckoutBody = {
@@ -33,15 +33,16 @@ export async function POST(request: Request) {
     const body = (await request.json()) as CheckoutBody;
     const priceId = (body.priceId ?? "").trim();
 
-    const allowedPriceIds = getAllowedPriceIds();
-    if (!priceId || !allowedPriceIds.includes(priceId)) {
+    const subscriptionPriceIds = getAllowedSubscriptionPriceIds();
+    const isExtraCreditsPurchase = priceId === EXTRA_CREDITS_PRICE_ID;
+    if (!priceId || (!subscriptionPriceIds.includes(priceId) && !isExtraCreditsPurchase)) {
       return NextResponse.json({ error: "Invalid priceId." }, { status: 400 });
     }
 
     const existing = await getRawSubscription(user.id);
     const siteUrl = getSiteUrlFromRequest(request);
 
-    if (isPaidStatus(existing?.status) && existing?.stripe_customer_id) {
+    if (!isExtraCreditsPurchase && isPaidStatus(existing?.status) && existing?.stripe_customer_id) {
       const portal = await createPortalSession(existing.stripe_customer_id, `${siteUrl}/wovo-ai`);
       return NextResponse.json({ url: portal.url });
     }
@@ -53,6 +54,7 @@ export async function POST(request: Request) {
       userId: user.id,
       successUrl: `${siteUrl}/wovo-ai`,
       cancelUrl: `${siteUrl}/wovo-ai`,
+      mode: isExtraCreditsPurchase ? "payment" : "subscription",
     });
 
     if (!session.url) {

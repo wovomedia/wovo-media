@@ -6,15 +6,15 @@ import { getPlanConfig } from "@/lib/wovo-ai/plans";
 import { getSubscriptionStatus } from "@/lib/wovo-ai/subscription";
 
 function adminResponse(): UnifiedSubscriptionResponse {
-  const plan = getPlanConfig("agency");
+  const plan = getPlanConfig("business");
   return {
     status: "active",
-    plan: "agency",
+    plan: "business",
     remaining: {
-      credits_total: plan.monthlyCredits,
+      monthly_limit: plan.monthlyCredits,
+      monthly_used: 0,
+      extra_credits: 0,
       credits_remaining: plan.monthlyCredits,
-      weekly_limit: plan.weeklyLimit,
-      weekly_used: 0,
     },
     can_generate: true,
     message: "Admin allowlist access enabled.",
@@ -38,7 +38,7 @@ export async function GET(request: Request) {
     const fallback: UnifiedSubscriptionResponse = {
       status: "inactive",
       plan: "none",
-      remaining: { credits_total: 0, credits_remaining: 0, weekly_limit: 0, weekly_used: 0 },
+      remaining: { monthly_limit: 0, monthly_used: 0, extra_credits: 0, credits_remaining: 0 },
       can_generate: false,
       message: error instanceof Error ? error.message : "Unexpected error.",
     };

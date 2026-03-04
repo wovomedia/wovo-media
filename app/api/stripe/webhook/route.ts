@@ -5,6 +5,8 @@ import {
   cancelSubscriptionByCustomerId,
   cancelSubscriptionByStripeSubscriptionId,
   syncSubscriptionFromStripe,
+  addExtraCredits,
+  findUserIdByCustomerId,
 } from "@/lib/wovo-ai/subscription";
 
 export const runtime = "nodejs";
@@ -99,12 +101,18 @@ export async function POST(request: Request) {
       case "checkout.session.completed": {
         const session = event.data.object as {
           subscription?: string;
-          metadata?: { userId?: string };
+          customer?: string;
+          metadata?: { userId?: string; purchaseType?: string };
         };
 
         if (session.subscription) {
           const subscription = await retrieveSubscription(String(session.subscription));
           await syncSubscriptionFromStripe(subscription, session.metadata?.userId);
+        } else if (session.metadata?.purchaseType === "extra_credits") {
+          const userId = session.metadata?.userId ?? (session.customer ? await findUserIdByCustomerId(String(session.customer)) : null);
+          if (userId) {
+            await addExtraCredits(userId, 3);
+          }
         }
         break;
       }
