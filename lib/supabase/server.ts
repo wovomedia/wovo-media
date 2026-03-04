@@ -148,3 +148,22 @@ export async function updateAuthEmail(accessToken: string, email: string) {
     throw new Error(text || "Unable to update email.");
   }
 }
+
+export async function updateAuthPassword(accessToken: string, password: string) {
+  const headers = new Headers();
+  headers.set("apikey", getSupabaseAnonKey());
+  headers.set("Authorization", `Bearer ${accessToken}`);
+  headers.set("Content-Type", "application/json");
+
+  const response = await fetch(`${getSupabaseUrl()}/auth/v1/user`, {
+    method: "PUT",
+    headers,
+    body: JSON.stringify({ password }),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || "Unable to update password.");
+  }
+}
