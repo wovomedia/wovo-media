@@ -1,363 +1,146 @@
 "use client";
 
 import Link from "next/link";
-import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { mapSupabaseAuthError } from "@/lib/supabase/auth-errors";
-import { supabase, type Session } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
+import { type KeyboardEvent, useEffect, useMemo, useState } from "react";
+import { supabase } from "@/lib/supabase/client";
+import { clearSession, parseSessionFromHash, persistSession, readSessionFromStorage } from "@/lib/supabase/session-client";
 import type { UnifiedSubscriptionResponse } from "@/lib/wovo-ai/contracts";
 
-type SupabaseAuthUser = { id: string; email?: string };
-type SubscriptionPayload = UnifiedSubscriptionResponse & { admin_access?: boolean };
 type ChatSummary = { id: string; title: string; created_at: string };
 type ChatMessage = { id: string; role: "user" | "assistant"; content: string; created_at: string };
 
-type QuickAction = { label: string; key: string; prefix: string; icon: string };
-
-const STORAGE_KEY = "wovo-supabase-session";
-const quickActions: QuickAction[] = [
-  { label: "Caption", key: "caption", prefix: "Write a short social media caption for this business goal: ", icon: "✍️" },
-  { label: "Facebook Post", key: "facebook", prefix: "Create a Facebook post optimized for engagement: ", icon: "📘" },
-  { label: "Instagram Caption", key: "instagram", prefix: "Create an Instagram caption with emojis and CTA: ", icon: "📸" },
-  { label: "Ad Copy", key: "adcopy", prefix: "Write conversion-focused ad copy for: ", icon: "📈" },
-  { label: "Generate Image", key: "image", prefix: "Generate an image concept and prompt for: ", icon: "🖼️" },
-];
-
-function parseSessionFromHash(hash: string): Session | null {
-  if (!hash.startsWith("#")) return null;
-  const params = new URLSearchParams(hash.slice(1));
-  const accessToken = params.get("access_token");
-  if (!accessToken) return null;
-  return { access_token: accessToken, refresh_token: params.get("refresh_token") ?? undefined };
-}
+const quickActions = ["Caption", "Facebook Post", "Instagram Caption", "Ad Copy", "Generate Image"] as const;
 
 export default function WovoAiPage() {
-  const [session, setSession] = useState<Session | null>(null);
-  const [authUser, setAuthUser] = useState<SupabaseAuthUser | null>(null);
-  const [loadingSession, setLoadingSession] = useState(true);
-  const [subscription, setSubscription] = useState<SubscriptionPayload | null>(null);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const router = useRouter();
+  const [token, setToken] = useState<string | null>(null);
+  const [subscription, setSubscription] = useState<UnifiedSubscriptionResponse | null>(null);
   const [chats, setChats] = useState<ChatSummary[]>([]);
-  const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [chatId, setChatId] = useState<string | null>(null);
   const [prompt, setPrompt] = useState("");
-  const [selectedAction, setSelectedAction] = useState<QuickAction>(quickActions[0]);
-  const [loadingMessages, setLoadingMessages] = useState(false);
-  const [generating, setGenerating] = useState(false);
+  const [search, setSearch] = useState("");
+  const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
-  const [info, setInfo] = useState("");
+  const [action, setAction] = useState<(typeof quickActions)[number]>("Caption");
 
-  const transcriptRef = useRef<HTMLDivElement | null>(null);
+  const authedFetch = async (input: string, init?: RequestInit) => fetch(input, { ...init, headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...(init?.headers ?? {}) } });
 
-  const getAccessToken = useCallback(async (): Promise<string | null> => {
-    const {
-      data: { session: currentSession },
-    } = await supabase.auth.getSession();
-    return currentSession?.access_token ?? session?.access_token ?? null;
-  }, [session?.access_token]);
+  const load = async (accessToken: string) => {
+    setToken(accessToken);
+    supabase.setAccessToken(accessToken);
+    const [subRes, chatsRes, onboardRes] = await Promise.all([
+      fetch("/api/wovo-ai/subscription", { headers: { Authorization: `Bearer ${accessToken}` } }),
+      fetch("/api/wovo-ai/chats", { headers: { Authorization: `Bearer ${accessToken}` } }),
+      fetch("/api/wovo-ai/onboarding", { headers: { Authorization: `Bearer ${accessToken}` } }),
+    ]);
+    const onboard = (await onboardRes.json()) as { complete?: boolean };
+    if (!onboard.complete) return router.push("/signup");
 
-  const authHeaders = useCallback(async () => {
-    const token = await getAccessToken();
-    if (!token) throw new Error("Missing auth session.");
-    return { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
-  }, [getAccessToken]);
-
-  const loadSubscription = useCallback(async () => {
-    const response = await fetch("/api/wovo-ai/subscription", { headers: await authHeaders() });
-    const payload = (await response.json()) as SubscriptionPayload & { error?: string };
-    if (!response.ok) throw new Error(payload.error ?? "Unable to load subscription.");
-    setSubscription(payload);
-  }, [authHeaders]);
-
-  const loadChats = useCallback(async () => {
-    const response = await fetch("/api/wovo-ai/chats", { headers: await authHeaders() });
-    const payload = (await response.json()) as { chats?: ChatSummary[]; error?: string };
-    if (!response.ok) throw new Error(payload.error ?? "Unable to load chats.");
-    const nextChats = payload.chats ?? [];
-    setChats(nextChats);
-    setActiveChatId((prev) => prev ?? nextChats[0]?.id ?? null);
-  }, [authHeaders]);
-
-  const loadMessages = useCallback(
-    async (chatId: string) => {
-      setLoadingMessages(true);
-      try {
-        const response = await fetch(`/api/wovo-ai/chats/${chatId}/messages`, { headers: await authHeaders() });
-        const payload = (await response.json()) as { messages?: ChatMessage[]; error?: string };
-        if (!response.ok) throw new Error(payload.error ?? "Unable to load messages.");
-        setMessages(payload.messages ?? []);
-      } finally {
-        setLoadingMessages(false);
-      }
-    },
-    [authHeaders],
-  );
-
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const fromHash = parseSessionFromHash(window.location.hash);
-        if (fromHash) {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(fromHash));
-          window.history.replaceState({}, document.title, "/wovo-ai");
-          setSession(fromHash);
-          supabase.setAccessToken(fromHash.access_token);
-          return;
-        }
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-          const parsed = JSON.parse(stored) as Session;
-          setSession(parsed);
-          supabase.setAccessToken(parsed.access_token);
-        }
-      } finally {
-        setLoadingSession(false);
-      }
-    };
-    void load();
-  }, []);
-
-  useEffect(() => {
-    const hydrate = async () => {
-      if (!session?.access_token) return;
-      const { data, error: userError } = await supabase.auth.getUser(session.access_token);
-      if (userError || !data.user) return;
-      setAuthUser(data.user as SupabaseAuthUser);
-      setEmail(data.user.email ?? "");
-      await Promise.all([loadSubscription(), loadChats()]);
-    };
-    void hydrate().catch((err: unknown) => setError(err instanceof Error ? err.message : "Unable to load account."));
-  }, [loadChats, loadSubscription, session?.access_token]);
-
-  useEffect(() => {
-    if (!activeChatId || !session?.access_token) return;
-    void loadMessages(activeChatId).catch((err: unknown) => setError(err instanceof Error ? err.message : "Unable to load messages."));
-  }, [activeChatId, loadMessages, session?.access_token]);
-
-  useEffect(() => {
-    transcriptRef.current?.scrollTo({ top: transcriptRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages]);
-
-  const createChat = async (title = "New Chat") => {
-    const response = await fetch("/api/wovo-ai/chats", {
-      method: "POST",
-      headers: await authHeaders(),
-      body: JSON.stringify({ title }),
-    });
-    const payload = (await response.json()) as { chat?: ChatSummary; error?: string };
-    if (!response.ok || !payload.chat) throw new Error(payload.error ?? "Unable to create chat.");
-    setChats((prev) => [payload.chat as ChatSummary, ...prev]);
-    setActiveChatId(payload.chat.id);
-    setMessages([]);
-    return payload.chat.id;
+    setSubscription((await subRes.json()) as UnifiedSubscriptionResponse);
+    const chatPayload = (await chatsRes.json()) as { chats: ChatSummary[] };
+    setChats(chatPayload.chats ?? []);
+    setChatId(chatPayload.chats?.[0]?.id ?? null);
   };
 
-  const persistMessage = async (chatId: string, role: "user" | "assistant", content: string) => {
-    const response = await fetch(`/api/wovo-ai/chats/${chatId}/messages`, {
-      method: "POST",
-      headers: await authHeaders(),
-      body: JSON.stringify({ role, content }),
-    });
-    const payload = (await response.json()) as { message?: ChatMessage; error?: string };
-    if (!response.ok || !payload.message) throw new Error(payload.error ?? "Unable to save message.");
-    return payload.message;
+  useEffect(() => {
+    const fromHash = parseSessionFromHash(window.location.hash);
+    if (fromHash) {
+      persistSession(fromHash);
+      window.history.replaceState({}, document.title, "/wovo-ai");
+      void load(fromHash.access_token);
+      return;
+    }
+    const s = readSessionFromStorage();
+    if (!s?.access_token) return router.push("/login");
+    void load(s.access_token);
+  }, [router]);
+
+  useEffect(() => {
+    if (!chatId || !token) return;
+    void authedFetch(`/api/wovo-ai/chats/${chatId}/messages`).then((r) => r.json()).then((d: { messages: ChatMessage[] }) => setMessages(d.messages ?? []));
+  }, [chatId, token]);
+
+  const createChat = async () => {
+    const res = await authedFetch("/api/wovo-ai/chats", { method: "POST", body: JSON.stringify({ title: "New Chat" }) });
+    const data = (await res.json()) as { chat: ChatSummary };
+    setChats((prev) => [data.chat, ...prev]);
+    setChatId(data.chat.id);
   };
 
-  const sendMessage = async () => {
-    const topic = prompt.trim();
-    if (!topic || generating) return;
-    setGenerating(true);
+  const send = async () => {
+    if (!prompt.trim() || !chatId || sending) return;
+    setSending(true);
     setError("");
-
     try {
-      if ((subscription?.remaining.credits_remaining ?? 0) <= 0 && !subscription?.admin_access) {
-        throw new Error("No credits remaining. Please upgrade or buy extra credits.");
-      }
-
-      const chatId = activeChatId ?? (await createChat(topic.slice(0, 50)));
-      const finalPrompt = `${selectedAction.prefix}${topic}`;
-      const userMessage = await persistMessage(chatId, "user", finalPrompt);
-      setMessages((prev) => [...prev, userMessage]);
+      const res = await authedFetch("/api/ai/chat", { method: "POST", body: JSON.stringify({ message: prompt, chatId, quickAction: action.toLowerCase().replace(" ", "") }) });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Failed");
       setPrompt("");
-
-      const assistantTempId = `temp-${Date.now()}`;
-      setMessages((prev) => [...prev, { id: assistantTempId, role: "assistant", content: "", created_at: new Date().toISOString() }]);
-
-      const response = await fetch("/api/wovo-ai/chat", {
-        method: "POST",
-        headers: await authHeaders(),
-        body: JSON.stringify({ message: finalPrompt, quickAction: selectedAction.key, chatId }),
-      });
-
-      if (!response.ok || !response.body) {
-        const payload = (await response.json()) as { error?: string };
-        throw new Error(payload.error ?? "Unable to generate content.");
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let assistantContent = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const events = buffer.split("\n\n");
-        buffer = events.pop() ?? "";
-
-        for (const event of events) {
-          if (!event.startsWith("data: ")) continue;
-          const data = JSON.parse(event.slice(6)) as { delta?: string; done?: boolean; assistantText?: string };
-          if (data.delta) {
-            assistantContent += data.delta;
-            setMessages((prev) => prev.map((message) => (message.id === assistantTempId ? { ...message, content: assistantContent } : message)));
-          }
-          if (data.done && data.assistantText) {
-            assistantContent = data.assistantText;
-          }
-        }
-      }
-
-      const persistedAssistant = await persistMessage(chatId, "assistant", assistantContent.trim() || "Done.");
-      setMessages((prev) => prev.map((message) => (message.id === assistantTempId ? persistedAssistant : message)));
-      await loadSubscription();
-      await loadChats();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to send message.");
+      const messagesRes = await authedFetch(`/api/wovo-ai/chats/${chatId}/messages`);
+      setMessages(((await messagesRes.json()) as { messages: ChatMessage[] }).messages ?? []);
+      const subRes = await authedFetch("/api/wovo-ai/subscription");
+      setSubscription((await subRes.json()) as UnifiedSubscriptionResponse);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed");
     } finally {
-      setGenerating(false);
+      setSending(false);
     }
   };
 
-  const onComposerKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+  const onKey = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
-      void sendMessage();
+      void send();
     }
   };
 
-  const startCheckout = async (endpoint: string) => {
-    const response = await fetch(endpoint, { method: "POST", headers: await authHeaders() });
-    const payload = (await response.json()) as { url?: string; error?: string };
-    if (!response.ok || !payload.url) throw new Error(payload.error ?? "Unable to start checkout.");
-    window.location.href = payload.url;
-  };
-
-  const signOut = () => {
-    localStorage.removeItem(STORAGE_KEY);
-    supabase.setAccessToken(null);
-    setSession(null);
-    setAuthUser(null);
-    setSubscription(null);
-    setChats([]);
-    setMessages([]);
-    setActiveChatId(null);
-  };
-
-  const planName = useMemo(() => subscription?.plan ?? "none", [subscription?.plan]);
-  const monthlyUsed = subscription?.remaining.monthly_used ?? 0;
-  const monthlyLimit = subscription?.remaining.monthly_limit ?? 0;
-  const remaining = subscription?.remaining.credits_remaining ?? 0;
+  const filteredChats = useMemo(() => chats.filter((c) => c.title.toLowerCase().includes(search.toLowerCase())), [chats, search]);
 
   return (
-    <main className="min-h-screen bg-slate-950 px-4 py-6 text-white">
-      <div className="mx-auto max-w-7xl space-y-5">
-        {!loadingSession && !session && (
-          <section className="mx-auto mt-20 max-w-md rounded-2xl border border-white/20 bg-slate-900/70 p-6 shadow-xl">
-            <h1 className="text-2xl font-bold">Wovo AI</h1>
-            <p className="mb-3 text-sm text-white/70">Sign in to continue</p>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="mb-2 w-full rounded-xl border border-white/20 bg-slate-950 p-2" />
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" className="mb-3 w-full rounded-xl border border-white/20 bg-slate-950 p-2" />
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={async () => {
-                  const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-                  if (signInError || !data.session) return setError(mapSupabaseAuthError(signInError).message);
-                  localStorage.setItem(STORAGE_KEY, JSON.stringify(data.session));
-                  supabase.setAccessToken(data.session.access_token);
-                  setSession(data.session);
-                }}
-                className="rounded-xl bg-white px-3 py-2 text-black"
-              >
-                Sign in
-              </button>
-              <button
-                onClick={async () => {
-                  const { error: signUpError } = await supabase.auth.signUp({ email, password });
-                  if (signUpError) return setError(mapSupabaseAuthError(signUpError).message);
-                  setInfo("Check your email to confirm your account.");
-                }}
-                className="rounded-xl border border-white/30 px-3 py-2"
-              >
-                Sign up
-              </button>
+    <main className="min-h-screen bg-black text-white">
+      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-4 p-4 md:grid-cols-[300px,1fr]">
+        <aside className="rounded-2xl border border-emerald-400/25 bg-zinc-950 p-3">
+          <button onClick={() => void createChat()} className="mb-3 w-full rounded-xl bg-emerald-400 py-2 font-semibold text-black">+ New Chat</button>
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search chats" className="mb-3 w-full rounded-xl border border-white/20 bg-black p-2" />
+          <div className="mb-3 flex flex-wrap gap-2">
+            {quickActions.map((q) => <button key={q} onClick={() => setAction(q)} className={`rounded-full px-3 py-1 text-xs ${action === q ? "bg-emerald-400 text-black" : "border border-white/20"}`}>{q}</button>)}
+          </div>
+          <div className="space-y-2">
+            {filteredChats.map((chat) => <button key={chat.id} onClick={() => setChatId(chat.id)} className={`w-full rounded-lg p-2 text-left text-sm ${chat.id === chatId ? "bg-emerald-400/20" : "bg-white/5"}`}>{chat.title}</button>)}
+          </div>
+        </aside>
+
+        <section className="rounded-2xl border border-emerald-400/25 bg-zinc-950 p-4">
+          <header className="mb-3 flex items-center justify-between border-b border-white/10 pb-3">
+            <div>
+              <h1 className="text-xl font-semibold">Wovo AI</h1>
+              <p className="text-xs text-white/70">Remaining credits: {subscription?.remaining.credits_remaining ?? 0}</p>
             </div>
-          </section>
-        )}
-
-        {session && authUser && (
-          <>
-            <header className="flex items-center justify-between rounded-2xl border border-white/20 bg-slate-900/70 p-4 shadow-lg">
-              <div>
-                <h1 className="text-xl font-semibold">Wovo AI Assistant</h1>
-                <p className="text-xs text-white/70">{authUser.email}</p>
+            <details className="relative">
+              <summary className="cursor-pointer rounded-lg border border-white/20 px-3 py-2 text-sm">Account</summary>
+              <div className="absolute right-0 z-20 mt-2 w-56 space-y-1 rounded-xl border border-white/15 bg-black p-2 text-sm">
+                <Link href="/wovo-ai/pricing" className="block rounded px-2 py-1 hover:bg-white/10">Upgrade plan</Link>
+                <button className="block w-full rounded px-2 py-1 text-left hover:bg-white/10" onClick={() => void authedFetch("/api/stripe/buy-credits", { method: "POST" }).then((r) => r.json()).then((d: { url?: string }) => d.url && (window.location.href = d.url))}>Buy credits</button>
+                <button className="block w-full rounded px-2 py-1 text-left hover:bg-white/10" onClick={() => void authedFetch("/api/stripe/portal", { method: "POST" }).then((r) => r.json()).then((d: { url?: string }) => d.url && (window.location.href = d.url))}>Manage billing</button>
+                <button className="block w-full rounded px-2 py-1 text-left hover:bg-white/10" onClick={async () => { const v = window.prompt("Type DELETE to confirm"); if (v === "DELETE") { await authedFetch("/api/account/delete", { method: "POST" }); clearSession(); router.push("/"); } }}>Delete account</button>
+                <button className="block w-full rounded px-2 py-1 text-left hover:bg-white/10" onClick={async () => { const email = window.prompt("New email"); if (email) await authedFetch("/api/account/change-email", { method: "POST", body: JSON.stringify({ email }) }); }}>Change email</button>
+                <button className="block w-full rounded px-2 py-1 text-left hover:bg-white/10" onClick={async () => { const password = window.prompt("New password"); if (password) await authedFetch("/api/account/change-password", { method: "POST", body: JSON.stringify({ password }) }); }}>Change password</button>
+                <button className="block w-full rounded px-2 py-1 text-left hover:bg-white/10" onClick={() => { clearSession(); router.push("/login"); }}>Sign out</button>
               </div>
-              <button onClick={signOut} className="rounded-xl border border-white/20 px-3 py-2 text-sm">
-                Sign out
-              </button>
-            </header>
+            </details>
+          </header>
 
-            <section className="grid gap-3 rounded-2xl border border-white/15 bg-slate-900/60 p-4 md:grid-cols-7">
-              <div><p className="text-xs text-white/70">Plan</p><p className="font-semibold capitalize">{planName}</p></div>
-              <div><p className="text-xs text-white/70">Monthly credits used</p><p className="font-semibold">{monthlyUsed}/{monthlyLimit}</p></div>
-              <div><p className="text-xs text-white/70">Remaining credits</p><p className="font-semibold">{remaining}</p></div>
-              <Link href="/pricing" className="rounded-xl bg-white px-3 py-2 text-center text-sm font-semibold text-black">Upgrade plan</Link>
-              <button onClick={() => void startCheckout("/api/stripe/buy-credits").catch((err: unknown) => setError(err instanceof Error ? err.message : "Checkout failed."))} className="rounded-xl border border-white/25 px-3 py-2 text-sm">Buy extra credits</button>
-              <button onClick={() => void startCheckout("/api/stripe/portal").catch((err: unknown) => setError(err instanceof Error ? err.message : "Portal failed."))} className="rounded-xl border border-white/25 px-3 py-2 text-sm">Manage billing</button>
-            </section>
-
-            <section className="grid gap-4 md:grid-cols-[280px,1fr]">
-              <aside className="rounded-2xl border border-white/15 bg-slate-900/60 p-3">
-                <button onClick={() => void createChat().catch((err: unknown) => setError(err instanceof Error ? err.message : "Unable to create chat."))} className="mb-3 w-full rounded-xl bg-white px-3 py-2 text-black">+ New chat</button>
-                <div className="space-y-2">
-                  {chats.map((chat) => (
-                    <button key={chat.id} onClick={() => setActiveChatId(chat.id)} className={`w-full rounded-xl border px-3 py-2 text-left text-sm ${activeChatId === chat.id ? "border-indigo-300 bg-indigo-500/15" : "border-white/20 hover:bg-white/5"}`}>
-                      {chat.title}
-                    </button>
-                  ))}
-                </div>
-              </aside>
-
-              <div className="rounded-2xl border border-white/15 bg-slate-900/60 p-3">
-                <div className="mb-4 flex flex-wrap gap-2">
-                  {quickActions.map((action) => (
-                    <button key={action.key} onClick={() => setSelectedAction(action)} className={`rounded-full border px-4 py-1.5 text-sm ${selectedAction.key === action.key ? "border-indigo-300 bg-indigo-500/25" : "border-white/20 bg-slate-950/70"}`}>
-                      <span className="mr-1">{action.icon}</span>{action.label}
-                    </button>
-                  ))}
-                </div>
-                <div ref={transcriptRef} className="h-[480px] space-y-3 overflow-y-auto rounded-2xl border border-white/15 bg-slate-950/70 p-4">
-                  {loadingMessages && <p className="text-sm text-white/70">Loading messages...</p>}
-                  {!loadingMessages && messages.length === 0 && <p className="text-sm text-white/70">Start a conversation.</p>}
-                  {messages.map((message) => (
-                    <div key={message.id} className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm ${message.role === "user" ? "ml-auto bg-indigo-500/25" : "border border-white/15 bg-slate-900"}`}>
-                      {message.content}
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-3 flex gap-2">
-                  <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} onKeyDown={onComposerKeyDown} rows={3} className="w-full rounded-2xl border border-white/20 bg-slate-950 p-3" placeholder="Ask Wovo AI..." disabled={generating || remaining <= 0} />
-                  <button onClick={() => void sendMessage()} disabled={generating || !prompt.trim() || remaining <= 0} className="rounded-2xl bg-white px-5 py-2 text-black disabled:opacity-60">{generating ? "Sending..." : "Send"}</button>
-                </div>
-                <p className="mt-1 text-xs text-white/70">Enter = send · Shift+Enter = newline</p>
-              </div>
-            </section>
-          </>
-        )}
-
-        {error && <p className="text-sm text-red-300">{error}</p>}
-        {info && <p className="text-sm text-emerald-300">{info}</p>}
+          <div className="h-[60vh] space-y-3 overflow-y-auto rounded-xl bg-black p-3">
+            {messages.map((m) => <div key={m.id} className={`max-w-[85%] whitespace-pre-wrap rounded-xl px-3 py-2 text-sm ${m.role === "user" ? "ml-auto bg-emerald-500/20" : "border border-white/10 bg-zinc-900"}`}>{m.content}</div>)}
+          </div>
+          <div className="mt-3 flex gap-2">
+            <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} onKeyDown={onKey} placeholder="Ask Wovo AI..." className="w-full rounded-xl border border-white/20 bg-black p-3" />
+            <button onClick={() => void send()} disabled={sending} className="rounded-xl bg-emerald-400 px-6 font-semibold text-black">{sending ? "..." : "Send"}</button>
+          </div>
+          {error && <p className="mt-2 text-sm text-red-300">{error}</p>}
+        </section>
       </div>
     </main>
   );

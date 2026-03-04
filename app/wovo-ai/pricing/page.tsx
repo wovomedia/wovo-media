@@ -1,0 +1,66 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { readSessionFromStorage } from "@/lib/supabase/session-client";
+import { supabase } from "@/lib/supabase/client";
+import type { UnifiedSubscriptionResponse } from "@/lib/wovo-ai/contracts";
+
+const CARDS = [
+  { key: "starter", title: "Starter", price: "$24.99/month", credits: "25 credits / month" },
+  { key: "pro", title: "Pro", price: "$49.99/month", credits: "50 credits / month" },
+  { key: "business", title: "Business", price: "$99/month", credits: "100 credits / month" },
+] as const;
+
+export default function WovoPricingPage() {
+  const router = useRouter();
+  const [token, setToken] = useState<string | null>(null);
+  const [subscription, setSubscription] = useState<UnifiedSubscriptionResponse | null>(null);
+  const [error, setError] = useState("");
+
+  const active = useMemo(() => subscription?.status === "active", [subscription?.status]);
+
+  useEffect(() => {
+    const s = readSessionFromStorage();
+    if (!s?.access_token) return router.push("/login");
+    supabase.setAccessToken(s.access_token);
+    setToken(s.access_token);
+    void fetch("/api/wovo-ai/subscription", { headers: { Authorization: `Bearer ${s.access_token}` } })
+      .then((r) => r.json())
+      .then((data) => setSubscription(data as UnifiedSubscriptionResponse));
+  }, [router]);
+
+  const choose = async (plan: "starter" | "pro" | "business") => {
+    if (!token) return;
+    const endpoint = active ? "/api/stripe/upgrade" : "/api/stripe/checkout-subscription";
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ plan }),
+    });
+    const data = (await res.json()) as { url?: string; error?: string };
+    if (!res.ok) throw new Error(data.error ?? "Failed");
+    if (data.url) window.location.href = data.url;
+    else router.push("/wovo-ai");
+  };
+
+  return (
+    <main className="min-h-screen bg-black px-6 py-16 text-white">
+      <h1 className="text-center text-4xl font-bold">Wovo AI Pricing</h1>
+      <p className="mb-10 text-center text-white/70">Custom Wovo upgrade flow (no forced portal redirect).</p>
+      <div className="mx-auto grid max-w-6xl gap-6 md:grid-cols-3">
+        {CARDS.map((card) => (
+          <article key={card.key} className="rounded-2xl border border-emerald-400/30 bg-zinc-950 p-6">
+            <h2 className="text-2xl font-semibold">{card.title}</h2>
+            <p className="mt-3 text-3xl font-bold text-emerald-300">{card.price}</p>
+            <p className="mt-1 text-white/75">{card.credits}</p>
+            <button className="mt-8 w-full rounded-xl bg-emerald-400 px-4 py-3 font-semibold text-black" onClick={() => void choose(card.key).catch((e: unknown) => setError(e instanceof Error ? e.message : "Failed"))}>
+              {active ? "Upgrade now" : "Start plan"}
+            </button>
+          </article>
+        ))}
+      </div>
+      {error && <p className="mt-5 text-center text-red-300">{error}</p>}
+    </main>
+  );
+}

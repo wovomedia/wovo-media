@@ -1,6 +1,7 @@
 import { supabaseServiceRoleRequest } from "@/lib/supabase/server";
 import { type UnifiedSubscriptionResponse } from "@/lib/wovo-ai/contracts";
 import { getPlanConfig, getPlanFromPriceId, isPaidStatus, type PlanName } from "@/lib/wovo-ai/plans";
+import { maybeResetMonthlyUsage } from "@/lib/wovo-ai/credits";
 import type { StripeSubscription } from "@/lib/stripe";
 
 type ProfileRow = {
@@ -12,6 +13,8 @@ type ProfileRow = {
   monthly_limit: number | null;
   monthly_used: number | null;
   extra_credits: number | null;
+  subscription_current_period_start: string | null;
+  subscription_current_period_end: string | null;
 };
 
 function toStatusPayload(profile: ProfileRow | null, status?: string | null): UnifiedSubscriptionResponse {
@@ -35,8 +38,9 @@ function toStatusPayload(profile: ProfileRow | null, status?: string | null): Un
 }
 
 export async function getSubscriptionStatus(userId: string): Promise<UnifiedSubscriptionResponse> {
+  await maybeResetMonthlyUsage(userId);
   const rows = await supabaseServiceRoleRequest<ProfileRow[]>(
-    `/rest/v1/profiles?select=user_id,plan,monthly_limit,monthly_used,extra_credits,stripe_customer_id,stripe_subscription_id,stripe_subscription_item_id&user_id=eq.${userId}&limit=1`,
+    `/rest/v1/profiles?select=user_id,plan,monthly_limit,monthly_used,extra_credits,stripe_customer_id,stripe_subscription_id,stripe_subscription_item_id,subscription_current_period_start,subscription_current_period_end&user_id=eq.${userId}&limit=1`,
   );
   const profile = rows?.[0] ?? null;
   const statusRows = await supabaseServiceRoleRequest<Array<{ status: string | null }>>(
@@ -98,7 +102,8 @@ export async function syncSubscriptionFromStripe(subscription: StripeSubscriptio
       plan: planKey,
       monthly_limit: planConfig.monthlyCredits,
       monthly_used: 0,
-      credits_reset_at: new Date().toISOString(),
+      subscription_current_period_start: getPeriodIso(subscription.current_period_start),
+      subscription_current_period_end: getPeriodIso(subscription.current_period_end),
       updated_at: new Date().toISOString(),
     }),
   });

@@ -52,7 +52,7 @@ export async function POST(request: Request) {
       priceId,
       userId: user.id,
       successUrl: `${siteUrl}/wovo-ai`,
-      cancelUrl: `${siteUrl}/pricing`,
+      cancelUrl: `${siteUrl}/wovo-ai/pricing`,
       mode: isExtraCreditsPurchase ? "payment" : "subscription",
     });
 
