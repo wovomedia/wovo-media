@@ -14,14 +14,23 @@ type GenerateResponse = SubscriptionPayload & {
   captions: string[];
   hashtags: string[];
   image_prompt: string;
+  image?: { url: string } | null;
 };
 
 type ChatMessage = { id: string; role: "user" | "assistant"; text: string; result?: GenerateResponse };
 
 type PlanOption = { key: PlanKey; name: string; price: string; priceId?: string; desc: string; subtext?: string; popular?: boolean };
 
+type HistoryRow = {
+  id: string;
+  input?: { message?: string };
+  output?: { captions?: unknown; hashtags?: unknown; image_prompt?: unknown; image?: unknown };
+  created_at: string;
+};
+
 const STORAGE_KEY = "wovo-supabase-session";
 const planOrder: PlanKey[] = ["starter", "pro", "agency"];
+const HISTORY_TURNS = 8;
 
 function createId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -33,6 +42,42 @@ function parseSessionFromHash(hash: string): Session | null {
   const accessToken = params.get("access_token");
   if (!accessToken) return null;
   return { access_token: accessToken, refresh_token: params.get("refresh_token") ?? undefined };
+}
+
+function toStringArray(value: unknown, max: number): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((entry) => String(entry).trim()).filter(Boolean).slice(0, max);
+}
+
+function mapHistoryRowToMessages(row: HistoryRow): ChatMessage[] {
+  const userText = row.input?.message?.trim() ?? "";
+  const captions = toStringArray(row.output?.captions, 5);
+  const hashtags = toStringArray(row.output?.hashtags, 10);
+  const imagePrompt = typeof row.output?.image_prompt === "string" ? row.output.image_prompt : "";
+  const image = typeof row.output?.image === "string" ? { url: row.output.image } : null;
+  const summaryText = captions[0] ?? imagePrompt ?? "Generated response";
+
+  const outputMessage: ChatMessage = {
+    id: `${row.id}-assistant`,
+    role: "assistant",
+    text: summaryText,
+    result: {
+      status: "active",
+      plan: "none",
+      remaining: { credits_total: 0, credits_remaining: 0, weekly_limit: 0, weekly_used: 0 },
+      can_generate: true,
+      captions,
+      hashtags,
+      image_prompt: imagePrompt,
+      image,
+    },
+  };
+
+  if (!userText) return [outputMessage];
+  return [
+    { id: `${row.id}-user`, role: "user", text: userText },
+    outputMessage,
+  ];
 }
 
 const inputClass = "w-full rounded-xl border border-white/20 bg-black/70 px-3 py-2.5 text-sm text-white outline-none";
@@ -47,6 +92,8 @@ export default function WovoAiPage() {
   const [prompt, setPrompt] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [generating, setGenerating] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [clearingHistory, setClearingHistory] = useState(false);
   const [submittingCheckout, setSubmittingCheckout] = useState<PlanKey | null>(null);
   const [openingPortal, setOpeningPortal] = useState(false);
   const [error, setError] = useState("");
@@ -78,6 +125,24 @@ export default function WovoAiPage() {
     if (!response.ok) throw new Error(payload.error ?? "Unable to load subscription.");
     setSubscription(payload);
     setError("");
+  }, [authHeaders]);
+
+  const loadHistory = useCallback(async () => {
+    setLoadingHistory(true);
+    try {
+      const response = await fetch("/api/wovo-ai/history", { headers: await authHeaders() });
+      const payload = (await response.json()) as { history?: HistoryRow[]; error?: string };
+      if (!response.ok) throw new Error(payload.error ?? "Unable to load history.");
+
+      const rows = payload.history ?? [];
+      const next = rows.slice().reverse().flatMap((row) => mapHistoryRowToMessages(row));
+      setMessages(next);
+    } catch (err) {
+      setMessages([]);
+      setError(err instanceof Error ? err.message : "Unable to load history.");
+    } finally {
+      setLoadingHistory(false);
+    }
   }, [authHeaders]);
 
   useEffect(() => {
@@ -119,21 +184,17 @@ export default function WovoAiPage() {
         return;
       }
 
-      if (!session?.access_token) {
-        return;
-      }
-
       setAuthUser(data.user as SupabaseAuthUser);
       setEmail(data.user.email ?? "");
       try {
-        await loadSubscription();
+        await Promise.all([loadSubscription(), loadHistory()]);
       } catch (err) {
         setSubscription(null);
-        setError(err instanceof Error ? err.message : "Unable to load subscription.");
+        setError(err instanceof Error ? err.message : "Unable to load account data.");
       }
     };
     void hydrate();
-  }, [loadSubscription, session?.access_token]);
+  }, [loadHistory, loadSubscription, session?.access_token]);
 
   useEffect(() => {
     transcriptRef.current?.scrollTo({ top: transcriptRef.current.scrollHeight, behavior: "smooth" });
@@ -194,6 +255,21 @@ export default function WovoAiPage() {
     }
   };
 
+  const clearHistory = async () => {
+    setClearingHistory(true);
+    setError("");
+    try {
+      const response = await fetch("/api/wovo-ai/history", { method: "DELETE", headers: await authHeaders() });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(payload.error ?? "Unable to clear history.");
+      setMessages([]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to clear history.");
+    } finally {
+      setClearingHistory(false);
+    }
+  };
+
   const handleGenerate = async () => {
     const message = prompt.trim();
     if (!message || generating || !canChat || blocked) return;
@@ -201,13 +277,19 @@ export default function WovoAiPage() {
     setError("");
 
     const thinkingId = createId();
-    setMessages((prev) => [...prev, { id: createId(), role: "user", text: message }, { id: thinkingId, role: "assistant", text: "Thinking..." }]);
+    const nextMessages = [...messages, { id: createId(), role: "user" as const, text: message }, { id: thinkingId, role: "assistant" as const, text: "Thinking..." }];
+    setMessages(nextMessages);
 
     try {
+      const history = messages
+        .filter((entry) => entry.role === "user" || (entry.role === "assistant" && entry.result))
+        .slice(-HISTORY_TURNS)
+        .map((entry) => ({ role: entry.role, text: entry.text }));
+
       const response = await fetch("/api/wovo-ai/generate", {
         method: "POST",
         headers: await authHeaders(),
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({ message, history }),
       });
       const payload = (await response.json()) as Partial<GenerateResponse> & { error?: string; message?: string };
       if (!response.ok) throw new Error(payload.message ?? payload.error ?? "Generation failed.");
@@ -220,11 +302,26 @@ export default function WovoAiPage() {
         captions: payload.captions ?? [],
         hashtags: payload.hashtags ?? [],
         image_prompt: payload.image_prompt ?? "",
+        image: payload.image ?? null,
       };
 
       setSubscription((prev) => (prev ? { ...prev, ...result, admin_access: prev.admin_access } : prev));
-      setMessages((prev) => prev.map((m) => (m.id === thinkingId ? { id: createId(), role: "assistant", text: "Generated response", result } : m)));
+      setMessages((prev) => prev.map((m) => (m.id === thinkingId ? { id: createId(), role: "assistant", text: result.captions[0] ?? "Generated response", result } : m)));
       setPrompt("");
+
+      await fetch("/api/wovo-ai/history", {
+        method: "POST",
+        headers: await authHeaders(),
+        body: JSON.stringify({
+          input: { message },
+          output: {
+            captions: result.captions,
+            hashtags: result.hashtags,
+            image_prompt: result.image_prompt,
+            image: result.image?.url ?? null,
+          },
+        }),
+      });
     } catch (err) {
       setMessages((prev) => prev.map((m) => (m.id === thinkingId ? { ...m, text: "Something went wrong. Please try again." } : m)));
       setError(err instanceof Error ? err.message : "Generation failed.");
@@ -293,6 +390,10 @@ export default function WovoAiPage() {
             </section>
 
             {canChat ? <section className="rounded-2xl border border-white/15 bg-white/5 p-4">
+              <div className="mb-2 flex items-center justify-between text-xs text-white/70">
+                <span>{loadingHistory ? "Loading history..." : `Messages: ${messages.length}`}</span>
+                <button onClick={() => void clearHistory()} disabled={clearingHistory || messages.length === 0} className="rounded-md border border-white/25 px-2 py-1 text-xs disabled:opacity-50">{clearingHistory ? "Clearing..." : "Clear history"}</button>
+              </div>
               <div ref={transcriptRef} className="h-[55vh] space-y-3 overflow-y-auto rounded-xl border border-white/10 bg-black/40 p-3 md:h-[430px]">
                 {messages.length === 0 && <p className="text-sm text-white/60">Ask for caption ideas to begin.</p>}
                 {messages.map((m) => <div key={m.id} className={`max-w-[92%] rounded-xl p-3 ${m.role === "user" ? "ml-auto bg-white/10" : "mr-auto border border-white/15 bg-black/50"}`}>
@@ -301,6 +402,7 @@ export default function WovoAiPage() {
                     <div><p className="font-semibold">Captions:</p><ol className="list-decimal space-y-1 pl-5">{m.result.captions.map((c, i) => <li key={`${m.id}-${i}`}>{c}</li>)}</ol></div>
                     <p><span className="font-semibold">Hashtags:</span> {m.result.hashtags.join(" ")}</p>
                     <div><p className="font-semibold">Image prompt:</p><pre className="mt-1 overflow-x-auto rounded-md bg-black/70 p-2 text-xs">{m.result.image_prompt}</pre></div>
+                    {m.result.image?.url && <img src={m.result.image.url} alt="Generated concept" className="max-h-52 rounded-md border border-white/15" />}
                   </div>}
                 </div>)}
               </div>

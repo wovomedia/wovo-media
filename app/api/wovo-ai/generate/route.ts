@@ -15,6 +15,7 @@ type GenerateBody = {
   contact?: string;
   goal?: string;
   reference_image?: string | null;
+  history?: Array<{ role?: "user" | "assistant"; text?: string }>;
 };
 
 type ConsumeCreditResult = {
@@ -61,6 +62,18 @@ function toStringArray(value: unknown, max: number): string[] {
   return value.map((entry) => String(entry).trim()).filter(Boolean).slice(0, max);
 }
 
+function normalizeHistory(history: GenerateBody["history"]): Array<{ role: "user" | "assistant"; text: string }> {
+  if (!Array.isArray(history)) return [];
+
+  return history
+    .map((turn) => ({
+      role: turn?.role === "assistant" ? "assistant" : "user",
+      text: turn?.text?.trim() ?? "",
+    }))
+    .filter((turn) => Boolean(turn.text))
+    .slice(-8);
+}
+
 export async function POST(request: Request) {
   try {
     if (!process.env.OPENAI_API_KEY) {
@@ -71,6 +84,7 @@ export async function POST(request: Request) {
     const isAdmin = isAdminEmail(user.email);
     const body = (await request.json()) as GenerateBody;
     const message = body.message?.trim() ?? "";
+    const history = normalizeHistory(body.history);
 
     if (!message) {
       return NextResponse.json({ ...fallbackSubscription("Message is required."), captions: [], hashtags: [], image_prompt: "" }, { status: 400 });
@@ -81,6 +95,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ ...subscription, captions: [], hashtags: [], image_prompt: "", message: "Credits exhausted or weekly limit reached." }, { status: 403 });
     }
 
+    const historyContext = history.length
+      ? `\nConversation context:\n${history.map((turn, index) => `${index + 1}. ${turn.role.toUpperCase()}: ${turn.text}`).join("\n")}`
+      : "";
+
     const prompt = `You are Wovo AI, an expert social media marketer.
 Return strict JSON only with this shape:
 {
@@ -90,6 +108,7 @@ Return strict JSON only with this shape:
 }
 
 User request: ${message}
+${historyContext}
 Business details:
 - Name: ${body.business_name ?? "N/A"}
 - Type: ${body.business_type ?? "N/A"}
