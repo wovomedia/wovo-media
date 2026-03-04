@@ -1,4 +1,3 @@
-import OpenAI from "openai";
 import { requireServerUser, supabaseServiceRoleRequest } from "@/lib/supabase/server";
 import { isActiveSubscription } from "@/lib/wovo-ai/plans";
 
@@ -74,10 +73,6 @@ export async function POST(request: Request) {
       }),
     });
 
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
-
     const body = (await request.json()) as WovoAiRequestBody;
 
     const business_name = body.business_name?.trim() ?? "";
@@ -97,21 +92,34 @@ export async function POST(request: Request) {
       );
     }
 
-    const response = await openai.responses.create({
-      prompt: {
-        id: "pmpt_69a7a0735c8c81908946ba48efcdc15106882ac1cfb894a6",
-        variables: {
-          business_name,
-          business_type,
-          location,
-          contact,
-          topic,
-          goal,
-        },
+    const response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
       },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        prompt: {
+          id: "pmpt_69a7a0735c8c81908946ba48efcdc15106882ac1cfb894a6",
+          variables: {
+            business_name,
+            business_type,
+            location,
+            contact,
+            topic,
+            goal,
+          },
+        },
+      }),
     });
 
-    const rawText = response.output_text?.trim() ?? "";
+    if (!response.ok) {
+      return Response.json({ error: "OpenAI request failed." }, { status: 502 });
+    }
+
+    const payload = (await response.json()) as { output_text?: string };
+    const rawText = payload.output_text?.trim() ?? "";
 
     if (!rawText) {
       return Response.json({ error: "OpenAI returned an empty response." }, { status: 502 });
@@ -126,7 +134,7 @@ export async function POST(request: Request) {
         {
           captions: { raw: rawText },
           generated_image_data: null,
-          raw_response: response,
+          raw_response: payload,
         },
         { status: 200 },
       );

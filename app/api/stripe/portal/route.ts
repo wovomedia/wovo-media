@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { stripe } from "@/lib/stripe";
+import { createPortalSession } from "@/lib/stripe";
 import { requireServerUser, supabaseServiceRoleRequest } from "@/lib/supabase/server";
 
 type UserRow = {
@@ -20,10 +20,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No Stripe customer found." }, { status: 400 });
     }
 
-    const session = await stripe.billingPortal.sessions.create({
-      customer: stripeCustomerId,
-      return_url: `${process.env.NEXT_PUBLIC_SITE_URL}/wovo-ai`,
-    });
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+    const session = await createPortalSession(stripeCustomerId, `${siteUrl}/wovo-ai`);
 
     return NextResponse.json({ url: session.url });
   } catch (error) {

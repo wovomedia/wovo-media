@@ -1,18 +1,14 @@
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!supabaseUrl) {
-  throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL");
+function getRequiredEnv(value: string | undefined, name: string): string {
+  if (!value) throw new Error(`Missing ${name}`);
+  return value;
 }
 
-if (!supabaseServiceRoleKey) {
-  throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY");
-}
-
-const buildUrl = (path: string) => `${supabaseUrl}${path}`;
+const buildUrl = (path: string) => `${getRequiredEnv(process.env.NEXT_PUBLIC_SUPABASE_URL, "NEXT_PUBLIC_SUPABASE_URL")}${path}`;
 
 export const supabaseAdmin = {
   async query<T = unknown>(path: string, init?: RequestInit): Promise<T> {
+    const supabaseServiceRoleKey = getRequiredEnv(process.env.SUPABASE_SERVICE_ROLE_KEY, "SUPABASE_SERVICE_ROLE_KEY");
+
     const response = await fetch(buildUrl(path), {
       ...init,
       headers: {

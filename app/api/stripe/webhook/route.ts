@@ -1,16 +1,43 @@
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
-import Stripe from "stripe";
-import { stripe } from "@/lib/stripe";
+import { retrieveSubscription, type StripeSubscription } from "@/lib/stripe";
 import { supabaseServiceRoleRequest } from "@/lib/supabase/server";
 import { getPlanConfig, getPlanFromPriceId } from "@/lib/wovo-ai/plans";
 
 export const runtime = "nodejs";
 
+type StripeEvent = {
+  type: string;
+  data: { object: Record<string, unknown> };
+};
+
 type UserRow = {
   id: string;
   stripe_customer_id: string | null;
 };
+
+function verifySignature(payload: string, signatureHeader: string, secret: string): boolean {
+  const elements = signatureHeader.split(",").map((entry) => entry.trim());
+  const timestamp = elements.find((part) => part.startsWith("t="))?.slice(2);
+  const signature = elements.find((part) => part.startsWith("v1="))?.slice(3);
+
+  if (!timestamp || !signature) {
+    return false;
+  }
+
+  const signedPayload = `${timestamp}.${payload}`;
+  const expected = createHmac("sha256", secret).update(signedPayload, "utf8").digest("hex");
+
+  const expectedBuffer = Buffer.from(expected, "hex");
+  const actualBuffer = Buffer.from(signature, "hex");
+
+  if (expectedBuffer.length !== actualBuffer.length) {
+    return false;
+  }
+
+  return timingSafeEqual(expectedBuffer, actualBuffer);
+}
 
 async function resolveUserIdFromCustomer(customerId: string): Promise<string | null> {
   const users = await supabaseServiceRoleRequest<UserRow[]>(
@@ -20,8 +47,8 @@ async function resolveUserIdFromCustomer(customerId: string): Promise<string | n
   return users?.[0]?.id ?? null;
 }
 
-async function updateUserFromSubscription(subscription: Stripe.Subscription) {
-  const priceId = subscription.items.data[0]?.price?.id ?? null;
+async function updateUserFromSubscription(subscription: StripeSubscription) {
+  const priceId = subscription.items?.data?.[0]?.price?.id ?? null;
   const planName = getPlanFromPriceId(priceId);
   const customerId = String(subscription.customer);
 
@@ -61,23 +88,30 @@ export async function POST(request: Request) {
 
   const body = await request.text();
 
-  let event: Stripe.Event;
+  if (!verifySignature(body, signature, webhookSecret)) {
+    return NextResponse.json({ error: "Invalid webhook signature." }, { status: 400 });
+  }
+
+  let event: StripeEvent;
 
   try {
-    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Invalid signature." },
-      { status: 400 },
-    );
+    event = JSON.parse(body) as StripeEvent;
+  } catch {
+    return NextResponse.json({ error: "Invalid webhook payload." }, { status: 400 });
   }
 
   try {
     switch (event.type) {
       case "checkout.session.completed": {
-        const session = event.data.object as Stripe.Checkout.Session;
+        const session = event.data.object as {
+          customer?: string;
+          subscription?: string;
+          metadata?: { userId?: string };
+          customer_details?: { email?: string };
+        };
+
         if (session.customer && session.subscription) {
-          const subscription = await stripe.subscriptions.retrieve(String(session.subscription));
+          const subscription = await retrieveSubscription(String(session.subscription));
           const userId = session.metadata?.userId ?? null;
 
           if (userId) {
@@ -100,12 +134,12 @@ export async function POST(request: Request) {
       }
       case "customer.subscription.created":
       case "customer.subscription.updated": {
-        const subscription = event.data.object as Stripe.Subscription;
+        const subscription = event.data.object as unknown as StripeSubscription;
         await updateUserFromSubscription(subscription);
         break;
       }
       case "customer.subscription.deleted": {
-        const subscription = event.data.object as Stripe.Subscription;
+        const subscription = event.data.object as unknown as StripeSubscription;
         const customerId = String(subscription.customer);
         const userId = await resolveUserIdFromCustomer(customerId);
 
