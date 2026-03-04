@@ -24,8 +24,8 @@ type ConsumeCreditRow = {
 };
 
 type SubscriptionCreditsRow = {
-  monthly_credits_total: number | null;
-  monthly_credits_remaining: number | null;
+  credits_total: number | null;
+  credits_remaining: number | null;
   weekly_used: number | null;
   weekly_limit: number | null;
 };
@@ -229,7 +229,7 @@ export async function POST(request: Request) {
     const creditRows = isAdmin
       ? null
       : await supabaseServiceRoleRequest<SubscriptionCreditsRow[]>(
-          `/rest/v1/subscriptions?select=monthly_credits_total,monthly_credits_remaining,weekly_used,weekly_limit&user_id=eq.${user.id}&limit=1`,
+          `/rest/v1/subscriptions?select=credits_total,credits_remaining,weekly_used,weekly_limit&user_id=eq.${user.id}&limit=1`,
         );
 
     const creditRow = creditRows?.[0];
@@ -240,8 +240,8 @@ export async function POST(request: Request) {
       image_prompt: generated.image_prompt,
       image: generatedImage ? { url: generatedImage } : null,
       updated_credits: {
-        remaining: isAdmin ? 999999 : creditRow?.monthly_credits_remaining ?? 0,
-        total: isAdmin ? 999999 : creditRow?.monthly_credits_total ?? 0,
+        remaining: isAdmin ? 999999 : creditRow?.credits_remaining ?? 0,
+        total: isAdmin ? 999999 : creditRow?.credits_total ?? 0,
         weekly_used: isAdmin ? 0 : creditRow?.weekly_used ?? 0,
         weekly_limit: isAdmin ? 999999 : creditRow?.weekly_limit ?? 0,
       },
