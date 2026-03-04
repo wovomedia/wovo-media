@@ -110,6 +110,25 @@ export const supabaseClient = {
     },
   },
   from(table: string) {
+    const request = async (path: string, options?: RequestInit) => {
+      const response = await fetch(path, {
+        ...options,
+        headers: {
+          apikey: supabaseAnonKey,
+          ...(options?.headers ?? {}),
+        },
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as SupabaseAuthErrorPayload | null;
+        throw payload ?? { message: `Unable to query ${table} in Supabase.` };
+      }
+
+      if (response.status === 204) return null;
+      return response.json();
+    };
+
     return {
       async selectByEmail(accessToken: string, email: string) {
         const url = new URL(buildUrl(`/rest/v1/${table}`));
@@ -117,20 +136,53 @@ export const supabaseClient = {
         url.searchParams.set("email", `eq.${email}`);
         url.searchParams.set("limit", "1");
 
-        const response = await fetch(url.toString(), {
+        const rows = (await request(url.toString(), {
           headers: {
-            apikey: supabaseAnonKey,
             Authorization: `Bearer ${accessToken}`,
           },
-          cache: "no-store",
-        });
+        })) as Record<string, unknown>[];
 
-        if (!response.ok) {
-          throw new Error(`Unable to query ${table} in Supabase.`);
-        }
-
-        const rows = (await response.json()) as Record<string, unknown>[];
         return rows[0] ?? null;
+      },
+      async selectById(accessToken: string, id: string) {
+        const url = new URL(buildUrl(`/rest/v1/${table}`));
+        url.searchParams.set("select", "*");
+        url.searchParams.set("id", `eq.${id}`);
+        url.searchParams.set("limit", "1");
+
+        const rows = (await request(url.toString(), {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        })) as Record<string, unknown>[];
+
+        return rows[0] ?? null;
+      },
+      async insert(accessToken: string, values: Record<string, unknown>) {
+        const url = buildUrl(`/rest/v1/${table}`);
+        await request(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+            Prefer: "return=minimal",
+          },
+          body: JSON.stringify(values),
+        });
+      },
+      async updateById(accessToken: string, id: string, values: Record<string, unknown>) {
+        const url = new URL(buildUrl(`/rest/v1/${table}`));
+        url.searchParams.set("id", `eq.${id}`);
+
+        await request(url.toString(), {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+            Prefer: "return=minimal",
+          },
+          body: JSON.stringify(values),
+        });
       },
     };
   },
