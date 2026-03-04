@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
-import { createCheckoutSession, createPortalSession } from "@/lib/stripe";
+import { createCheckoutSession } from "@/lib/stripe";
 import { requireServerUser } from "@/lib/supabase/server";
 import { ensureStripeCustomerForUser } from "@/lib/wovo-ai/billing";
-import { EXTRA_CREDITS_PRICE_ID, getAllowedSubscriptionPriceIds, isPaidStatus } from "@/lib/wovo-ai/plans";
+import { EXTRA_CREDITS_PRICE_ID, getAllowedSubscriptionPriceIds, isPaidStatus, WOVO_AI_PRICES } from "@/lib/wovo-ai/plans";
 import { getRawSubscription } from "@/lib/wovo-ai/subscription";
 
 type CheckoutBody = {
   priceId?: string;
+  plan?: "starter" | "pro" | "business";
 };
 
 function getSiteUrlFromRequest(request: Request): string {
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
   try {
     const { user } = await requireServerUser(authorization);
     const body = (await request.json()) as CheckoutBody;
-    const priceId = (body.priceId ?? "").trim();
+    const priceId = (body.priceId ?? (body.plan ? WOVO_AI_PRICES[body.plan] : "") ?? "").trim();
 
     const subscriptionPriceIds = getAllowedSubscriptionPriceIds();
     const isExtraCreditsPurchase = priceId === EXTRA_CREDITS_PRICE_ID;
@@ -40,20 +41,18 @@ export async function POST(request: Request) {
     }
 
     const existing = await getRawSubscription(user.id);
-    const siteUrl = getSiteUrlFromRequest(request);
-
-    if (!isExtraCreditsPurchase && isPaidStatus(existing?.status) && existing?.stripe_customer_id) {
-      const portal = await createPortalSession(existing.stripe_customer_id, `${siteUrl}/wovo-ai`);
-      return NextResponse.json({ url: portal.url });
+    if (!isExtraCreditsPurchase && isPaidStatus(existing?.status)) {
+      return NextResponse.json({ error: "Subscription already active. Use /api/stripe/upgrade to change plan." }, { status: 400 });
     }
 
     const stripeCustomerId = await ensureStripeCustomerForUser(user.id, user.email);
+    const siteUrl = getSiteUrlFromRequest(request);
     const session = await createCheckoutSession({
       customerId: stripeCustomerId,
       priceId,
       userId: user.id,
       successUrl: `${siteUrl}/wovo-ai`,
-      cancelUrl: `${siteUrl}/wovo-ai`,
+      cancelUrl: `${siteUrl}/pricing`,
       mode: isExtraCreditsPurchase ? "payment" : "subscription",
     });
 
@@ -66,9 +65,6 @@ export async function POST(request: Request) {
     if (error instanceof Error && error.message.includes("Unable to verify session")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unexpected error." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Unexpected error." }, { status: 500 });
   }
 }

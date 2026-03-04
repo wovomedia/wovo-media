@@ -47,7 +47,7 @@ export type StripeSubscription = {
   cancel_at_period_end: boolean;
   current_period_start: number;
   current_period_end: number;
-  items?: { data?: Array<{ price?: { id?: string | null } }> };
+  items?: { data?: Array<{ id: string; price?: { id?: string | null } }> };
 };
 
 export async function createStripeCustomer(email: string, userId: string): Promise<{ id: string }> {
@@ -87,6 +87,14 @@ export async function createPortalSession(customerId: string, returnUrl: string)
 
 export async function retrieveSubscription(subscriptionId: string): Promise<StripeSubscription> {
   return stripeRequest(`/subscriptions/${subscriptionId}`, undefined, "GET");
+}
+
+export async function updateSubscriptionPrice(subscriptionId: string, subscriptionItemId: string, newPriceId: string): Promise<StripeSubscription> {
+  return stripeRequest(`/subscriptions/${subscriptionId}`, {
+    "items[0][id]": subscriptionItemId,
+    "items[0][price]": newPriceId,
+    proration_behavior: "create_prorations",
+  });
 }
 
 export async function cancelStripeSubscription(subscriptionId: string): Promise<void> {

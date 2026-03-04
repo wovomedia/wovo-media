@@ -17,23 +17,22 @@ function getSiteUrlFromRequest(request: Request): string {
 }
 
 export async function POST(request: Request) {
-  const authorization = request.headers.get("authorization");
-  if (!authorization?.startsWith("Bearer ")) {
-    return NextResponse.json({ error: "Missing bearer token." }, { status: 401 });
-  }
-
   try {
-    const { user } = await requireServerUser(authorization);
-    const rows = await supabaseServiceRoleRequest<Array<{ stripe_customer_id: string | null; status: string | null }>>(
-      `/rest/v1/subscriptions?select=stripe_customer_id,status&user_id=eq.${user.id}&limit=1`,
-    );
+    const { user } = await requireServerUser(request.headers.get("authorization"));
+    const [profileRows, subscriptionRows] = await Promise.all([
+      supabaseServiceRoleRequest<Array<{ stripe_customer_id: string | null }>>(
+        `/rest/v1/profiles?select=stripe_customer_id&user_id=eq.${user.id}&limit=1`,
+      ),
+      supabaseServiceRoleRequest<Array<{ status: string | null }>>(
+        `/rest/v1/subscriptions?select=status&user_id=eq.${user.id}&limit=1`,
+      ),
+    ]);
 
-    const row = rows?.[0];
-    if (!isPaidStatus(row?.status)) {
+    if (!isPaidStatus(subscriptionRows?.[0]?.status)) {
       return NextResponse.json({ error: "No active subscription found." }, { status: 400 });
     }
 
-    const stripeCustomerId = row?.stripe_customer_id ?? null;
+    const stripeCustomerId = profileRows?.[0]?.stripe_customer_id ?? null;
     if (!stripeCustomerId) {
       return NextResponse.json({ error: "No Stripe customer found for this account." }, { status: 400 });
     }
@@ -44,9 +43,6 @@ export async function POST(request: Request) {
     if (error instanceof Error && error.message.includes("Unable to verify session")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unexpected error." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Unexpected error." }, { status: 500 });
   }
 }
