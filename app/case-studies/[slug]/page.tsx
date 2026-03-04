@@ -1,4 +1,5 @@
 import React from "react";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 type CaseStudy = {
@@ -13,7 +14,6 @@ type CaseStudy = {
 };
 
 const BRAND = {
-  name: "Wovo Media",
   phone: "931-458-3255",
   email: "Support@wovomedia.com",
 };
@@ -81,32 +81,10 @@ export default async function CaseStudyPage({
 
   return (
     <main className="min-h-screen bg-black text-white">
-      <header className="border-b border-white/10 bg-black/50 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
-          <a href="/" className="font-extrabold tracking-tight">
-            {BRAND.name}
-          </a>
-          <div className="flex gap-2">
-            <a
-              href={`tel:${BRAND.phone}`}
-              className="rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-sm font-bold text-white/90 hover:bg-white/10"
-            >
-              Call
-            </a>
-            <a
-              href={`sms:${BRAND.phone}`}
-              className="rounded-xl bg-emerald-400 px-4 py-2 text-sm font-extrabold text-black hover:bg-emerald-300"
-            >
-              Text
-            </a>
-          </div>
-        </div>
-      </header>
-
       <section className="mx-auto max-w-5xl px-6 py-12">
-        <a href="/#growth" className="text-sm text-white/70 underline">
+        <Link href="/#growth" className="text-sm text-white/70 underline">
           ← Back to results
-        </a>
+        </Link>
 
         <h1 className="mt-4 text-4xl font-extrabold md:text-5xl">{cs.name}</h1>
         <p className="mt-2 text-white/60">{cs.location}</p>
@@ -161,12 +139,12 @@ export default async function CaseStudyPage({
           </p>
 
           <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-            <a
+            <Link
               href="/#contact"
               className="rounded-2xl bg-emerald-400 px-6 py-4 text-center font-extrabold text-black hover:bg-emerald-300"
             >
               Request a Plan
-            </a>
+            </Link>
             <a
               href={`sms:${BRAND.phone}`}
               className="rounded-2xl border border-emerald-400/35 bg-emerald-400/10 px-6 py-4 text-center font-extrabold text-emerald-200 hover:bg-emerald-400/20"
