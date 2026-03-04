@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type ChangeEvent, type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { mapSupabaseAuthError } from "@/lib/supabase/auth-errors";
 import { supabase, type Session } from "@/lib/supabase/client";
 import type { UnifiedSubscriptionResponse } from "@/lib/wovo-ai/contracts";
@@ -10,10 +10,20 @@ type PlanKey = "starter" | "pro" | "agency";
 type SupabaseAuthUser = { id: string; email?: string };
 
 type SubscriptionPayload = UnifiedSubscriptionResponse & { admin_access?: boolean };
-type GenerateResponse = SubscriptionPayload & {
+type GenerateResponse = {
   captions: string[];
   hashtags: string[];
   image_prompt: string;
+  image_url: string | null;
+};
+
+type WovoAiApiResponse = {
+  captions?: { facebook?: string; instagram?: string; tiktok?: string };
+  hashtags?: string[];
+  image_prompt?: string;
+  image?: { url?: string } | null;
+  updated_credits?: { remaining?: number; total?: number; weekly_used?: number; weekly_limit?: number };
+  error?: string;
 };
 
 type ChatMessage = { id: string; role: "user" | "assistant"; text: string; result?: GenerateResponse };
@@ -45,6 +55,13 @@ export default function WovoAiPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [prompt, setPrompt] = useState("");
+  const [businessName, setBusinessName] = useState("");
+  const [businessType, setBusinessType] = useState("");
+  const [location, setLocation] = useState("");
+  const [contact, setContact] = useState("");
+  const [goal, setGoal] = useState("");
+  const [referenceImage, setReferenceImage] = useState<string | null>(null);
+  const [referenceImageName, setReferenceImageName] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [generating, setGenerating] = useState(false);
   const [submittingCheckout, setSubmittingCheckout] = useState<PlanKey | null>(null);
@@ -195,34 +212,59 @@ export default function WovoAiPage() {
   };
 
   const handleGenerate = async () => {
-    const message = prompt.trim();
-    if (!message || generating || !canChat || blocked) return;
+    const topic = prompt.trim();
+    if (!topic || generating || !canChat || blocked) return;
     setGenerating(true);
     setError("");
 
     const thinkingId = createId();
-    setMessages((prev) => [...prev, { id: createId(), role: "user", text: message }, { id: thinkingId, role: "assistant", text: "Thinking..." }]);
+    setMessages((prev) => [...prev, { id: createId(), role: "user", text: topic }, { id: thinkingId, role: "assistant", text: "Thinking..." }]);
 
     try {
-      const response = await fetch("/api/wovo-ai/generate", {
+      const response = await fetch("/api/wovo-ai", {
         method: "POST",
         headers: await authHeaders(),
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({
+          topic,
+          business_name: businessName.trim(),
+          business_type: businessType.trim(),
+          location: location.trim(),
+          contact: contact.trim(),
+          goal: goal.trim(),
+          include_image: Boolean(referenceImage),
+          image_base64: referenceImage,
+        }),
       });
-      const payload = (await response.json()) as Partial<GenerateResponse> & { error?: string; message?: string };
-      if (!response.ok) throw new Error(payload.message ?? payload.error ?? "Generation failed.");
+      const payload = (await response.json()) as WovoAiApiResponse;
+      if (!response.ok) throw new Error(payload.error ?? "Generation failed.");
+
+      const captions = [payload.captions?.facebook, payload.captions?.instagram, payload.captions?.tiktok]
+        .map((caption) => caption?.trim() ?? "")
+        .filter(Boolean);
 
       const result: GenerateResponse = {
-        status: payload.status === "active" ? "active" : "inactive",
-        plan: payload.plan === "starter" || payload.plan === "pro" || payload.plan === "agency" ? payload.plan : "none",
-        remaining: payload.remaining ?? { credits_total: 0, credits_remaining: 0, weekly_limit: 0, weekly_used: 0 },
-        can_generate: Boolean(payload.can_generate),
-        captions: payload.captions ?? [],
+        captions,
         hashtags: payload.hashtags ?? [],
         image_prompt: payload.image_prompt ?? "",
+        image_url: payload.image?.url ?? null,
       };
 
-      setSubscription((prev) => (prev ? { ...prev, ...result, admin_access: prev.admin_access } : prev));
+      setSubscription((prev) => {
+        if (!prev || !payload.updated_credits) return prev;
+        const creditsRemaining = payload.updated_credits.remaining ?? prev.remaining.credits_remaining;
+        const weeklyUsed = payload.updated_credits.weekly_used ?? prev.remaining.weekly_used;
+        const weeklyLimit = payload.updated_credits.weekly_limit ?? prev.remaining.weekly_limit;
+        return {
+          ...prev,
+          remaining: {
+            credits_total: payload.updated_credits.total ?? prev.remaining.credits_total,
+            credits_remaining: creditsRemaining,
+            weekly_used: weeklyUsed,
+            weekly_limit: weeklyLimit,
+          },
+          can_generate: prev.admin_access ? true : creditsRemaining > 0 && (weeklyLimit <= 0 || weeklyUsed < weeklyLimit),
+        };
+      });
       setMessages((prev) => prev.map((m) => (m.id === thinkingId ? { id: createId(), role: "assistant", text: "Generated response", result } : m)));
       setPrompt("");
     } catch (err) {
@@ -230,6 +272,30 @@ export default function WovoAiPage() {
       setError(err instanceof Error ? err.message : "Generation failed.");
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const onReferenceImageChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      setReferenceImage(null);
+      setReferenceImageName("");
+      return;
+    }
+
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result ?? ""));
+        reader.onerror = () => reject(new Error("Unable to read image file."));
+        reader.readAsDataURL(file);
+      });
+      setReferenceImage(dataUrl);
+      setReferenceImageName(file.name);
+    } catch (err) {
+      setReferenceImage(null);
+      setReferenceImageName("");
+      setError(err instanceof Error ? err.message : "Unable to attach image.");
     }
   };
 
@@ -301,12 +367,24 @@ export default function WovoAiPage() {
                     <div><p className="font-semibold">Captions:</p><ol className="list-decimal space-y-1 pl-5">{m.result.captions.map((c, i) => <li key={`${m.id}-${i}`}>{c}</li>)}</ol></div>
                     <p><span className="font-semibold">Hashtags:</span> {m.result.hashtags.join(" ")}</p>
                     <div><p className="font-semibold">Image prompt:</p><pre className="mt-1 overflow-x-auto rounded-md bg-black/70 p-2 text-xs">{m.result.image_prompt}</pre></div>
+                    {m.result.image_url && <div><p className="font-semibold">Generated image:</p><img src={m.result.image_url} alt="Generated social post" className="mt-1 max-h-64 rounded-md border border-white/20" /></div>}
                   </div>}
                 </div>)}
               </div>
 
               <div className="sticky bottom-0 mt-3 rounded-xl border border-white/10 bg-black/80 p-3">
                 {blocked && <p className="mb-2 text-xs text-amber-300">{subscription?.message ?? "You have reached your credit limit."}</p>}
+                <div className="mb-2 grid gap-2 sm:grid-cols-2">
+                  <input value={businessName} onChange={(e) => setBusinessName(e.target.value)} className={inputClass} placeholder="Business name" disabled={generating || blocked} />
+                  <input value={businessType} onChange={(e) => setBusinessType(e.target.value)} className={inputClass} placeholder="Business type" disabled={generating || blocked} />
+                  <input value={location} onChange={(e) => setLocation(e.target.value)} className={inputClass} placeholder="Location" disabled={generating || blocked} />
+                  <input value={contact} onChange={(e) => setContact(e.target.value)} className={inputClass} placeholder="Contact info" disabled={generating || blocked} />
+                </div>
+                <input value={goal} onChange={(e) => setGoal(e.target.value)} className={inputClass} placeholder="Goal (e.g. bookings, walk-ins, awareness)" disabled={generating || blocked} />
+                <div className="mt-2 flex items-center gap-2 text-xs text-white/70">
+                  <input type="file" accept="image/*" onChange={(e) => void onReferenceImageChange(e)} disabled={generating || blocked} />
+                  {referenceImageName && <span>Attached: {referenceImageName}</span>}
+                </div>
                 <div className="flex gap-2">
                   <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} onKeyDown={onComposerKeyDown} rows={3} className={inputClass} placeholder="Type your message..." disabled={generating || blocked} />
                   <button onClick={() => void handleGenerate()} disabled={generating || blocked || !prompt.trim()} className="rounded-xl bg-emerald-400 px-4 py-2 text-sm font-bold text-black disabled:opacity-60">{generating ? "Sending..." : "Send"}</button>
