@@ -19,6 +19,8 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 let currentAccessToken: string | null = null;
 let currentSession: Session | null = null;
 
+const SESSION_EXPIRED_MESSAGE = "Your session expired. Please sign in again.";
+
 function setCurrentSession(session: Session | null) {
   currentSession = session;
   currentAccessToken = session?.access_token ?? null;
@@ -107,6 +109,10 @@ class QueryBuilder<T extends Record<string, unknown>> {
   }
 }
 
+export function isSessionExpiredError(error: unknown): boolean {
+  return error instanceof Error && error.message === SESSION_EXPIRED_MESSAGE;
+}
+
 export const supabase = {
   setSession(session: Session | null) {
     setCurrentSession(session);
@@ -124,7 +130,7 @@ export const supabase = {
         const refreshToken = currentSession?.refresh_token;
         if (!refreshToken) {
           setCurrentSession(null);
-          return { data: { session: null }, error: new Error("Your session expired. Please sign in again.") };
+          return { data: { session: null }, error: new Error(SESSION_EXPIRED_MESSAGE) };
         }
 
         const data = await supabaseFetch<{ access_token: string; refresh_token?: string; expires_in?: number; token_type?: string }>(
@@ -145,7 +151,7 @@ export const supabase = {
         return { data: { session }, error: null };
       } catch {
         setCurrentSession(null);
-        return { data: { session: null }, error: new Error("Your session expired. Please sign in again.") };
+        return { data: { session: null }, error: new Error(SESSION_EXPIRED_MESSAGE) };
       }
     },
     async getUser(accessToken?: string): Promise<AuthResult<{ user: AuthUser | null; session: Session | null }>> {

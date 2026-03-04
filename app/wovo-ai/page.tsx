@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { mapSupabaseAuthError } from "@/lib/supabase/auth-errors";
-import { supabase, type Session } from "@/lib/supabase/client";
+import { isSessionExpiredError, supabase, type Session } from "@/lib/supabase/client";
 import type { UnifiedSubscriptionResponse } from "@/lib/wovo-ai/contracts";
 
 type PlanKey = "starter" | "pro" | "agency";
@@ -85,6 +85,16 @@ export default function WovoAiPage() {
     setSubscription(payload);
   }, [authHeaders]);
 
+  const clearSessionState = useCallback((message?: string) => {
+    localStorage.removeItem(STORAGE_KEY);
+    supabase.setSession(null);
+    setSession(null);
+    setAuthUser(null);
+    setSubscription(null);
+    setMessages([]);
+    if (message) setError(message);
+  }, []);
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -114,8 +124,8 @@ export default function WovoAiPage() {
       if (!session?.access_token) return;
       const { data, error: userError } = await supabase.auth.getUser(session.access_token);
       if (userError || !data.user) {
-        if (userError?.message === "Your session expired. Please sign in again.") {
-          signOut("Your session expired. Please sign in again.");
+        if (isSessionExpiredError(userError)) {
+          clearSessionState("Your session expired. Please sign in again.");
           return;
         }
         setError(mapSupabaseAuthError(userError).message);
@@ -130,7 +140,7 @@ export default function WovoAiPage() {
       await loadSubscription();
     };
     void hydrate();
-  }, [loadSubscription, session?.access_token]);
+  }, [clearSessionState, loadSubscription, session?.access_token]);
 
   useEffect(() => {
     transcriptRef.current?.scrollTo({ top: transcriptRef.current.scrollHeight, behavior: "smooth" });
@@ -152,13 +162,7 @@ export default function WovoAiPage() {
   };
 
   const signOut = (message?: string) => {
-    localStorage.removeItem(STORAGE_KEY);
-    supabase.setSession(null);
-    setSession(null);
-    setAuthUser(null);
-    setSubscription(null);
-    setMessages([]);
-    if (message) setError(message);
+    clearSessionState(message);
   };
 
   const startCheckout = async (plan: PlanOption) => {
