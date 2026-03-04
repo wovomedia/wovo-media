@@ -74,20 +74,28 @@ For any release that includes Wovo AI API changes, run this migration gate in CI
 2. Run the validation queries below.
 3. Fail the pipeline immediately if any query does not pass.
 
+CI script source: `scripts/ci/migration-gate.sh`
+
 Example CI/CD gate:
 
 ```bash
-set -euo pipefail
+./scripts/ci/migration-gate.sh
+```
 
-# 1) Apply migrations in order.
-for migration in $(find supabase/migrations -maxdepth 1 -type f -name '*.sql' | sort); do
-  psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f "$migration"
-done
+Validation SQL used by the gate:
 
-# 2) Validation checks (must all pass).
-psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 <<'SQL'
+```sql
 do $$
 begin
+  -- Check required tables.
+  if to_regclass('public.subscriptions') is null then
+    raise exception 'Missing table public.subscriptions';
+  end if;
+
+  if to_regclass('public.generations') is null then
+    raise exception 'Missing table public.generations';
+  end if;
+
   -- Check function signature: consume_generation_credit(uuid)
   if not exists (
     select 1
@@ -100,17 +108,58 @@ begin
     raise exception 'Missing function public.consume_generation_credit(uuid)';
   end if;
 
-  -- Check required tables.
-  if to_regclass('public.subscriptions') is null then
-    raise exception 'Missing table public.subscriptions';
+  -- Check required columns on public.subscriptions.
+  if not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'subscriptions'
+      and column_name = 'credits_total'
+  ) then
+    raise exception 'Missing column public.subscriptions.credits_total';
   end if;
 
-  if to_regclass('public.generations') is null then
-    raise exception 'Missing table public.generations';
+  if not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'subscriptions'
+      and column_name = 'credits_remaining'
+  ) then
+    raise exception 'Missing column public.subscriptions.credits_remaining';
+  end if;
+
+  if not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'subscriptions'
+      and column_name = 'weekly_limit'
+  ) then
+    raise exception 'Missing column public.subscriptions.weekly_limit';
+  end if;
+
+  if not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'subscriptions'
+      and column_name = 'weekly_used'
+  ) then
+    raise exception 'Missing column public.subscriptions.weekly_used';
+  end if;
+
+  if not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'subscriptions'
+      and column_name = 'week_start'
+  ) then
+    raise exception 'Missing column public.subscriptions.week_start';
   end if;
 end
 $$;
-SQL
 ```
 
 If the migration gate fails, block deployment until the schema is corrected.
