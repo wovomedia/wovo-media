@@ -1,0 +1,79 @@
+name: DB Bootstrap Check
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  verify-bootstrap:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: app
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d app"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGDATABASE: app
+      PGUSER: postgres
+      PGPASSWORD: postgres
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Bootstrap auth schema and roles for migrations
+        run: |
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          create schema if not exists auth;
+
+          do $$
+          begin
+            if not exists (select 1 from pg_roles where rolname = 'authenticated') then
+              create role authenticated;
+            end if;
+            if not exists (select 1 from pg_roles where rolname = 'anon') then
+              create role anon;
+            end if;
+            if not exists (select 1 from pg_roles where rolname = 'service_role') then
+              create role service_role;
+            end if;
+          end;
+          $$;
+
+          create table if not exists auth.users (
+            id uuid primary key,
+            email text,
+            raw_user_meta_data jsonb
+          );
+
+          create or replace function auth.uid()
+          returns uuid
+          language sql
+          stable
+          as $$
+            select null::uuid;
+          $$;
+          SQL
+
+      - name: Apply canonical migrations
+        run: |
+          for file in $(ls supabase/migrations/*.sql | sort); do
+            echo "Applying ${file}"
+            psql -v ON_ERROR_STOP=1 -f "$file"
+          done
+
+      - name: Assert billing bootstrap objects
+        run: psql -v ON_ERROR_STOP=1 -f ci/assert-billing-bootstrap.sql

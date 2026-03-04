@@ -18,8 +18,9 @@ Set these before running locally/deploying:
 
 ## Apply DB migrations
 
-1. Apply the SQL in `supabase/migrations/*`.
-2. Confirm `public.subscriptions` and `public.usage_credits` tables exist.
+1. Use `supabase/migrations/*` as the canonical billing schema source and apply them in filename order.
+2. Do not apply `supabase/schema.sql` for billing bootstrap (legacy only).
+3. Confirm `public.subscriptions` exists and includes credit-tracking columns (`credits_total`, `credits_remaining`, `weekly_limit`, `weekly_used`) and that `public.consume_generation_credit(uuid)` exists.
 
 ## Checkout flow test
 

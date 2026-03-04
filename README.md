@@ -37,11 +37,13 @@ Required environment variables:
 
 Supabase SQL setup:
 
-1. Apply all SQL migration files in `supabase/migrations/` (in order).
-2. Then apply `supabase/wovo-ai-schema.sql` if needed for:
+1. **Canonical source of truth:** `supabase/migrations/*` for billing/subscription objects.
+2. Apply all SQL migration files in `supabase/migrations/` in filename order.
+3. Apply `supabase/wovo-ai-schema.sql` for Wovo AI generation tables if needed:
    - `public.business_settings`
    - `public.generations`
    - RLS policies for both tables.
+4. Do **not** apply `supabase/schema.sql` for billing setup. That file is legacy and does not represent the full subscription + credit model.
 
 Validation query (run in Supabase SQL editor):
 
@@ -65,6 +67,8 @@ select to_regclass('public.generations') as generations_table;
 ```
 
 Applying migrations before calling `/api/wovo-ai/generate` or `/api/wovo-ai` prevents the `PGRST202` runtime failure shown in the UI.
+
+CI enforces this bootstrap path via `.github/workflows/db-bootstrap-check.yml`, which provisions a temporary Postgres instance, applies the migration bootstrap sequence, and asserts expected billing objects exist.
 
 ## Learn More
 
