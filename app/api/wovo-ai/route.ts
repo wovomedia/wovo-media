@@ -17,17 +17,17 @@ type WovoAiRequestBody = {
   image_base64?: string;
 };
 
-type ConsumeCreditRow = {
-  consumed: boolean;
-  credits_used_month: number;
-  credits_limit_month: number;
+type ProfileCreditsRow = {
+  credits: number | null;
+  weekly_usage: number | null;
+  weekly_limit: number | null;
 };
 
-type SubscriptionCreditsRow = {
-  credits_total: number | null;
-  credits_remaining: number | null;
-  weekly_used: number | null;
-  weekly_limit: number | null;
+type ConsumeProfileCreditRow = {
+  consumed: boolean;
+  credits: number;
+  weekly_usage: number;
+  weekly_limit: number;
 };
 
 type GeneratedPayload = {
@@ -173,23 +173,30 @@ export async function POST(request: Request) {
       return Response.json({ error: "Topic is required." }, { status: 400 });
     }
 
+    let updatedCredits: { remaining: number; total: number; weekly_used: number; weekly_limit: number } | null = null;
+
     if (!isAdmin) {
       const subscription = await getSubscriptionStatus(user.id);
       if (!isPaidStatus(subscription.status)) {
         return Response.json({ error: "An active subscription is required." }, { status: 402 });
       }
-      if (!subscription.can_generate) {
-        return Response.json({ error: "No generation credits available." }, { status: 402 });
-      }
 
-      const consumeRows = await supabaseServiceRoleRequest<ConsumeCreditRow[]>("/rest/v1/rpc/consume_generation_credit", {
+      const consumeRows = await supabaseServiceRoleRequest<ConsumeProfileCreditRow[]>("/rest/v1/rpc/consume_profile_generation_credit", {
         method: "POST",
         body: JSON.stringify({ p_user_id: user.id }),
       });
 
-      if (!consumeRows?.[0]?.consumed) {
-        return Response.json({ error: "Credit limit reached." }, { status: 402 });
+      const consumeRow = consumeRows?.[0];
+      if (!consumeRow?.consumed) {
+        return Response.json({ error: "You’ve hit your limit for now. Please top up credits or wait for your weekly reset." }, { status: 402 });
       }
+
+      updatedCredits = {
+        remaining: consumeRow.credits,
+        total: Math.max(consumeRow.credits + 1, consumeRow.credits),
+        weekly_used: consumeRow.weekly_usage,
+        weekly_limit: consumeRow.weekly_limit,
+      };
     }
 
     const generated = await generateCaptionsWithOpenAI({
@@ -226,13 +233,13 @@ export async function POST(request: Request) {
       }),
     });
 
-    const creditRows = isAdmin
+    const profileRows = isAdmin
       ? null
-      : await supabaseServiceRoleRequest<SubscriptionCreditsRow[]>(
-          `/rest/v1/subscriptions?select=credits_total,credits_remaining,weekly_used,weekly_limit&user_id=eq.${user.id}&limit=1`,
+      : await supabaseServiceRoleRequest<ProfileCreditsRow[]>(
+          `/rest/v1/profiles?select=credits,weekly_usage,weekly_limit&user_id=eq.${user.id}&limit=1`,
         );
 
-    const creditRow = creditRows?.[0];
+    const profile = profileRows?.[0];
 
     return Response.json({
       captions: generated.captions,
@@ -240,10 +247,10 @@ export async function POST(request: Request) {
       image_prompt: generated.image_prompt,
       image: generatedImage ? { url: generatedImage } : null,
       updated_credits: {
-        remaining: isAdmin ? 999999 : creditRow?.credits_remaining ?? 0,
-        total: isAdmin ? 999999 : creditRow?.credits_total ?? 0,
-        weekly_used: isAdmin ? 0 : creditRow?.weekly_used ?? 0,
-        weekly_limit: isAdmin ? 999999 : creditRow?.weekly_limit ?? 0,
+        remaining: isAdmin ? 999999 : updatedCredits?.remaining ?? profile?.credits ?? 0,
+        total: isAdmin ? 999999 : Math.max(updatedCredits?.remaining ?? profile?.credits ?? 0, 0),
+        weekly_used: isAdmin ? 0 : updatedCredits?.weekly_used ?? profile?.weekly_usage ?? 0,
+        weekly_limit: isAdmin ? 999999 : updatedCredits?.weekly_limit ?? profile?.weekly_limit ?? 0,
       },
     });
   } catch (error) {
