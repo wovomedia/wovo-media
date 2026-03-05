@@ -241,18 +241,7 @@ export default function WovoAiPage() {
           </div>
         </div>
       )}
-      <div className="grid min-h-screen grid-cols-[64px,1fr]">
-        <aside className="flex flex-col items-center border-r border-zinc-200 bg-zinc-100 py-4">
-          <div className="mb-6 flex h-10 w-10 items-center justify-center rounded-full bg-[#f25555] text-lg text-white">🦉</div>
-          <div className="space-y-3 text-lg text-zinc-500">
-            <button className="block h-9 w-9 rounded-lg hover:bg-zinc-200">📅</button>
-            <button className="block h-9 w-9 rounded-lg hover:bg-zinc-200">⊕</button>
-            <button className="block h-9 w-9 rounded-full bg-[#073b4c] text-white">✦</button>
-            <button className="block h-9 w-9 rounded-lg hover:bg-zinc-200">▣</button>
-            <button className="block h-9 w-9 rounded-lg hover:bg-zinc-200">▮</button>
-          </div>
-        </aside>
-
+      <div className="min-h-screen">
         <section className="flex min-h-screen flex-col">
           <header className="flex items-center justify-between border-b border-zinc-200 bg-white px-6 py-4">
             <div className="flex items-center gap-3">
