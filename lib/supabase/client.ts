@@ -115,11 +115,17 @@ export const supabase = {
         return { data: { user: null }, error: error instanceof Error ? error : new Error("Unable to load user") };
       }
     },
-    async signUp(payload: { email: string; password: string }): Promise<AuthResult<Record<string, unknown>>> {
+    async signUp(payload: { email: string; password: string; options?: { emailRedirectTo?: string } }): Promise<AuthResult<Record<string, unknown>>> {
       try {
         const data = await supabaseFetch<Record<string, unknown>>("/auth/v1/signup", {
           method: "POST",
-          body: JSON.stringify(payload),
+          body: JSON.stringify({
+            email: payload.email,
+            password: payload.password,
+            options: payload.options?.emailRedirectTo
+              ? { email_redirect_to: payload.options.emailRedirectTo }
+              : undefined,
+          }),
         });
         return { data, error: null };
       } catch (error) {
