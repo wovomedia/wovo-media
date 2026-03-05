@@ -7,10 +7,16 @@ export const runtime = "nodejs";
 
 type Body = { message?: string; chatId?: string; quickAction?: string };
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 function systemPrompt(action?: string): string {
   const map: Record<string, string> = {
+    inspireme: "Share one fresh, brand-safe social idea with a clear hook and CTA.",
+    whatstrendinginmyindustry: "Summarize current content trends for this business niche and suggest a post angle.",
+    ineedacampaignidea: "Create a concise multi-post campaign concept with theme, hooks, and CTA.",
+    howcaniboostengagement: "Recommend practical engagement tactics with post examples and cadence.",
+    draftatiktokscript: "Write a short TikTok script with hook, beats, and ending CTA.",
+    writeaninstagrampost: "Write an Instagram post with punchy copy, hashtags, and CTA.",
+    draftapostingschedulefornextmonth: "Create a four-week posting schedule with post types and goals.",
     caption: "Generate a concise social caption with a clear CTA.",
     facebook: "Write a Facebook post optimized for engagement.",
     instagram: "Write an Instagram caption with emojis and CTA.",
@@ -22,9 +28,12 @@ function systemPrompt(action?: string): string {
 
 export async function POST(request: Request) {
   try {
-    if (!process.env.OPENAI_API_KEY) {
+    const openAiApiKey = process.env.OPENAI_API_KEY;
+    if (!openAiApiKey) {
       return NextResponse.json({ error: "Missing OPENAI_API_KEY" }, { status: 500 });
     }
+
+    const client = new OpenAI({ apiKey: openAiApiKey });
 
     const { user } = await requireServerUser(request.headers.get("authorization"));
     const body = (await request.json()) as Body;
