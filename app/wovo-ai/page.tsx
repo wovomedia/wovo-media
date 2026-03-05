@@ -10,6 +10,14 @@ import type { UnifiedSubscriptionResponse } from "@/lib/wovo-ai/contracts";
 
 type ChatSummary = { id: string; title: string; created_at: string };
 type ChatMessage = { id: string; role: "user" | "assistant"; content: string; created_at: string };
+type PlanOption = {
+  name: string;
+  price: string;
+  credits: string;
+  priceId: string;
+  badge?: string | null;
+  perks: string[];
+};
 
 const quickActions = [
   "Inspire me",
@@ -20,6 +28,33 @@ const quickActions = [
   "Write an Instagram post",
   "Draft a posting schedule for next month",
 ] as const;
+
+const planOptions: PlanOption[] = [
+  {
+    name: "Starter",
+    price: "$24.99/mo",
+    credits: "25 credits",
+    priceId: "price_1T76wyFmIvQosWF9UoGSKAe2",
+    badge: null,
+    perks: ["25 AI credits / month", "Caption generator", "Basic image prompts", "Standard speed"],
+  },
+  {
+    name: "Growth",
+    price: "$49.99/mo",
+    credits: "50 credits",
+    priceId: "price_1T76wSFmIvQosWF9u3GWCWBV",
+    badge: null,
+    perks: ["50 AI credits / month", "Everything in Starter", "Faster generations", "Saved chats"],
+  },
+  {
+    name: "Pro",
+    price: "$99/mo",
+    credits: "100 credits",
+    priceId: "price_1T76vlFmIvQosWF9gmdPrCVT",
+    badge: "Most Benefits",
+    perks: ["100 AI credits / month", "Priority AI generations", "Best value per credit", "Advanced templates", "Brand voice presets", "Priority support"],
+  },
+];
 
 export default function WovoAiPage() {
   const router = useRouter();
@@ -166,6 +201,17 @@ export default function WovoAiPage() {
     setPromptText(selectedAction);
   };
 
+  const startCheckout = async (priceId: string) => {
+    if (!token) return;
+    const r = await fetch("/api/stripe/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ priceId }),
+    });
+    const { url } = (await r.json()) as { url: string };
+    if (url) window.location.href = url;
+  };
+
   if (loadingPlan) {
     return <div className="flex h-screen items-center justify-center bg-black text-white">Loading your Wovo AI account...</div>;
   }
@@ -174,42 +220,23 @@ export default function WovoAiPage() {
     <main className="min-h-screen bg-[#f4f4f5] text-zinc-900">
       {showPlanModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur">
-          <div className="w-[460px] rounded-2xl border border-zinc-800 bg-zinc-900 p-6 text-white shadow-xl">
+          <div className="w-full max-w-5xl rounded-2xl border border-zinc-800 bg-zinc-900 p-6 text-white shadow-xl">
             <h2 className="mb-2 text-xl font-semibold">Choose your Wovo AI plan</h2>
-            <p className="mb-6 text-zinc-400">Pick a plan to start generating AI content.</p>
-
-            <div className="space-y-3">
-              <button
-                className="w-full rounded-lg bg-emerald-500 py-2 font-semibold hover:opacity-90"
-                onClick={async () => {
-                  const r = await fetch("/api/stripe/checkout", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ plan: "starter" }),
-                  });
-                  const { url } = (await r.json()) as { url: string };
-                  window.location.href = url;
-                }}
-              >
-                Starter — $24/mo
-              </button>
-
-              <button
-                className="w-full rounded-lg bg-zinc-700 py-2 font-semibold hover:opacity-90"
-                onClick={async () => {
-                  const r = await fetch("/api/stripe/checkout", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ plan: "pro" }),
-                  });
-                  const { url } = (await r.json()) as { url: string };
-                  window.location.href = url;
-                }}
-              >
-                Pro — $99/mo
-              </button>
+            <p className="mb-6 text-zinc-400">Pick a plan to start generating AI content. Your account stays locked until an active subscription is detected.</p>
+            <div className="grid gap-4 md:grid-cols-3">
+              {planOptions.map((plan) => (
+                <article key={plan.priceId} className={`rounded-xl border p-4 ${plan.name === "Pro" ? "border-violet-400 bg-violet-500/10" : "border-zinc-700 bg-zinc-950"}`}>
+                  {plan.badge && (<p className="mb-2 inline-block rounded-full bg-violet-500 px-2 py-0.5 text-xs font-semibold text-white">{plan.badge}</p>)}
+                  <h3 className="text-lg font-semibold">{plan.name}</h3>
+                  <p className="text-zinc-200">{plan.price}</p>
+                  <p className="text-sm text-zinc-400">{plan.credits}</p>
+                  <ul className="mt-3 space-y-1 text-sm text-zinc-300">{plan.perks.map((perk) => <li key={perk}>• {perk}</li>)}</ul>
+                  <button className="mt-4 w-full rounded-lg bg-white py-2 font-semibold text-zinc-900 hover:opacity-90" onClick={() => void startCheckout(plan.priceId)}>
+                    Choose {plan.name}
+                  </button>
+                </article>
+              ))}
             </div>
-
             <p className="mt-5 text-xs text-zinc-500">Already paid? Refresh after checkout and you’ll be unlocked automatically.</p>
           </div>
         </div>
@@ -238,7 +265,7 @@ export default function WovoAiPage() {
                 <summary className="cursor-pointer rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm">Account</summary>
                 <div className="absolute right-0 z-20 mt-2 w-56 space-y-1 rounded-xl border border-zinc-200 bg-white p-2 text-sm shadow-xl">
                   <p className="rounded px-2 py-1 text-xs text-zinc-500">Credits left: {subscription?.remaining_credits ?? subscription?.remainingCredits ?? subscription?.remaining?.credits_remaining ?? 0}</p>
-                  <Link href="/wovo-ai/pricing" className="block rounded px-2 py-1 hover:bg-zinc-100">Upgrade plan</Link>
+                  <Link href="/wovo-ai/profile" className="block rounded px-2 py-1 hover:bg-zinc-100">Profile</Link>
                   <button className="block w-full rounded px-2 py-1 text-left hover:bg-zinc-100" onClick={() => void authedFetch("/api/stripe/buy-credits", { method: "POST" }).then((r) => r.json()).then((d: { url?: string }) => d.url && (window.location.href = d.url))}>Buy credits</button>
                   <button className="block w-full rounded px-2 py-1 text-left hover:bg-zinc-100" onClick={() => void authedFetch("/api/stripe/portal", { method: "POST" }).then((r) => r.json()).then((d: { url?: string }) => d.url && (window.location.href = d.url))}>Manage billing</button>
                   <button className="block w-full rounded px-2 py-1 text-left hover:bg-zinc-100" onClick={async () => { const v = window.prompt("Type DELETE to confirm"); if (v === "DELETE") { await authedFetch("/api/account/delete", { method: "POST" }); clearSession(); router.push("/"); } }}>Delete account</button>
