@@ -8,6 +8,10 @@ export const runtime = "nodejs";
 type Body = { message?: string; chatId?: string; quickAction?: string };
 
 
+function normalizeQuickAction(action?: string): string {
+  return (action ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
 function systemPrompt(action?: string): string {
   const map: Record<string, string> = {
     inspireme: "Share one fresh, brand-safe social idea with a clear hook and CTA.",
@@ -23,7 +27,8 @@ function systemPrompt(action?: string): string {
     adcopy: "Write conversion-focused ad copy.",
     image: "Generate a detailed image concept prompt.",
   };
-  return `You are Wovo AI. Be practical, premium, concise. ${map[action ?? ""] ?? ""}`.trim();
+  const normalizedAction = normalizeQuickAction(action);
+  return `You are Wovo AI. Be practical, premium, concise. ${map[normalizedAction] ?? ""}`.trim();
 }
 
 export async function POST(request: Request) {
