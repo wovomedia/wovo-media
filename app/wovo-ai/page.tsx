@@ -31,7 +31,7 @@ export default function WovoAiPage() {
   const [search, setSearch] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
-  const [action, setAction] = useState<(typeof quickActions)[number]>("Caption");
+  const [action, setAction] = useState<(typeof quickActions)[number]>(quickActions[0]);
 
   const authedFetch = async (input: string, init?: RequestInit) => fetch(input, { ...init, headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...(init?.headers ?? {}) } });
 
