@@ -27,7 +27,7 @@ export default function WovoAiPage() {
   const [chats, setChats] = useState<ChatSummary[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chatId, setChatId] = useState<string | null>(null);
-  const [prompt, setPrompt] = useState("");
+  const [promptText, setPromptText] = useState("");
   const [search, setSearch] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
@@ -78,14 +78,14 @@ export default function WovoAiPage() {
   };
 
   const send = async () => {
-    if (!prompt.trim() || !chatId || sending) return;
+    if (!promptText.trim() || !chatId || sending) return;
     setSending(true);
     setError("");
     try {
-      const res = await authedFetch("/api/ai/chat", { method: "POST", body: JSON.stringify({ message: prompt, chatId, quickAction: action.toLowerCase().replace(/[^a-z0-9]/g, "") }) });
+      const res = await authedFetch("/api/ai/chat", { method: "POST", body: JSON.stringify({ message: promptText, chatId, quickAction: action.toLowerCase().replace(/[^a-z0-9]/g, "") }) });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) throw new Error(data.error ?? "Failed");
-      setPrompt("");
+      setPromptText("");
       const messagesRes = await authedFetch(`/api/wovo-ai/chats/${chatId}/messages`);
       setMessages(((await messagesRes.json()) as { messages: ChatMessage[] }).messages ?? []);
       const subRes = await authedFetch("/api/wovo-ai/subscription");
@@ -108,7 +108,7 @@ export default function WovoAiPage() {
 
   const handleQuickActionSelect = (selectedAction: (typeof quickActions)[number]) => {
     setAction(selectedAction);
-    setPrompt(selectedAction);
+    setPromptText(selectedAction);
   };
 
   return (
@@ -152,7 +152,7 @@ export default function WovoAiPage() {
           <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col px-6 py-10">
             <h2 className="text-center text-4xl font-semibold">How can Wovo AI help?</h2>
             <div className="mt-7 rounded-2xl border border-zinc-300 bg-white p-5 shadow-sm">
-              <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} onKeyDown={onKey} placeholder="Ask Wovo AI a question" className="h-24 w-full resize-none border-none bg-transparent text-lg outline-none placeholder:text-zinc-500" />
+              <textarea value={promptText} onChange={(e) => setPromptText(e.target.value)} onKeyDown={onKey} placeholder="Ask Wovo AI a question" className="h-24 w-full resize-none border-none bg-transparent text-lg outline-none placeholder:text-zinc-500" />
               <div className="mt-4 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search chats" className="rounded-full border border-zinc-300 bg-zinc-50 px-3 py-1.5 text-xs" />
