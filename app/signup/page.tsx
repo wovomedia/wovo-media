@@ -15,7 +15,10 @@ export default function SignupPage() {
   const [age, setAge] = useState(18);
   const [gender, setGender] = useState<"boy" | "girl" | "other">("other");
   const [error, setError] = useState("");
-  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin).replace(/\/$/, "");
+  const siteUrl = (
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    (typeof window !== "undefined" ? window.location.origin : "https://wovomedia.com")
+  ).replace(/\/$/, "");
 
   const onSignup = async () => {
     setError("");
