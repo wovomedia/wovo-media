@@ -7,7 +7,6 @@ export const runtime = "nodejs";
 
 type Body = { message?: string; chatId?: string; quickAction?: string };
 
-
 function normalizeQuickAction(action?: string): string {
   return (action ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
 }
@@ -41,9 +40,27 @@ export async function POST(request: Request) {
     const client = new OpenAI({ apiKey: openAiApiKey });
 
     const { user } = await requireServerUser(request.headers.get("authorization"));
-    const body = (await request.json()) as Body;
-    const message = body.message?.trim();
-    const chatId = body.chatId?.trim();
+    const contentType = request.headers.get("content-type") ?? "";
+    let message = "";
+    let chatId = "";
+    let quickAction: string | undefined;
+    let attachmentContext = "";
+
+    if (contentType.includes("multipart/form-data")) {
+      const form = await request.formData();
+      message = String(form.get("message") ?? "").trim();
+      chatId = String(form.get("chatId") ?? "").trim();
+      quickAction = String(form.get("quickAction") ?? "");
+      const file = form.get("file");
+      if (file instanceof File) {
+        attachmentContext = `\n\nAttached file: ${file.name} (${file.type || "unknown type"}, ${file.size} bytes).`;
+      }
+    } else {
+      const body = (await request.json()) as Body;
+      message = body.message?.trim() ?? "";
+      chatId = body.chatId?.trim() ?? "";
+      quickAction = body.quickAction;
+    }
 
     if (!message || !chatId) {
       return NextResponse.json({ error: "chatId and message are required." }, { status: 400 });
@@ -54,14 +71,14 @@ export async function POST(request: Request) {
     await supabaseServiceRoleRequest("/rest/v1/messages", {
       method: "POST",
       headers: { Prefer: "return=minimal" },
-      body: JSON.stringify({ chat_id: chatId, user_id: user.id, role: "user", content: message }),
+      body: JSON.stringify({ chat_id: chatId, user_id: user.id, role: "user", content: `${message}${attachmentContext}` }),
     });
 
     const completion = await client.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
-        { role: "system", content: systemPrompt(body.quickAction) },
-        { role: "user", content: message },
+        { role: "system", content: systemPrompt(quickAction) },
+        { role: "user", content: `${message}${attachmentContext}` },
       ],
     });
 

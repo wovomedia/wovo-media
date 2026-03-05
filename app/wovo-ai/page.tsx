@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type KeyboardEvent, useEffect, useMemo, useState } from "react";
+import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { clearSession, parseSessionFromHash, persistSession, readSessionFromStorage } from "@/lib/supabase/session-client";
 import { submitPendingOnboarding } from "@/lib/wovo-ai/onboarding-client";
@@ -70,8 +70,19 @@ export default function WovoAiPage() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const [action, setAction] = useState<(typeof quickActions)[number]>(quickActions[0]);
+  const [attachment, setAttachment] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [renameChatId, setRenameChatId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
 
-  const authedFetch = async (input: string, init?: RequestInit) => fetch(input, { ...init, headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...(init?.headers ?? {}) } });
+  const authedFetch = async (input: string, init?: RequestInit) => {
+    const nextHeaders = new Headers(init?.headers);
+    nextHeaders.set("Authorization", `Bearer ${token}`);
+    if (init?.body && !(init.body instanceof FormData) && !nextHeaders.has("Content-Type")) {
+      nextHeaders.set("Content-Type", "application/json");
+    }
+    return fetch(input, { ...init, headers: nextHeaders });
+  };
 
   const load = async (accessToken: string) => {
     setToken(accessToken);
@@ -172,10 +183,23 @@ export default function WovoAiPage() {
     setSending(true);
     setError("");
     try {
-      const res = await authedFetch("/api/ai/chat", { method: "POST", body: JSON.stringify({ message: promptText, chatId, quickAction: action.toLowerCase().replace(/[^a-z0-9]/g, "") }) });
+      const normalizedQuickAction = action.toLowerCase().replace(/[^a-z0-9]/g, "");
+      const body = attachment
+        ? (() => {
+          const form = new FormData();
+          form.append("message", promptText);
+          form.append("chatId", chatId);
+          form.append("quickAction", normalizedQuickAction);
+          form.append("file", attachment);
+          return form;
+        })()
+        : JSON.stringify({ message: promptText, chatId, quickAction: normalizedQuickAction });
+      const res = await authedFetch("/api/ai/chat", { method: "POST", body });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) throw new Error(data.error ?? "Failed");
       setPromptText("");
+      setAttachment(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
       const messagesRes = await authedFetch(`/api/wovo-ai/chats/${chatId}/messages`);
       setMessages(((await messagesRes.json()) as { messages: ChatMessage[] }).messages ?? []);
       const subRes = await authedFetch("/api/wovo-ai/subscription");
@@ -195,6 +219,40 @@ export default function WovoAiPage() {
   };
 
   const filteredChats = useMemo(() => chats.filter((c) => c.title.toLowerCase().includes(search.toLowerCase())), [chats, search]);
+
+  const beginRename = () => {
+    if (!chatId) return;
+    const selected = chats.find((chat) => chat.id === chatId);
+    if (!selected) return;
+    setRenameChatId(chatId);
+    setRenameValue(selected.title || "");
+  };
+
+  const saveRename = async () => {
+    if (!renameChatId) return;
+    const trimmed = renameValue.trim();
+    if (!trimmed || trimmed.length > 60) {
+      setError("Chat name must be between 1 and 60 characters.");
+      return;
+    }
+
+    try {
+      const response = await authedFetch(`/api/wovo-ai/chats/${renameChatId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ title: trimmed }),
+      });
+      const payload = (await response.json()) as { error?: string; chat?: ChatSummary };
+      if (!response.ok || !payload.chat) {
+        throw new Error(payload.error ?? "Unable to rename chat.");
+      }
+      setChats((prev) => prev.map((chat) => (chat.id === renameChatId ? { ...chat, title: payload.chat?.title ?? trimmed } : chat)));
+      setRenameChatId(null);
+      setRenameValue("");
+      setError("");
+    } catch (renameError) {
+      setError(renameError instanceof Error ? renameError.message : "Unable to rename chat.");
+    }
+  };
 
   const handleQuickActionSelect = (selectedAction: (typeof quickActions)[number]) => {
     setAction(selectedAction);
@@ -269,13 +327,47 @@ export default function WovoAiPage() {
           <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col px-6 py-10">
             <h2 className="text-center text-4xl font-semibold">How can Wovo AI help?</h2>
             <div className="mt-7 rounded-2xl border border-zinc-300 bg-white p-5 shadow-sm">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,application/pdf"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0] ?? null;
+                  setAttachment(f);
+                }}
+              />
               <textarea value={promptText} onChange={(e) => setPromptText(e.target.value)} onKeyDown={onKey} placeholder="Ask Wovo AI a question" className="h-24 w-full resize-none border-none bg-transparent text-lg outline-none placeholder:text-zinc-500" />
+              {attachment && (
+                <div className="mt-3 inline-flex max-w-full items-center gap-2 rounded-full border border-zinc-300 bg-zinc-100 px-3 py-1 text-xs text-zinc-700">
+                  <span className="truncate">{attachment.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAttachment(null);
+                      if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}
+                    className="rounded-full px-1 hover:bg-zinc-200"
+                    aria-label="Remove attachment"
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
               <div className="mt-4 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search chats" className="rounded-full border border-zinc-300 bg-zinc-50 px-3 py-1.5 text-xs" />
                   <select value={action} onChange={(e) => setAction(e.target.value as (typeof quickActions)[number])} className="rounded-full border border-zinc-300 bg-zinc-50 px-3 py-1.5 text-xs font-medium">
                     {quickActions.map((q) => <option key={q} value={q}>{q}</option>)}
                   </select>
+                  <button
+                    type="button"
+                    className="rounded-full border border-zinc-300 bg-zinc-50 px-2.5 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-100"
+                    onClick={() => fileInputRef.current?.click()}
+                    aria-label="Attach a file"
+                  >
+                    📎
+                  </button>
                 </div>
                 <button onClick={() => void send()} disabled={sending} className="rounded-full bg-zinc-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{sending ? "..." : "Send"}</button>
               </div>
@@ -290,14 +382,47 @@ export default function WovoAiPage() {
             </div>
 
             <div className="mt-8 space-y-3 rounded-2xl border border-zinc-200 bg-white p-4">
-              <h3 className="text-sm font-semibold text-zinc-500">Chats</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-zinc-500">Chats</h3>
+                <button
+                  type="button"
+                  onClick={beginRename}
+                  disabled={!chatId}
+                  className="rounded-md px-2 py-1 text-xs font-medium text-zinc-600 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Rename
+                </button>
+              </div>
               <div className="max-h-40 space-y-2 overflow-y-auto">
                 {filteredChats.map((chat) => <button key={chat.id} onClick={() => setChatId(chat.id)} className={`w-full rounded-lg p-2 text-left text-sm ${chat.id === chatId ? "bg-zinc-900 text-white" : "bg-zinc-100"}`}>{chat.title}</button>)}
               </div>
             </div>
 
             <div className="mt-6 space-y-3 rounded-2xl border border-zinc-200 bg-white p-4">
-              <h3 className="text-sm font-semibold text-zinc-500">Conversation</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-zinc-500">Conversation</h3>
+                {renameChatId && (
+                  <input
+                    value={renameValue}
+                    maxLength={60}
+                    autoFocus
+                    onChange={(event) => setRenameValue(event.target.value)}
+                    onBlur={() => void saveRename()}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        void saveRename();
+                      }
+                      if (event.key === "Escape") {
+                        setRenameChatId(null);
+                        setRenameValue("");
+                      }
+                    }}
+                    className="w-56 rounded-md border border-zinc-300 px-2 py-1 text-xs text-zinc-700"
+                    placeholder="Rename chat"
+                  />
+                )}
+              </div>
               <div className="max-h-64 space-y-3 overflow-y-auto">
                 {messages.map((m) => (
                   <div key={m.id} className={`max-w-[85%] whitespace-pre-wrap rounded-xl px-3 py-2 text-sm ${m.role === "user" ? "ml-auto bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-900"}`}>
