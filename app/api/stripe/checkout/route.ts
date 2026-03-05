@@ -2,12 +2,22 @@ import { NextResponse } from "next/server";
 import { createCheckoutSession } from "@/lib/stripe";
 import { requireServerUser } from "@/lib/supabase/server";
 import { ensureStripeCustomerForUser } from "@/lib/wovo-ai/billing";
-import { EXTRA_CREDITS_PRICE_ID, getAllowedSubscriptionPriceIds, isPaidStatus, WOVO_AI_PRICES } from "@/lib/wovo-ai/plans";
+import { EXTRA_CREDITS_PRICE_ID, getAllowedSubscriptionPriceIds, isPaidStatus } from "@/lib/wovo-ai/plans";
 import { getRawSubscription } from "@/lib/wovo-ai/subscription";
+
+type LegacyPlan = "starter" | "growth" | "standard" | "pro" | "business";
 
 type CheckoutBody = {
   priceId?: string;
-  plan?: "starter" | "pro" | "business";
+  plan?: LegacyPlan;
+};
+
+const LEGACY_PLAN_PRICE_MAP: Record<LegacyPlan, string> = {
+  starter: "price_1T76wyFmIvQosWF9UoGSKAe2",
+  growth: "price_1T76wSFmIvQosWF9u3GWCWBV",
+  standard: "price_1T76wSFmIvQosWF9u3GWCWBV",
+  pro: "price_1T76vlFmIvQosWF9gmdPrCVT",
+  business: "price_1T76vlFmIvQosWF9gmdPrCVT",
 };
 
 function getSiteUrlFromRequest(request: Request): string {
@@ -32,7 +42,8 @@ export async function POST(request: Request) {
   try {
     const { user } = await requireServerUser(authorization);
     const body = (await request.json()) as CheckoutBody;
-    const priceId = (body.priceId ?? (body.plan ? WOVO_AI_PRICES[body.plan] : "") ?? "").trim();
+    const mappedLegacyPriceId = body.plan ? LEGACY_PLAN_PRICE_MAP[body.plan] : "";
+    const priceId = (body.priceId ?? mappedLegacyPriceId ?? "").trim();
 
     const subscriptionPriceIds = getAllowedSubscriptionPriceIds();
     const isExtraCreditsPurchase = priceId === EXTRA_CREDITS_PRICE_ID;
