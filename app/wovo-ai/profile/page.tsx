@@ -1,9 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { type ChangeEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/client";
 import { readSessionFromStorage } from "@/lib/supabase/session-client";
+
+type PlanOption = {
+  name: string;
+  priceLabel: string;
+  credits: string;
+  priceId: string;
+  badge?: string | null;
+  perks: string[];
+};
 
 type SubscriptionPayload = {
   active?: boolean;
@@ -15,13 +24,14 @@ type SubscriptionPayload = {
   tier?: string;
 };
 
-const PLANS = [
-  { name: "Starter", priceLabel: "$24.99/mo", credits: "25 credits/mo", priceId: "price_1T76wyFmIvQosWF9UoGSKAe2", perks: ["25 AI credits every month", "Core Wovo AI tools", "Fast setup"] },
-  { name: "Growth", priceLabel: "$49.99/mo", credits: "50 credits/mo", priceId: "price_1T76wSFmIvQosWF9u3GWCWBV", perks: ["50 AI credits every month", "More output for active teams", "Better monthly value"] },
-  { name: "Pro", priceLabel: "$99/mo", credits: "100 credits/mo", priceId: "price_1T76vlFmIvQosWF9gmdPrCVT", badge: "Most Popular", perks: ["100 AI credits every month", "Most Benefits + best value", "Priority tier for serious creators"] },
-] as const;
+const PLANS: PlanOption[] = [
+  { name: "Starter", priceLabel: "$24.99/mo", credits: "25 credits/mo", priceId: "price_1T76wyFmIvQosWF9UoGSKAe2", badge: null, perks: ["25 AI credits every month", "Core Wovo AI tools", "Fast setup"] },
+  { name: "Growth", priceLabel: "$49.99/mo", credits: "50 credits/mo", priceId: "price_1T76wSFmIvQosWF9u3GWCWBV", badge: null, perks: ["50 AI credits every month", "More output for active teams", "Better monthly value"] },
+  { name: "Pro", priceLabel: "$99/mo", credits: "100 credits/mo", priceId: "price_1T76vlFmIvQosWF9gmdPrCVT", badge: "Most Benefits", perks: ["100 AI credits every month", "Most Benefits + best value", "Priority tier for serious creators"] },
+];
 
 export default function WovoAiProfilePage() {
+  const supabase = createClient();
   const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
   const [subscription, setSubscription] = useState<SubscriptionPayload | null>(null);
@@ -139,7 +149,7 @@ export default function WovoAiProfilePage() {
               <div className="mt-5 grid gap-4 md:grid-cols-3">
                 {PLANS.map((plan) => (
                   <article key={plan.priceId} className={`rounded-xl border p-4 ${plan.name === "Pro" ? "border-violet-400 bg-violet-500/10" : "border-zinc-800 bg-zinc-950"}`}>
-                    {plan.badge ? <p className="mb-2 inline-block rounded-full bg-violet-500 px-2 py-0.5 text-xs font-semibold">{plan.badge}</p> : null}
+                    {plan.badge && <p className="mb-2 inline-block rounded-full bg-violet-500 px-2 py-0.5 text-xs font-semibold text-white">{plan.badge}</p>}
                     <h3 className="text-lg font-semibold">{plan.name}</h3>
                     <p className="text-zinc-300">{plan.priceLabel}</p>
                     <p className="text-sm text-zinc-400">{plan.credits}</p>
@@ -160,7 +170,7 @@ export default function WovoAiProfilePage() {
               <div className="mt-5 grid gap-4 md:grid-cols-3">
                 {PLANS.map((plan) => (
                   <article key={`upgrade-${plan.priceId}`} className={`rounded-xl border p-4 ${plan.name === "Pro" ? "border-violet-400 bg-violet-500/10" : "border-zinc-800 bg-zinc-950"}`}>
-                    {plan.badge ? <p className="mb-2 inline-block rounded-full bg-violet-500 px-2 py-0.5 text-xs font-semibold">{plan.badge}</p> : null}
+                    {plan.badge && <p className="mb-2 inline-block rounded-full bg-violet-500 px-2 py-0.5 text-xs font-semibold text-white">{plan.badge}</p>}
                     <h3 className="text-lg font-semibold">{plan.name}</h3>
                     <p className="text-zinc-300">{plan.priceLabel}</p>
                     <p className="text-sm text-zinc-400">{plan.credits}</p>
@@ -182,7 +192,7 @@ export default function WovoAiProfilePage() {
             <p className="text-sm text-red-200">Delete account permanently</p>
             <p className="mt-1 text-xs text-red-300">Type DELETE to confirm. This removes your Wovo AI data and account access.</p>
             <div className="mt-3 flex flex-col gap-3 sm:flex-row">
-              <input value={deletePrompt} onChange={(event) => setDeletePrompt(event.target.value)} placeholder="Type DELETE" className="rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm outline-none ring-violet-400/80 focus:ring" />
+              <input value={deletePrompt} onChange={(event: ChangeEvent<HTMLInputElement>) => setDeletePrompt(event.target.value)} placeholder="Type DELETE" className="rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm outline-none ring-violet-400/80 focus:ring" />
               <button disabled={busy} onClick={() => void deleteAccount()} className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-60">Delete account</button>
             </div>
           </div>

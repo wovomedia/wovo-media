@@ -100,6 +100,11 @@ export const supabase = {
     async getSession(): Promise<AuthResult<{ session: Session | null }>> {
       return { data: { session: currentSession }, error: null };
     },
+    async signOut(): Promise<AuthResult<{ success: boolean }>> {
+      currentAccessToken = null;
+      currentSession = null;
+      return { data: { success: true }, error: null };
+    },
     async getUser(accessToken?: string): Promise<AuthResult<{ user: AuthUser | null }>> {
       try {
         const headers = defaultHeaders();
@@ -158,3 +163,8 @@ export const supabase = {
     return new QueryBuilder<T>(table);
   },
 };
+
+
+export function createClient() {
+  return supabase;
+}
