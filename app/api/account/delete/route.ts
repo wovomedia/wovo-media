@@ -5,7 +5,12 @@ export async function POST(request: Request) {
   try {
     const { user } = await requireServerUser(request.headers.get("authorization"));
 
-    await supabaseServiceRoleRequest(`/rest/v1/profiles?user_id=eq.${user.id}`, {
+    await supabaseServiceRoleRequest(`/rest/v1/messages?user_id=eq.${user.id}`, {
+      method: "DELETE",
+      headers: { Prefer: "return=minimal" },
+    });
+
+    await supabaseServiceRoleRequest(`/rest/v1/chats?user_id=eq.${user.id}`, {
       method: "DELETE",
       headers: { Prefer: "return=minimal" },
     });
@@ -15,9 +20,21 @@ export async function POST(request: Request) {
       headers: { Prefer: "return=minimal" },
     });
 
-    await deleteAuthUserById(user.id);
+    await supabaseServiceRoleRequest(`/rest/v1/profiles?user_id=eq.${user.id}`, {
+      method: "DELETE",
+      headers: { Prefer: "return=minimal" },
+    });
 
-    return NextResponse.json({ success: true });
+    try {
+      await deleteAuthUserById(user.id);
+      return NextResponse.json({ success: true, deletedAuthUser: true });
+    } catch {
+      return NextResponse.json({
+        success: true,
+        deletedAuthUser: false,
+        message: "App data deleted. Auth user deletion is not available in this environment.",
+      });
+    }
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unexpected error." }, { status: 500 });
   }
