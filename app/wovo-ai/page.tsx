@@ -82,7 +82,7 @@ export default function WovoAiPage() {
     setSending(true);
     setError("");
     try {
-      const res = await authedFetch("/api/ai/chat", { method: "POST", body: JSON.stringify({ message: prompt, chatId, quickAction: action.toLowerCase().replace(/\s+/g, "") }) });
+      const res = await authedFetch("/api/ai/chat", { method: "POST", body: JSON.stringify({ message: prompt, chatId, quickAction: action.toLowerCase().replace(/[^a-z0-9]/g, "") }) });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) throw new Error(data.error ?? "Failed");
       setPrompt("");
@@ -105,6 +105,11 @@ export default function WovoAiPage() {
   };
 
   const filteredChats = useMemo(() => chats.filter((c) => c.title.toLowerCase().includes(search.toLowerCase())), [chats, search]);
+
+  const handleQuickActionSelect = (selectedAction: (typeof quickActions)[number]) => {
+    setAction(selectedAction);
+    setPrompt(selectedAction);
+  };
 
   return (
     <main className="min-h-screen bg-[#f4f4f5] text-zinc-900">
@@ -161,7 +166,7 @@ export default function WovoAiPage() {
 
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               {quickActions.map((q) => (
-                <button key={q} onClick={() => { setAction(q); setPrompt(q); }} className="rounded-full bg-zinc-200 px-5 py-2 text-sm font-medium text-zinc-800 transition hover:bg-zinc-300">
+                <button key={q} onClick={() => handleQuickActionSelect(q)} className="rounded-full bg-zinc-200 px-5 py-2 text-sm font-medium text-zinc-800 transition hover:bg-zinc-300">
                   {q}
                 </button>
               ))}
