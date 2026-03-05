@@ -82,7 +82,7 @@ export default function WovoAiPage() {
     setSending(true);
     setError("");
     try {
-      const res = await authedFetch("/api/ai/chat", { method: "POST", body: JSON.stringify({ message: prompt, chatId, quickAction: action.toLowerCase().replace(/[^a-z0-9]/g, "") }) });
+      const res = await authedFetch("/api/ai/chat", { method: "POST", body: JSON.stringify({ message: prompt, chatId, quickAction: action.toLowerCase().replace(/\s+/g, "") }) });
       const data = (await res.json()) as { error?: string };
       if (!res.ok) throw new Error(data.error ?? "Failed");
       setPrompt("");
