@@ -582,24 +582,27 @@ export default function Home() {
       {/* ABOUT WOVO AI */}
       <section id="about-ai" className="border-y border-white/10 bg-white/5 py-14">
         <SectionHeading
-          kicker="WOVO AI"
+          kicker="Wovo AI"
           title="About Wovo AI"
-          subtitle="AI-powered caption and creative support built for speed, consistency, and conversion-focused content."
+          subtitle="Wovo AI is an AI-powered marketing assistant built for businesses that need content fast. Generate captions, marketing ideas, posting schedules, scripts, and AI-generated images in seconds. Designed for creators, agencies, and local businesses who want consistent, high-performing content without spending hours creating posts."
         />
         <div className="mx-auto mt-8 max-w-6xl px-4 sm:px-6">
           <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
             <div data-reveal className="rounded-3xl border border-white/10 bg-black/25 p-6">
-              <h3 className="text-2xl font-extrabold text-white">Built for teams that need content now.</h3>
+              <h3 className="text-2xl font-extrabold text-white">Built for businesses that need content now.</h3>
               <p className="mt-3 text-white/70">
-                Wovo AI helps businesses create platform-ready captions and creative direction in minutes. It uses your
-                saved business context so output stays relevant to your market, audience, and goals.
+                Wovo AI helps you instantly generate platform-ready captions, campaign ideas, marketing angles, and visuals
+                for social media. Create content for Facebook, Instagram, TikTok, and more while keeping your brand voice
+                consistent.
               </p>
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
                 {[
-                  "Fast caption generation for multiple platforms",
-                  "Profile-aware prompts for more relevant output",
-                  "Cleaner workflow for weekly content planning",
-                  "Designed to support real lead-generation campaigns",
+                  "AI caption generator for social media",
+                  "Campaign + marketing idea generator",
+                  "AI image generation for posts and ads",
+                  "Weekly content planning in seconds",
+                  "Script generation for videos and reels",
+                  "Engagement-focused prompt tools",
                 ].map((item) => (
                   <div key={item} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/75">
                     {item}
@@ -612,12 +615,12 @@ export default function Home() {
               <div className="text-sm font-semibold text-white/70">Inside Wovo AI</div>
               <div className="mt-4 space-y-3">
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <div className="text-sm font-semibold text-white">Sign in + save business profile</div>
-                  <p className="mt-1 text-sm text-white/65">Keep your business details ready so outputs stay consistent.</p>
+                  <div className="text-sm font-semibold text-white">Sign in + save your profile</div>
+                  <p className="mt-1 text-sm text-white/65">Save your chats and keep your business prompts organized.</p>
                 </div>
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <div className="text-sm font-semibold text-white">Generate captions + concepts</div>
-                  <p className="mt-1 text-sm text-white/65">Create content ideas for Facebook, Instagram, and TikTok quickly.</p>
+                  <div className="text-sm font-semibold text-white">Generate captions, ideas, and images</div>
+                  <p className="mt-1 text-sm text-white/65">Create captions, scripts, marketing ideas, posting schedules, and AI images instantly.</p>
                 </div>
                 <a
                   href="/wovo-ai"
