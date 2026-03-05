@@ -10,6 +10,14 @@ import type { UnifiedSubscriptionResponse } from "@/lib/wovo-ai/contracts";
 
 type ChatSummary = { id: string; title: string; created_at: string };
 type ChatMessage = { id: string; role: "user" | "assistant"; content: string; created_at: string };
+type PlanOption = {
+  name: string;
+  price: string;
+  credits: string;
+  priceId: string;
+  badge?: string | null;
+  perks: string[];
+};
 
 const quickActions = [
   "Inspire me",
@@ -21,11 +29,32 @@ const quickActions = [
   "Draft a posting schedule for next month",
 ] as const;
 
-const planOptions = [
-  { name: "Starter", price: "$24.99/mo", credits: "25 credits/mo", priceId: "price_1T76wyFmIvQosWF9UoGSKAe2", perks: ["25 AI credits/mo", "Core creation tools"] },
-  { name: "Growth", price: "$49.99/mo", credits: "50 credits/mo", priceId: "price_1T76wSFmIvQosWF9u3GWCWBV", perks: ["50 AI credits/mo", "Best for growing teams"] },
-  { name: "Pro", price: "$99/mo", credits: "100 credits/mo", priceId: "price_1T76vlFmIvQosWF9gmdPrCVT", badge: "Most Popular", perks: ["100 AI credits/mo", "Most Benefits", "Best value + priority"] },
-] as const;
+const planOptions: PlanOption[] = [
+  {
+    name: "Starter",
+    price: "$24.99/mo",
+    credits: "25 credits",
+    priceId: "price_1T76wyFmIvQosWF9UoGSKAe2",
+    badge: null,
+    perks: ["25 AI credits / month", "Caption generator", "Basic image prompts", "Standard speed"],
+  },
+  {
+    name: "Growth",
+    price: "$49.99/mo",
+    credits: "50 credits",
+    priceId: "price_1T76wSFmIvQosWF9u3GWCWBV",
+    badge: null,
+    perks: ["50 AI credits / month", "Everything in Starter", "Faster generations", "Saved chats"],
+  },
+  {
+    name: "Pro",
+    price: "$99/mo",
+    credits: "100 credits",
+    priceId: "price_1T76vlFmIvQosWF9gmdPrCVT",
+    badge: "Most Benefits",
+    perks: ["100 AI credits / month", "Priority AI generations", "Best value per credit", "Advanced templates", "Brand voice presets", "Priority support"],
+  },
+];
 
 export default function WovoAiPage() {
   const router = useRouter();
@@ -197,7 +226,7 @@ export default function WovoAiPage() {
             <div className="grid gap-4 md:grid-cols-3">
               {planOptions.map((plan) => (
                 <article key={plan.priceId} className={`rounded-xl border p-4 ${plan.name === "Pro" ? "border-violet-400 bg-violet-500/10" : "border-zinc-700 bg-zinc-950"}`}>
-                  {plan.badge ? <p className="mb-2 inline-block rounded-full bg-violet-500 px-2 py-0.5 text-xs font-semibold">{plan.badge}</p> : null}
+                  {plan.badge && (<p className="mb-2 inline-block rounded-full bg-violet-500 px-2 py-0.5 text-xs font-semibold text-white">{plan.badge}</p>)}
                   <h3 className="text-lg font-semibold">{plan.name}</h3>
                   <p className="text-zinc-200">{plan.price}</p>
                   <p className="text-sm text-zinc-400">{plan.credits}</p>
