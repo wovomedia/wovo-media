@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { type KeyboardEvent, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { clearSession, parseSessionFromHash, persistSession, readSessionFromStorage } from "@/lib/supabase/session-client";
+import { submitPendingOnboarding } from "@/lib/wovo-ai/onboarding-client";
 import type { UnifiedSubscriptionResponse } from "@/lib/wovo-ai/contracts";
 
 type ChatSummary = { id: string; title: string; created_at: string };
@@ -38,6 +39,9 @@ export default function WovoAiPage() {
   const load = async (accessToken: string) => {
     setToken(accessToken);
     supabase.setAccessToken(accessToken);
+
+    await submitPendingOnboarding(accessToken);
+
     const [subRes, chatsRes, onboardRes] = await Promise.all([
       fetch("/api/wovo-ai/subscription", { headers: { Authorization: `Bearer ${accessToken}` } }),
       fetch("/api/wovo-ai/chats", { headers: { Authorization: `Bearer ${accessToken}` } }),
