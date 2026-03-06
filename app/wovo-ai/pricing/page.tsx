@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { readSessionFromStorage } from "@/lib/supabase/session-client";
 import { supabase } from "@/lib/supabase/client";
 import type { UnifiedSubscriptionResponse } from "@/lib/wovo-ai/contracts";
+import { getAuthAccessState } from "@/lib/wovo-ai/access";
 
 const CARDS = [
   { key: "starter", title: "Starter", price: "$24.99/month", credits: "50 credits / month" },
@@ -22,7 +23,9 @@ export default function WovoPricingPage() {
 
   useEffect(() => {
     const s = readSessionFromStorage();
-    if (!s?.access_token) return router.push("/login");
+    const authState = getAuthAccessState({ session: s });
+    console.info("[wovo-pricing] Route auth state", { route: "/wovo-ai/pricing", isAuthenticated: authState.isAuthenticated });
+    if (!authState.isAuthenticated || !s?.access_token) return router.push("/login");
     supabase.setAccessToken(s.access_token);
     setToken(s.access_token);
     void fetch("/api/wovo-ai/subscription", { headers: { Authorization: `Bearer ${s.access_token}` } })

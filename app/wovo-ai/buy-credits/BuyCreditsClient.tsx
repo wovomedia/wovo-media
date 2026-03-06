@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { readSessionFromStorage } from "@/lib/supabase/session-client";
 import type { UnifiedSubscriptionResponse } from "@/lib/wovo-ai/contracts";
+import { getAuthAccessState } from "@/lib/wovo-ai/access";
 import { CREDIT_PACKS } from "@/lib/wovo-ai/plans";
 
 export default function BuyCreditsClient() {
@@ -30,7 +31,9 @@ export default function BuyCreditsClient() {
 
   useEffect(() => {
     const session = readSessionFromStorage();
-    if (!session?.access_token) {
+    const authState = getAuthAccessState({ session });
+    console.info("[wovo-buy-credits] Route auth state", { route: "/wovo-ai/buy-credits", isAuthenticated: authState.isAuthenticated });
+    if (!authState.isAuthenticated || !session?.access_token) {
       setLoading(false);
       router.push("/login");
       return;
