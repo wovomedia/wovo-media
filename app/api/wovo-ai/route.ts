@@ -1,5 +1,4 @@
 import { requireServerUser, supabaseServiceRoleRequest } from "@/lib/supabase/server";
-import { isAdminEmail } from "@/lib/wovo-ai/admin";
 import { isPaidStatus } from "@/lib/wovo-ai/plans";
 import { getSubscriptionStatus } from "@/lib/wovo-ai/subscription";
 
@@ -164,7 +163,6 @@ export async function POST(request: Request) {
     }
 
     const { user } = await requireServerUser(request.headers.get("authorization"));
-    const isAdmin = isAdminEmail(user.email);
 
     const body = (await request.json()) as WovoAiRequestBody;
     const topic = body.topic?.trim() ?? "";
@@ -175,29 +173,27 @@ export async function POST(request: Request) {
 
     let updatedCredits: { remaining: number; total: number; weekly_used: number; weekly_limit: number } | null = null;
 
-    if (!isAdmin) {
-      const subscription = await getSubscriptionStatus(user.id);
-      if (!isPaidStatus(subscription.status)) {
-        return Response.json({ error: "An active subscription is required." }, { status: 402 });
-      }
-
-      const consumeRows = await supabaseServiceRoleRequest<ConsumeProfileCreditRow[]>("/rest/v1/rpc/consume_profile_generation_credit", {
-        method: "POST",
-        body: JSON.stringify({ p_user_id: user.id }),
-      });
-
-      const consumeRow = consumeRows?.[0];
-      if (!consumeRow?.consumed) {
-        return Response.json({ error: "You’ve hit your limit for now. Please top up credits or wait for your weekly reset." }, { status: 402 });
-      }
-
-      updatedCredits = {
-        remaining: consumeRow.credits,
-        total: Math.max(consumeRow.credits + 1, consumeRow.credits),
-        weekly_used: consumeRow.weekly_usage,
-        weekly_limit: consumeRow.weekly_limit,
-      };
+    const subscription = await getSubscriptionStatus(user.id);
+    if (!isPaidStatus(subscription.status)) {
+      return Response.json({ error: "An active subscription is required." }, { status: 402 });
     }
+
+    const consumeRows = await supabaseServiceRoleRequest<ConsumeProfileCreditRow[]>("/rest/v1/rpc/consume_profile_generation_credit", {
+      method: "POST",
+      body: JSON.stringify({ p_user_id: user.id }),
+    });
+
+    const consumeRow = consumeRows?.[0];
+    if (!consumeRow?.consumed) {
+      return Response.json({ error: "You’ve hit your limit for now. Please top up credits or wait for your weekly reset." }, { status: 402 });
+    }
+
+    updatedCredits = {
+      remaining: consumeRow.credits,
+      total: Math.max(consumeRow.credits + 1, consumeRow.credits),
+      weekly_used: consumeRow.weekly_usage,
+      weekly_limit: consumeRow.weekly_limit,
+    };
 
     const generated = await generateCaptionsWithOpenAI({
       business_name: body.business_name?.trim() ?? "",
@@ -233,11 +229,9 @@ export async function POST(request: Request) {
       }),
     });
 
-    const profileRows = isAdmin
-      ? null
-      : await supabaseServiceRoleRequest<ProfileCreditsRow[]>(
-          `/rest/v1/profiles?select=credits,weekly_usage,weekly_limit&user_id=eq.${user.id}&limit=1`,
-        );
+    const profileRows = await supabaseServiceRoleRequest<ProfileCreditsRow[]>(
+      `/rest/v1/profiles?select=credits,weekly_usage,weekly_limit&user_id=eq.${user.id}&limit=1`,
+    );
 
     const profile = profileRows?.[0];
 
@@ -247,10 +241,10 @@ export async function POST(request: Request) {
       image_prompt: generated.image_prompt,
       image: generatedImage ? { url: generatedImage } : null,
       updated_credits: {
-        remaining: isAdmin ? 999999 : updatedCredits?.remaining ?? profile?.credits ?? 0,
-        total: isAdmin ? 999999 : Math.max(updatedCredits?.remaining ?? profile?.credits ?? 0, 0),
-        weekly_used: isAdmin ? 0 : updatedCredits?.weekly_used ?? profile?.weekly_usage ?? 0,
-        weekly_limit: isAdmin ? 999999 : updatedCredits?.weekly_limit ?? profile?.weekly_limit ?? 0,
+        remaining: updatedCredits?.remaining ?? profile?.credits ?? 0,
+        total: Math.max(updatedCredits?.remaining ?? profile?.credits ?? 0, 0),
+        weekly_used: updatedCredits?.weekly_used ?? profile?.weekly_usage ?? 0,
+        weekly_limit: updatedCredits?.weekly_limit ?? profile?.weekly_limit ?? 0,
       },
     });
   } catch (error) {

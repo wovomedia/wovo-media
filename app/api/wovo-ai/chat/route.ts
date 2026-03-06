@@ -1,5 +1,4 @@
 import { requireServerUser, supabaseServiceRoleRequest } from "@/lib/supabase/server";
-import { isAdminEmail } from "@/lib/wovo-ai/admin";
 
 export const runtime = "nodejs";
 
@@ -48,17 +47,14 @@ export async function POST(request: Request) {
       return Response.json({ error: "Message is required." }, { status: 400 });
     }
 
-    const isAdmin = isAdminEmail(user.email);
-    if (!isAdmin) {
-      const consumeRows = await supabaseServiceRoleRequest<ConsumeCreditRow[]>("/rest/v1/rpc/consume_generation_credit", {
-        method: "POST",
-        body: JSON.stringify({ p_user_id: user.id }),
-      });
+    const consumeRows = await supabaseServiceRoleRequest<ConsumeCreditRow[]>("/rest/v1/rpc/consume_generation_credit", {
+      method: "POST",
+      body: JSON.stringify({ p_user_id: user.id }),
+    });
 
-      const consume = consumeRows?.[0];
-      if (!consume?.consumed || consume.remaining_credits < 0) {
-        return Response.json({ error: "No credits remaining" }, { status: 402 });
-      }
+    const consume = consumeRows?.[0];
+    if (!consume?.consumed || consume.remaining_credits < 0) {
+      return Response.json({ error: "No credits remaining" }, { status: 402 });
     }
 
     const openAiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
