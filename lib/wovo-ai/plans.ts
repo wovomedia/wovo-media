@@ -51,6 +51,12 @@ export const CREDIT_PACKS: CreditPack[] = [
   { priceId: "price_1T7tqNFmIvQosWF9emrI26Mi", credits: 50, price: 10, label: "Large Pack" },
 ];
 
+export const CREDIT_PACK_MAP: Record<string, number> = {
+  price_1T7K3uFmIvQosWF9B3oVEMMu: 5,
+  price_1T7tozFmIvQosWF9Nrnm4zqG: 20,
+  price_1T7tqNFmIvQosWF9emrI26Mi: 50,
+};
+
 export const EXTRA_CREDITS_PRICE_ID = CREDIT_PACKS[0].priceId;
 
 export function getCreditPackByPriceId(priceId: string | null | undefined): CreditPack | null {
