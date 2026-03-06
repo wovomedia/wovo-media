@@ -498,6 +498,7 @@ export default function WovoAiPage() {
               ))}
             </div>
             <p className="mt-5 text-xs text-zinc-500">Already paid? Refresh after checkout and you’ll be unlocked automatically.</p>
+            <p className="mt-2 text-xs text-zinc-500">Canceling your subscription pauses all unused credits. Your credits will become available again once your subscription is reactivated.</p>
           </div>
         </div>
       )}
@@ -517,6 +518,7 @@ export default function WovoAiPage() {
                   <Link href="/wovo-ai/profile" className="block rounded px-2 py-1 hover:bg-white/10">Profile</Link>
                   <button className="block w-full rounded px-2 py-1 text-left hover:bg-white/10" onClick={goToBuyCredits}>Buy credits</button>
                   <button className="block w-full rounded px-2 py-1 text-left hover:bg-white/10" onClick={() => void authedFetch("/api/stripe/portal", { method: "POST" }).then((r) => r.json()).then((d: { url?: string }) => d.url && (window.location.href = d.url))}>Manage billing</button>
+                  <p className="px-2 py-1 text-[11px] leading-snug text-zinc-500">If your subscription is canceled, your remaining credits will be paused until your subscription is activated again.</p>
                   <button className="block w-full rounded px-2 py-1 text-left hover:bg-white/10" onClick={async () => { const v = window.prompt("Type DELETE to confirm"); if (v === "DELETE") { await authedFetch("/api/account/delete", { method: "POST" }); clearSession(); router.push("/"); } }}>Delete account</button>
                   <button className="block w-full rounded px-2 py-1 text-left hover:bg-white/10" onClick={async () => { const email = window.prompt("New email"); if (email) await authedFetch("/api/account/change-email", { method: "POST", body: JSON.stringify({ email }) }); }}>Change email</button>
                   <button className="block w-full rounded px-2 py-1 text-left hover:bg-white/10" onClick={async () => { const password = window.prompt("New password"); if (password) await authedFetch("/api/account/change-password", { method: "POST", body: JSON.stringify({ password }) }); }}>Change password</button>
