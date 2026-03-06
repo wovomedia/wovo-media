@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase/client";
+import { getBaseUrl } from "@/lib/site-url";
 import { clearPendingOnboarding, storePendingOnboarding } from "@/lib/wovo-ai/onboarding-client";
 
 export default function SignupPage() {
@@ -15,10 +16,7 @@ export default function SignupPage() {
   const [age, setAge] = useState(18);
   const [gender, setGender] = useState<"boy" | "girl" | "other">("other");
   const [error, setError] = useState("");
-  const siteUrl = (
-    process.env.NEXT_PUBLIC_SITE_URL ??
-    (typeof window !== "undefined" ? window.location.origin : "https://wovomedia.com")
-  ).replace(/\/$/, "");
+  const siteUrl = getBaseUrl();
 
   const onSignup = async () => {
     setError("");

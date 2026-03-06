@@ -18,6 +18,28 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 
 let currentAccessToken: string | null = null;
 let currentSession: Session | null = null;
+const PKCE_STORAGE_KEY = "wovo-supabase-pkce-code-verifier";
+
+function toBase64Url(bytes: Uint8Array): string {
+  let binary = "";
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function generateCodeVerifier(): string {
+  const randomBytes = new Uint8Array(32);
+  crypto.getRandomValues(randomBytes);
+  return toBase64Url(randomBytes);
+}
+
+async function generateCodeChallenge(verifier: string): Promise<string> {
+  const data = new TextEncoder().encode(verifier);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return toBase64Url(new Uint8Array(digest));
+}
 
 function defaultHeaders(): Headers {
   const headers = new Headers();
@@ -155,13 +177,53 @@ export const supabase = {
       }
     },
     async signInWithOAuth(args: { provider: OAuthProvider; options: { redirectTo: string } }): Promise<AuthResult<{ url: string | null }>> {
+      const codeVerifier = generateCodeVerifier();
+      localStorage.setItem(PKCE_STORAGE_KEY, codeVerifier);
+      const codeChallenge = await generateCodeChallenge(codeVerifier);
+
       try {
-        const query = new URLSearchParams({ provider: args.provider, redirect_to: args.options.redirectTo }).toString();
+        const query = new URLSearchParams({
+          provider: args.provider,
+          redirect_to: args.options.redirectTo,
+          code_challenge: codeChallenge,
+          code_challenge_method: "S256",
+        }).toString();
+
         const data = await supabaseFetch<{ url?: string }>(`/auth/v1/authorize?${query}`, { method: "GET" });
         return { data: { url: data.url ?? null }, error: null };
       } catch {
-        const fallbackUrl = `${supabaseUrl}/auth/v1/authorize?provider=${args.provider}&redirect_to=${encodeURIComponent(args.options.redirectTo)}`;
+        const fallbackUrl = `${supabaseUrl}/auth/v1/authorize?provider=${args.provider}&redirect_to=${encodeURIComponent(args.options.redirectTo)}&code_challenge=${encodeURIComponent(codeChallenge)}&code_challenge_method=S256`;
         return { data: { url: fallbackUrl }, error: null };
+      }
+    },
+    async exchangeCodeForSession(authCode: string): Promise<AuthResult<{ session: Session | null }>> {
+      try {
+        const codeVerifier = localStorage.getItem(PKCE_STORAGE_KEY);
+        if (!codeVerifier) {
+          throw new Error("Missing PKCE code verifier.");
+        }
+
+        const data = await supabaseFetch<{ access_token: string; refresh_token?: string; expires_in?: number; token_type?: string }>(
+          "/auth/v1/token?grant_type=pkce",
+          {
+            method: "POST",
+            body: JSON.stringify({ auth_code: authCode, code_verifier: codeVerifier }),
+          },
+        );
+
+        const session: Session = {
+          access_token: data.access_token,
+          refresh_token: data.refresh_token,
+          expires_in: data.expires_in,
+          token_type: data.token_type,
+        };
+
+        currentAccessToken = session.access_token;
+        currentSession = session;
+        localStorage.removeItem(PKCE_STORAGE_KEY);
+        return { data: { session }, error: null };
+      } catch (error) {
+        return { data: { session: null }, error: error instanceof Error ? error : new Error("Unable to exchange auth code") };
       }
     },
   },
