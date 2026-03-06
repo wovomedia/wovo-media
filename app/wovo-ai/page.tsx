@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase/client";
 import { clearSession, parseSessionFromHash, persistSession, readSessionFromStorage } from "@/lib/supabase/session-client";
 import { submitPendingOnboarding } from "@/lib/wovo-ai/onboarding-client";
 import type { UnifiedSubscriptionResponse } from "@/lib/wovo-ai/contracts";
+import { EMPTY_BUSINESS_CONTEXT, type BusinessContext } from "@/lib/wovo-ai/business-context";
 
 type ChatSummary = { id: string; title: string; created_at: string };
 type ChatMessage = { id: string; role: "user" | "assistant"; content: string; created_at: string };
@@ -109,6 +110,7 @@ export default function WovoAiPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [renameChatId, setRenameChatId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  const [businessContext, setBusinessContext] = useState<BusinessContext>(EMPTY_BUSINESS_CONTEXT);
 
   const authedFetch = async (input: string, init?: RequestInit) => {
     const nextHeaders = new Headers(init?.headers);
@@ -254,7 +256,7 @@ export default function WovoAiPage() {
         const imageRes = await fetch("/api/wovo/image", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt: inputMessage }),
+          body: JSON.stringify({ prompt: inputMessage, businessContext }),
         });
         const imageData = (await imageRes.json()) as { error?: string; image?: string };
         if (!imageRes.ok || !imageData.image) {
@@ -268,7 +270,7 @@ export default function WovoAiPage() {
         const captionImageRes = await fetch("/api/wovo/caption-image", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt: inputMessage }),
+          body: JSON.stringify({ prompt: inputMessage, businessContext }),
         });
         const captionImageData = (await captionImageRes.json()) as { error?: string; caption?: string; imagePrompt?: string; image?: string };
         if (!captionImageRes.ok || !captionImageData.caption || !captionImageData.image) {
@@ -283,7 +285,7 @@ export default function WovoAiPage() {
         const chatRes = await fetch("/api/wovo/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: inputMessage, history, mode }),
+          body: JSON.stringify({ message: inputMessage, history, mode, businessContext }),
         });
         const chatData = (await chatRes.json()) as { error?: string; reply?: string };
         if (!chatRes.ok || !chatData.reply) {
@@ -501,6 +503,57 @@ export default function WovoAiPage() {
                 </div>
                 <button onClick={() => void send()} disabled={sending} className="rounded-full bg-emerald-400 px-5 py-2 text-sm font-semibold text-black transition hover:bg-emerald-300 disabled:opacity-50">{sending ? "..." : "Send"}</button>
               </div>
+
+              <details className="mt-4 rounded-xl border border-white/10 bg-black/25 p-3">
+                <summary className="cursor-pointer list-none text-sm font-medium text-zinc-200">
+                  Optional Business Context
+                </summary>
+                <p className="mt-1 text-xs text-zinc-400">Add business details to get more accurate captions and visuals.</p>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  <input
+                    value={businessContext.businessName}
+                    onChange={(event) => setBusinessContext((prev) => ({ ...prev, businessName: event.target.value }))}
+                    placeholder="Enter business name"
+                    className="w-full rounded-lg border border-white/10 bg-[#0b0d0d] px-3 py-2 text-xs text-zinc-100 placeholder:text-zinc-500"
+                    aria-label="Business Name"
+                  />
+                  <input
+                    value={businessContext.phoneNumber}
+                    onChange={(event) => setBusinessContext((prev) => ({ ...prev, phoneNumber: event.target.value }))}
+                    placeholder="Enter phone number"
+                    className="w-full rounded-lg border border-white/10 bg-[#0b0d0d] px-3 py-2 text-xs text-zinc-100 placeholder:text-zinc-500"
+                    aria-label="Phone Number"
+                  />
+                  <input
+                    value={businessContext.email}
+                    onChange={(event) => setBusinessContext((prev) => ({ ...prev, email: event.target.value }))}
+                    placeholder="Enter email"
+                    className="w-full rounded-lg border border-white/10 bg-[#0b0d0d] px-3 py-2 text-xs text-zinc-100 placeholder:text-zinc-500"
+                    aria-label="Email"
+                  />
+                  <input
+                    value={businessContext.businessDescription}
+                    onChange={(event) => setBusinessContext((prev) => ({ ...prev, businessDescription: event.target.value }))}
+                    placeholder="Describe the business"
+                    className="w-full rounded-lg border border-white/10 bg-[#0b0d0d] px-3 py-2 text-xs text-zinc-100 placeholder:text-zinc-500 sm:col-span-2"
+                    aria-label="Business Description"
+                  />
+                  <input
+                    value={businessContext.location}
+                    onChange={(event) => setBusinessContext((prev) => ({ ...prev, location: event.target.value }))}
+                    placeholder="Enter location"
+                    className="w-full rounded-lg border border-white/10 bg-[#0b0d0d] px-3 py-2 text-xs text-zinc-100 placeholder:text-zinc-500"
+                    aria-label="Business Location"
+                  />
+                  <input
+                    value={businessContext.serviceLocation}
+                    onChange={(event) => setBusinessContext((prev) => ({ ...prev, serviceLocation: event.target.value }))}
+                    placeholder="Enter service area"
+                    className="w-full rounded-lg border border-white/10 bg-[#0b0d0d] px-3 py-2 text-xs text-zinc-100 placeholder:text-zinc-500"
+                    aria-label="Service Area"
+                  />
+                </div>
+              </details>
             </div>
 
             <div className="mt-6 flex flex-wrap justify-center gap-3">

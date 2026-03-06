@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
+import { formatBusinessContext, type BusinessContext, normalizeBusinessContext } from "@/lib/wovo-ai/business-context";
 
 export const runtime = "nodejs";
 
@@ -14,6 +15,7 @@ type Body = {
   message?: string;
   history?: Message[];
   mode?: Mode;
+  businessContext?: Partial<BusinessContext>;
 };
 
 const BASE_SYSTEM_PROMPT =
@@ -45,6 +47,8 @@ export async function POST(request: Request) {
     const message = body.message?.trim() ?? "";
     const history = Array.isArray(body.history) ? body.history : [];
     const mode: Mode = body.mode ?? "chat";
+    const businessContext = normalizeBusinessContext(body.businessContext);
+    const businessContextBlock = formatBusinessContext(businessContext);
 
     if (!message) {
       return NextResponse.json({ error: "Message is required." }, { status: 400 });
@@ -56,7 +60,13 @@ export async function POST(request: Request) {
       input: [
         {
           role: "system",
-          content: `${BASE_SYSTEM_PROMPT} ${modeInstruction(mode)}`,
+          content: [
+            `${BASE_SYSTEM_PROMPT} ${modeInstruction(mode)}`,
+            businessContextBlock,
+            "Instruction: Use the business context when relevant. Do not invent missing details. If a field is blank, ignore it.",
+          ]
+            .filter(Boolean)
+            .join("\n\n"),
         },
         ...history.map((item) => ({
           role: item.role,
