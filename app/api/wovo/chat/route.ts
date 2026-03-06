@@ -12,6 +12,10 @@ type Message = {
   content: string;
 };
 
+type UserResponseContent =
+  | { type: "input_text"; text: string }
+  | { type: "input_image"; image_url: string; detail: "auto" };
+
 type Body = {
   message?: string;
   history?: Message[];
@@ -112,6 +116,13 @@ export async function POST(request: Request) {
     }
 
     const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const userContent: UserResponseContent[] | string = referenceImageDataUrl
+      ? [
+          { type: "input_text", text: message },
+          { type: "input_image", image_url: referenceImageDataUrl, detail: "auto" },
+        ]
+      : message;
+
     const response = await client.responses.create({
       model: process.env.OPENAI_MODEL || "gpt-5",
       input: [
@@ -133,12 +144,7 @@ export async function POST(request: Request) {
         })),
         {
           role: "user",
-          content: referenceImageDataUrl
-            ? [
-                { type: "input_text", text: message },
-                { type: "input_image", image_url: referenceImageDataUrl },
-              ]
-            : message,
+          content: userContent,
         },
       ],
     });

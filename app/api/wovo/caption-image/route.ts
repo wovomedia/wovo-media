@@ -11,6 +11,10 @@ type Body = {
   selectedPlatform?: string | null;
 };
 
+type UserResponseContent =
+  | { type: "input_text"; text: string }
+  | { type: "input_image"; image_url: string; detail: "auto" };
+
 const CAPTION_SYSTEM_PROMPT =
   "You are Wovo AI. Create social media captions for small businesses that are engaging, clear, promotional, and ready to post.";
 
@@ -75,6 +79,12 @@ export async function POST(request: Request) {
     }
 
     const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const captionUserContent: UserResponseContent[] | string = referenceImageDataUrl
+      ? [
+          { type: "input_text", text: prompt },
+          { type: "input_image", image_url: referenceImageDataUrl, detail: "auto" },
+        ]
+      : prompt;
 
     const captionResponse = await client.responses.create({
       model: process.env.OPENAI_MODEL || "gpt-5",
@@ -93,12 +103,7 @@ export async function POST(request: Request) {
         },
         {
           role: "user",
-          content: referenceImageDataUrl
-            ? [
-                { type: "input_text", text: prompt },
-                { type: "input_image", image_url: referenceImageDataUrl },
-              ]
-            : prompt,
+          content: captionUserContent,
         },
       ],
     });
@@ -107,6 +112,13 @@ export async function POST(request: Request) {
     if (!caption) {
       return NextResponse.json({ error: "Caption generation failed." }, { status: 502 });
     }
+
+    const imagePromptUserContent: UserResponseContent[] | string = referenceImageDataUrl
+      ? [
+          { type: "input_text", text: caption },
+          { type: "input_image", image_url: referenceImageDataUrl, detail: "auto" },
+        ]
+      : caption;
 
     const imagePromptResponse = await client.responses.create({
       model: process.env.OPENAI_MODEL || "gpt-5",
@@ -126,12 +138,7 @@ export async function POST(request: Request) {
         },
         {
           role: "user",
-          content: referenceImageDataUrl
-            ? [
-                { type: "input_text", text: caption },
-                { type: "input_image", image_url: referenceImageDataUrl },
-              ]
-            : caption,
+          content: imagePromptUserContent,
         },
       ],
     });

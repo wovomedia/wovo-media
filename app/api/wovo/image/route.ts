@@ -11,6 +11,10 @@ type Body = {
   selectedPlatform?: string | null;
 };
 
+type UserResponseContent =
+  | { type: "input_text"; text: string }
+  | { type: "input_image"; image_url: string; detail: "auto" };
+
 async function parseIncomingRequest(request: Request): Promise<{
   prompt: string;
   businessContext: BusinessContext;
@@ -82,6 +86,11 @@ export async function POST(request: Request) {
       .join("\n\n");
 
     if (referenceImageDataUrl) {
+      const refinementContent: UserResponseContent[] = [
+        { type: "input_text", text: `User request: ${prompt}` },
+        { type: "input_image", image_url: referenceImageDataUrl, detail: "auto" },
+      ];
+
       const promptRefinement = await client.responses.create({
         model: process.env.OPENAI_MODEL || "gpt-5",
         input: [
@@ -99,10 +108,7 @@ export async function POST(request: Request) {
           },
           {
             role: "user",
-            content: [
-              { type: "input_text", text: `User request: ${prompt}` },
-              { type: "input_image", image_url: referenceImageDataUrl },
-            ],
+            content: refinementContent,
           },
         ],
       });
