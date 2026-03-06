@@ -268,7 +268,7 @@ export default function WovoAiPage() {
   };
 
   const send = async () => {
-    if (!promptText.trim() || !chatId || sending) return;
+    if (!promptText.trim() || !chatId || !canSend) return;
 
     const inputMessage = promptText.trim();
     const activeChatId = chatId;
@@ -349,9 +349,13 @@ export default function WovoAiPage() {
   const onKey = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
+      if (!canSend) return;
       void send();
     }
   };
+
+  const creditsRemaining = subscription?.remaining_credits ?? subscription?.remainingCredits ?? subscription?.remaining?.credits_remaining ?? 0;
+  const canSend = creditsRemaining > 0 && !sending;
 
   const filteredChats = useMemo(() => chats.filter((c) => c.title.toLowerCase().includes(search.toLowerCase())), [chats, search]);
 
@@ -476,7 +480,7 @@ export default function WovoAiPage() {
               <details className="relative">
                 <summary className="cursor-pointer rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-zinc-100">Account</summary>
                 <div className="absolute right-0 z-20 mt-2 w-56 space-y-1 rounded-xl border border-white/10 bg-[#111313] p-2 text-sm shadow-xl">
-                  <p className="rounded px-2 py-1 text-xs text-zinc-400">Credits left: {subscription?.remaining_credits ?? subscription?.remainingCredits ?? subscription?.remaining?.credits_remaining ?? 0}</p>
+                  <p className="rounded px-2 py-1 text-xs text-zinc-400">Credits left: {creditsRemaining}</p>
                   <Link href="/wovo-ai/profile" className="block rounded px-2 py-1 hover:bg-white/10">Profile</Link>
                   <button className="block w-full rounded px-2 py-1 text-left hover:bg-white/10" onClick={() => void authedFetch("/api/stripe/buy-credits", { method: "POST" }).then((r) => r.json()).then((d: { url?: string }) => d.url && (window.location.href = d.url))}>Buy credits</button>
                   <button className="block w-full rounded px-2 py-1 text-left hover:bg-white/10" onClick={() => void authedFetch("/api/stripe/portal", { method: "POST" }).then((r) => r.json()).then((d: { url?: string }) => d.url && (window.location.href = d.url))}>Manage billing</button>
@@ -537,7 +541,17 @@ export default function WovoAiPage() {
                     🎤
                   </button>
                 </div>
-                <button onClick={() => void send()} disabled={sending} className="rounded-full bg-emerald-400 px-5 py-2 text-sm font-semibold text-black transition hover:bg-emerald-300 disabled:opacity-50">{sending ? "..." : "Send"}</button>
+                {creditsRemaining <= 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => void authedFetch("/api/stripe/buy-credits", { method: "POST" }).then((r) => r.json()).then((d: { url?: string }) => d.url && (window.location.href = d.url))}
+                    className="rounded-full bg-amber-400 px-5 py-2 text-sm font-semibold text-black transition hover:bg-amber-300"
+                  >
+                    Buy Credits
+                  </button>
+                ) : (
+                  <button onClick={() => void send()} disabled={!canSend} className="rounded-full bg-emerald-400 px-5 py-2 text-sm font-semibold text-black transition hover:bg-emerald-300 disabled:opacity-50">{sending ? "..." : "Send"}</button>
+                )}
               </div>
 
               <details className="mt-4 rounded-xl border border-white/10 bg-black/25 p-3">
@@ -716,6 +730,7 @@ export default function WovoAiPage() {
               </section>
               </div>
 
+            {creditsRemaining <= 0 && <p className="mt-3 text-sm text-amber-300">You are out of credits. Buy credits to continue sending.</p>}
             {error && <p className="mt-3 text-sm text-red-300">{error}</p>}
           </div>
         </section>
