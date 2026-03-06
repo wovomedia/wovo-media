@@ -13,6 +13,8 @@ export type UnifiedSubscriptionResponse = {
   status: "active" | "inactive";
   plan: ResponsePlan;
   remaining: RemainingCredits;
+  has_access: boolean;
+  requires_subscription: boolean;
   can_generate: boolean;
   message?: string;
 };

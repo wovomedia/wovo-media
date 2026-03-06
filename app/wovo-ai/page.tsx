@@ -6,6 +6,7 @@ import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react"
 import { supabase } from "@/lib/supabase/client";
 import { clearSession, parseSessionFromHash, persistSession, readSessionFromStorage } from "@/lib/supabase/session-client";
 import { submitPendingOnboarding } from "@/lib/wovo-ai/onboarding-client";
+import { resolveAiAccessState } from "@/lib/wovo-ai/access";
 import type { UnifiedSubscriptionResponse } from "@/lib/wovo-ai/contracts";
 import { EMPTY_BUSINESS_CONTEXT, type BusinessContext } from "@/lib/wovo-ai/business-context";
 import type { CaptionPlatform } from "@/lib/wovo-ai/prompt-context";
@@ -146,8 +147,7 @@ export default function WovoAiPage() {
 
     const subData = (await subRes.json()) as UnifiedSubscriptionResponse;
     setSubscription(subData);
-    const active = Boolean((subData as { active?: boolean; hasPlan?: boolean })?.active ?? (subData as { active?: boolean; hasPlan?: boolean })?.hasPlan);
-    setShowPlanModal(!active);
+    setShowPlanModal(resolveAiAccessState(subData).showPaywall);
     setLoadingPlan(false);
     const chatPayload = (await chatsRes.json()) as { chats: ChatSummary[] };
     setChats(chatPayload.chats ?? []);
@@ -166,9 +166,9 @@ export default function WovoAiPage() {
         });
         const data = await res.json();
         if (!mounted) return;
-        setSubscription(data);
-        const active = Boolean(data?.active ?? data?.hasPlan);
-        if (!active) setShowPlanModal(true);
+        const subscriptionData = data as UnifiedSubscriptionResponse;
+        setSubscription(subscriptionData);
+        setShowPlanModal(resolveAiAccessState(subscriptionData).showPaywall);
       } catch (e) {
         console.error("Subscription check failed", e);
         if (mounted) setShowPlanModal(true);

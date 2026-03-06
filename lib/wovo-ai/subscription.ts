@@ -35,6 +35,8 @@ function toStatusPayload(profile: ProfileRow | null, status?: string | null, isA
       extra_credits: extraCredits,
       credits_remaining: creditsRemaining,
     },
+    has_access: activeSubscription,
+    requires_subscription: !activeSubscription,
     can_generate: activeSubscription && creditsRemaining > 0,
   };
 }
