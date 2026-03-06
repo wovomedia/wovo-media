@@ -18,6 +18,8 @@ export async function GET(request: Request) {
       status: "inactive",
       plan: "none",
       remaining: { monthly_limit: 0, monthly_used: 0, extra_credits: 0, credits_remaining: 0 },
+      has_access: false,
+      requires_subscription: true,
       can_generate: false,
       message: error instanceof Error ? error.message : "Unexpected error.",
       admin_access: false,

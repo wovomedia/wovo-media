@@ -4,6 +4,8 @@ import { type ChangeEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { readSessionFromStorage } from "@/lib/supabase/session-client";
+import { resolveAiAccessState } from "@/lib/wovo-ai/access";
+import type { UnifiedSubscriptionResponse } from "@/lib/wovo-ai/contracts";
 
 type PlanOption = {
   name: string;
@@ -12,16 +14,6 @@ type PlanOption = {
   priceId: string;
   badge?: string | null;
   perks: string[];
-};
-
-type SubscriptionPayload = {
-  active?: boolean;
-  hasPlan?: boolean;
-  remaining_credits?: number;
-  remainingCredits?: number;
-  plan?: string;
-  planName?: string;
-  tier?: string;
 };
 
 const PLANS: PlanOption[] = [
@@ -34,15 +26,15 @@ export default function WovoAiProfilePage() {
   const supabase = createClient();
   const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
-  const [subscription, setSubscription] = useState<SubscriptionPayload | null>(null);
+  const [subscription, setSubscription] = useState<UnifiedSubscriptionResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [deletePrompt, setDeletePrompt] = useState("");
   const [error, setError] = useState("");
 
-  const active = Boolean(subscription?.active ?? subscription?.hasPlan);
-  const creditsLeft = subscription?.remaining_credits ?? subscription?.remainingCredits ?? 0;
-  const planName = useMemo(() => (subscription?.planName ?? subscription?.plan ?? subscription?.tier)?.trim() || "No plan", [subscription]);
+  const active = resolveAiAccessState(subscription).hasAccess;
+  const creditsLeft = subscription?.remaining.credits_remaining ?? 0;
+  const planName = useMemo(() => subscription?.plan?.trim() || "No plan", [subscription]);
 
   useEffect(() => {
     const session = readSessionFromStorage();
@@ -59,7 +51,7 @@ export default function WovoAiProfilePage() {
           headers: { Authorization: `Bearer ${session.access_token}` },
           cache: "no-store",
         });
-        const data = (await res.json()) as SubscriptionPayload;
+        const data = (await res.json()) as UnifiedSubscriptionResponse;
         setSubscription(data);
       } catch (loadError) {
         setError(loadError instanceof Error ? loadError.message : "Failed to load subscription.");
