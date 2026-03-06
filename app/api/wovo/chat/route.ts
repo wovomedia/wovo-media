@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
 import { formatBusinessContext, type BusinessContext, normalizeBusinessContext } from "@/lib/wovo-ai/business-context";
+import { formatPlatformContext, formatReferenceImageContext } from "@/lib/wovo-ai/prompt-context";
 
 export const runtime = "nodejs";
 
@@ -11,11 +12,16 @@ type Message = {
   content: string;
 };
 
+type UserResponseContent =
+  | { type: "input_text"; text: string }
+  | { type: "input_image"; image_url: string; detail: "auto" };
+
 type Body = {
   message?: string;
   history?: Message[];
   mode?: Mode;
   businessContext?: Partial<BusinessContext>;
+  selectedPlatform?: string | null;
 };
 
 const BASE_SYSTEM_PROMPT =
@@ -37,24 +43,86 @@ function modeInstruction(mode: Mode): string {
   }
 }
 
+async function parseIncomingRequest(request: Request): Promise<{
+  message: string;
+  history: Message[];
+  mode: Mode;
+  businessContext: BusinessContext;
+  selectedPlatform: string | null;
+  referenceImageDataUrl: string | null;
+}> {
+  const contentType = request.headers.get("content-type") ?? "";
+
+  if (contentType.includes("multipart/form-data")) {
+    const formData = await request.formData();
+    const rawHistory = formData.get("history")?.toString() ?? "[]";
+    const rawBusinessContext = formData.get("businessContext")?.toString() ?? "{}";
+    const referenceImage = formData.get("referenceImage");
+    const referenceImageFile = referenceImage instanceof File ? referenceImage : null;
+
+    let parsedHistory: Message[] = [];
+    let parsedBusinessContext: Partial<BusinessContext> = {};
+
+    try {
+      parsedHistory = JSON.parse(rawHistory) as Message[];
+    } catch {
+      parsedHistory = [];
+    }
+
+    try {
+      parsedBusinessContext = JSON.parse(rawBusinessContext) as Partial<BusinessContext>;
+    } catch {
+      parsedBusinessContext = {};
+    }
+
+    const referenceImageDataUrl = referenceImageFile
+      ? `data:${referenceImageFile.type || "image/png"};base64,${Buffer.from(await referenceImageFile.arrayBuffer()).toString("base64")}`
+      : null;
+
+    return {
+      message: formData.get("message")?.toString().trim() ?? "",
+      history: Array.isArray(parsedHistory) ? parsedHistory : [],
+      mode: (formData.get("mode")?.toString() as Mode) ?? "chat",
+      businessContext: normalizeBusinessContext(parsedBusinessContext),
+      selectedPlatform: formData.get("selectedPlatform")?.toString() ?? null,
+      referenceImageDataUrl,
+    };
+  }
+
+  const body = (await request.json()) as Body;
+  return {
+    message: body.message?.trim() ?? "",
+    history: Array.isArray(body.history) ? body.history : [],
+    mode: body.mode ?? "chat",
+    businessContext: normalizeBusinessContext(body.businessContext),
+    selectedPlatform: body.selectedPlatform ?? null,
+    referenceImageDataUrl: null,
+  };
+}
+
 export async function POST(request: Request) {
   try {
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json({ error: "Missing OPENAI_API_KEY" }, { status: 500 });
     }
 
-    const body = (await request.json()) as Body;
-    const message = body.message?.trim() ?? "";
-    const history = Array.isArray(body.history) ? body.history : [];
-    const mode: Mode = body.mode ?? "chat";
-    const businessContext = normalizeBusinessContext(body.businessContext);
+    const { message, history, mode, businessContext, selectedPlatform, referenceImageDataUrl } = await parseIncomingRequest(request);
     const businessContextBlock = formatBusinessContext(businessContext);
+    const platformContextBlock = formatPlatformContext(selectedPlatform);
+    const referenceImageContextBlock = formatReferenceImageContext(Boolean(referenceImageDataUrl));
 
     if (!message) {
       return NextResponse.json({ error: "Message is required." }, { status: 400 });
     }
 
     const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const userContent: UserResponseContent[] | string = referenceImageDataUrl
+      ? [
+          { type: "input_text", text: message },
+          { type: "input_image", image_url: referenceImageDataUrl, detail: "auto" },
+        ]
+      : message;
+
     const response = await client.responses.create({
       model: process.env.OPENAI_MODEL || "gpt-5",
       input: [
@@ -63,7 +131,9 @@ export async function POST(request: Request) {
           content: [
             `${BASE_SYSTEM_PROMPT} ${modeInstruction(mode)}`,
             businessContextBlock,
-            "Instruction: Use the business context when relevant. Do not invent missing details. If a field is blank, ignore it.",
+            platformContextBlock,
+            referenceImageContextBlock,
+            "Instruction: Use the provided context when relevant. Do not invent missing details. If a field is blank, ignore it.",
           ]
             .filter(Boolean)
             .join("\n\n"),
@@ -74,7 +144,7 @@ export async function POST(request: Request) {
         })),
         {
           role: "user",
-          content: message,
+          content: userContent,
         },
       ],
     });
