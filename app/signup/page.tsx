@@ -56,6 +56,9 @@ export default function SignupPage() {
     <main className="flex min-h-screen items-center justify-center bg-black p-6 text-white">
       <div className="w-full max-w-lg rounded-2xl border border-emerald-400/30 bg-zinc-950 p-6">
         <h1 className="text-2xl font-semibold">Create your Wovo AI account</h1>
+        <p className="mt-2 text-sm text-white/65">
+          Please create your account using one full method — either Continue with Google or email/password signup.
+        </p>
         <div className="mt-4 grid gap-2 md:grid-cols-2">
           <input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Full name" className="rounded-xl border border-white/20 bg-black p-3" />
           <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Username" className="rounded-xl border border-white/20 bg-black p-3" />
@@ -78,6 +81,7 @@ export default function SignupPage() {
         >
           Continue with Google
         </button>
+        <p className="mt-2 text-xs text-white/50">Use Google only if you plan to keep signing in with Google.</p>
         <p className="mt-3 text-sm text-white/70">Already have an account? <Link href="/login" className="text-emerald-300">Sign in</Link></p>
         {error && <p className="mt-2 text-sm text-red-300">{error}</p>}
       </div>
