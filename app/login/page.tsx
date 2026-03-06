@@ -25,10 +25,10 @@ export default function LoginPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-black p-6 text-white">
-      <div className="w-full max-w-md rounded-2xl border border-emerald-400/30 bg-zinc-950 p-6">
+      <div className="w-full max-w-md rounded-2xl border border-emerald-400/30 bg-zinc-950 p-5">
         <h1 className="text-2xl font-semibold">Log in to Wovo AI</h1>
-        <p className="mt-2 text-sm text-white/65">Sign in using the same method you used when creating your account.</p>
-        <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="mt-4 w-full rounded-xl border border-white/20 bg-black p-3" />
+        <p className="mt-1.5 text-sm text-white/65">Sign in using the same method you used to create your account.</p>
+        <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="mt-3 w-full rounded-xl border border-white/20 bg-black p-3" />
         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" className="mt-2 w-full rounded-xl border border-white/20 bg-black p-3" />
         <button
           onClick={async () => {
@@ -42,7 +42,7 @@ export default function LoginPage() {
           Log in
         </button>
         <button onClick={() => void loginWithGoogle()} className="mt-2 w-full rounded-xl border border-white/25 p-3">Continue with Google</button>
-        <p className="mt-3 text-sm text-white/70">Need an account? <Link href="/signup" className="text-emerald-300">Sign up</Link></p>
+        <p className="mt-2.5 text-sm text-white/70">Need an account? <Link href="/signup" className="text-emerald-300">Sign up</Link></p>
         {error && <p className="mt-2 text-sm text-red-300">{error}</p>}
       </div>
     </main>
