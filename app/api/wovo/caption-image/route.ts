@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
 import { formatBusinessContext, type BusinessContext, normalizeBusinessContext } from "@/lib/wovo-ai/business-context";
+import { guardAiRequest, toAiGuardErrorResponse } from "@/lib/wovo-ai/request-guard";
 import { formatPlatformContext, formatReferenceImageContext } from "@/lib/wovo-ai/prompt-context";
 
 export const runtime = "nodejs";
@@ -65,6 +66,8 @@ async function parseIncomingRequest(request: Request): Promise<{
 
 export async function POST(request: Request) {
   try {
+    await guardAiRequest(request.headers.get("authorization"), "caption_image");
+
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json({ error: "Missing OPENAI_API_KEY" }, { status: 500 });
     }
@@ -165,6 +168,8 @@ export async function POST(request: Request) {
       image: `data:image/png;base64,${imageBase64}`,
     });
   } catch (error) {
+    const guardError = toAiGuardErrorResponse(error);
+    if (guardError) return guardError;
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to generate caption and image." }, { status: 500 });
   }
 }

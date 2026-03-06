@@ -7,9 +7,9 @@ import { supabase } from "@/lib/supabase/client";
 import type { UnifiedSubscriptionResponse } from "@/lib/wovo-ai/contracts";
 
 const CARDS = [
-  { key: "starter", title: "Starter", price: "$24.99/month", credits: "25 credits / month" },
-  { key: "pro", title: "Pro", price: "$49.99/month", credits: "50 credits / month" },
-  { key: "business", title: "Business", price: "$99/month", credits: "100 credits / month" },
+  { key: "starter", title: "Starter", price: "$24.99/month", credits: "50 credits / month" },
+  { key: "pro", title: "Growth", price: "$49.99/month", credits: "150 credits / month" },
+  { key: "business", title: "Pro", price: "$99/month", credits: "300 credits / month" },
 ] as const;
 
 export default function WovoPricingPage() {

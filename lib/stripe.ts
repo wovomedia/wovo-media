@@ -64,7 +64,10 @@ export async function createCheckoutSession(args: {
   successUrl: string;
   cancelUrl: string;
   mode: "subscription" | "payment";
+  metadata?: Record<string, string>;
 }): Promise<StripeCheckoutSession> {
+  const metadataBody = Object.fromEntries(Object.entries(args.metadata ?? {}).map(([key, value]) => [`metadata[${key}]`, value]));
+
   return stripeRequest("/checkout/sessions", {
     mode: args.mode,
     customer: args.customerId,
@@ -74,6 +77,7 @@ export async function createCheckoutSession(args: {
     cancel_url: args.cancelUrl,
     "metadata[userId]": args.userId,
     "metadata[purchaseType]": args.mode === "payment" ? "extra_credits" : "subscription",
+    ...metadataBody,
     ...(args.mode === "subscription" ? { "subscription_data[metadata][userId]": args.userId } : {}),
   });
 }
