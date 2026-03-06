@@ -8,6 +8,7 @@ import { clearSession, parseSessionFromHash, persistSession, readSessionFromStor
 import { submitPendingOnboarding } from "@/lib/wovo-ai/onboarding-client";
 import type { UnifiedSubscriptionResponse } from "@/lib/wovo-ai/contracts";
 import { EMPTY_BUSINESS_CONTEXT, type BusinessContext } from "@/lib/wovo-ai/business-context";
+import type { CaptionPlatform } from "@/lib/wovo-ai/prompt-context";
 
 type ChatSummary = { id: string; title: string; created_at: string };
 type ChatMessage = { id: string; role: "user" | "assistant"; content: string; created_at: string };
@@ -30,6 +31,13 @@ const quickActions = [
   "Write an Instagram post",
   "Draft a posting schedule for next month",
 ] as const;
+
+const captionPlatforms: Array<{ value: CaptionPlatform; label: string }> = [
+  { value: "facebook", label: "Facebook" },
+  { value: "instagram", label: "Instagram" },
+  { value: "tiktok", label: "TikTok" },
+  { value: "youtube", label: "YouTube" },
+];
 
 const modeOptions: Array<{ value: WovoMode; label: string }> = [
   { value: "chat", label: "Chat" },
@@ -107,6 +115,7 @@ export default function WovoAiPage() {
   const [error, setError] = useState("");
   const [mode, setMode] = useState<WovoMode>("chat");
   const [attachment, setAttachment] = useState<File | null>(null);
+  const [selectedPlatform, setSelectedPlatform] = useState<CaptionPlatform | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [renameChatId, setRenameChatId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
@@ -230,6 +239,34 @@ export default function WovoAiPage() {
     return saveData.message;
   };
 
+  const clearAttachment = () => {
+    setAttachment(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const buildRequestPayload = (basePayload: Record<string, unknown>) => {
+    const payloadWithPlatform = {
+      ...basePayload,
+      selectedPlatform,
+      businessContext,
+    };
+
+    if (!attachment) {
+      return {
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payloadWithPlatform),
+      };
+    }
+
+    const formData = new FormData();
+    for (const [key, value] of Object.entries(payloadWithPlatform)) {
+      formData.append(key, typeof value === "string" ? value : JSON.stringify(value));
+    }
+    formData.append("referenceImage", attachment);
+
+    return { body: formData };
+  };
+
   const send = async () => {
     if (!promptText.trim() || !chatId || sending) return;
 
@@ -253,10 +290,10 @@ export default function WovoAiPage() {
       let assistantPayload: StoredAssistantPayload = { text: "" };
 
       if (mode === "image") {
+        const imageRequest = buildRequestPayload({ prompt: inputMessage });
         const imageRes = await fetch("/api/wovo/image", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt: inputMessage, businessContext }),
+          ...imageRequest,
         });
         const imageData = (await imageRes.json()) as { error?: string; image?: string };
         if (!imageRes.ok || !imageData.image) {
@@ -267,10 +304,10 @@ export default function WovoAiPage() {
           image: imageData.image,
         };
       } else if (mode === "caption_image") {
+        const captionImageRequest = buildRequestPayload({ prompt: inputMessage });
         const captionImageRes = await fetch("/api/wovo/caption-image", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt: inputMessage, businessContext }),
+          ...captionImageRequest,
         });
         const captionImageData = (await captionImageRes.json()) as { error?: string; caption?: string; imagePrompt?: string; image?: string };
         if (!captionImageRes.ok || !captionImageData.caption || !captionImageData.image) {
@@ -282,10 +319,10 @@ export default function WovoAiPage() {
           image: captionImageData.image,
         };
       } else {
+        const chatRequest = buildRequestPayload({ message: inputMessage, history, mode });
         const chatRes = await fetch("/api/wovo/chat", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: inputMessage, history, mode, businessContext }),
+          ...chatRequest,
         });
         const chatData = (await chatRes.json()) as { error?: string; reply?: string };
         if (!chatRes.ok || !chatData.reply) {
@@ -297,8 +334,7 @@ export default function WovoAiPage() {
       const assistantSaved = await saveMessage(activeChatId, "assistant", serializeAssistantPayload(assistantPayload));
       setMessages((prev) => [...prev, assistantSaved]);
 
-      setAttachment(null);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      clearAttachment();
       const subRes = await authedFetch("/api/wovo-ai/subscription");
       setSubscription((await subRes.json()) as UnifiedSubscriptionResponse);
     } catch (e) {
@@ -460,7 +496,7 @@ export default function WovoAiPage() {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*,application/pdf"
+                accept="image/*"
                 className="hidden"
                 onChange={(e) => {
                   const f = e.target.files?.[0] ?? null;
@@ -469,16 +505,14 @@ export default function WovoAiPage() {
               />
               <textarea value={promptText} onChange={(e) => setPromptText(e.target.value)} onKeyDown={onKey} placeholder="Ask Wovo AI a question" className="h-24 w-full resize-none border-none bg-transparent text-lg text-white outline-none placeholder:text-zinc-500" />
               {attachment && (
-                <div className="mt-3 inline-flex max-w-full items-center gap-2 rounded-full border border-white/15 bg-black/40 px-3 py-1 text-xs text-zinc-300">
-                  <span className="truncate">{attachment.name}</span>
+                <div className="mt-3 inline-flex max-w-full items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-100">
+                  <span className="font-medium text-emerald-200">Reference image added:</span>
+                  <span className="max-w-[190px] truncate text-zinc-100 sm:max-w-xs">{attachment.name}</span>
                   <button
                     type="button"
-                    onClick={() => {
-                      setAttachment(null);
-                      if (fileInputRef.current) fileInputRef.current.value = "";
-                    }}
-                    className="rounded-full px-1 hover:bg-white/10"
-                    aria-label="Remove attachment"
+                    onClick={clearAttachment}
+                    className="rounded-full px-1 text-zinc-300 hover:bg-white/10 hover:text-white"
+                    aria-label="Remove reference image"
                   >
                     ×
                   </button>
@@ -491,11 +525,13 @@ export default function WovoAiPage() {
                   </select>
                   <button
                     type="button"
-                    className="rounded-full border border-white/15 bg-black/40 px-2.5 py-1.5 text-xs font-semibold text-zinc-200 hover:bg-white/10"
+                    className="group inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-black/40 px-2.5 py-1.5 text-xs font-semibold text-zinc-200 hover:border-emerald-400/50 hover:bg-white/10"
                     onClick={() => fileInputRef.current?.click()}
-                    aria-label="Attach a file"
+                    aria-label="Add reference image or logo"
+                    title="Add reference image or logo"
                   >
-                    📎
+                    <span aria-hidden>📎</span>
+                    <span className="hidden sm:inline">Add Reference</span>
                   </button>
                   <button type="button" className="rounded-full border border-white/15 bg-black/40 px-2.5 py-1.5 text-xs font-semibold text-zinc-200 hover:bg-white/10" aria-label="Voice input">
                     🎤
@@ -554,6 +590,30 @@ export default function WovoAiPage() {
                   />
                 </div>
               </details>
+            <div className="mt-5 rounded-xl border border-white/10 bg-black/20 px-3 py-3 sm:px-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-zinc-300">Optional Caption Platform</p>
+              <p className="mt-1 text-[11px] text-zinc-500">Tailor captions for a specific platform.</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {captionPlatforms.map((platform) => {
+                  const active = selectedPlatform === platform.value;
+                  return (
+                    <button
+                      key={platform.value}
+                      type="button"
+                      onClick={() => setSelectedPlatform((prev) => (prev === platform.value ? null : platform.value))}
+                      className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                        active
+                          ? "border-emerald-400/80 bg-emerald-500/15 text-emerald-200 shadow-[0_0_0_1px_rgba(52,211,153,0.25)]"
+                          : "border-white/15 bg-[#121515] text-zinc-100 hover:border-emerald-400/50 hover:text-emerald-200"
+                      }`}
+                      aria-pressed={active}
+                    >
+                      {platform.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
             </div>
 
             <div className="mt-6 flex flex-wrap justify-center gap-3">
