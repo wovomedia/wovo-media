@@ -8,7 +8,7 @@ import {
   addExtraCredits,
   findUserIdByCustomerId,
 } from "@/lib/wovo-ai/subscription";
-import { getCreditPackByPriceId } from "@/lib/wovo-ai/plans";
+import { CREDIT_PACK_MAP } from "@/lib/wovo-ai/plans";
 
 export const runtime = "nodejs";
 
@@ -111,9 +111,9 @@ export async function POST(request: Request) {
           await syncSubscriptionFromStripe(subscription, session.metadata?.userId);
         } else if (session.metadata?.purchaseType === "extra_credits") {
           const userId = session.metadata?.userId ?? (session.customer ? await findUserIdByCustomerId(String(session.customer)) : null);
-          const selectedPack = getCreditPackByPriceId(session.metadata?.creditPackPriceId);
-          if (userId) {
-            await addExtraCredits(userId, selectedPack?.credits ?? 5);
+          const creditsToAdd = CREDIT_PACK_MAP[session.metadata?.creditPackPriceId ?? ""] ?? 0;
+          if (userId && creditsToAdd > 0) {
+            await addExtraCredits(userId, creditsToAdd);
           }
         }
         break;
