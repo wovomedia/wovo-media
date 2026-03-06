@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
-import { consumeOneCredit } from "@/lib/wovo-ai/credits";
+import { guardAiRequest, toAiGuardErrorResponse } from "@/lib/wovo-ai/request-guard";
 import { requireServerUser, supabaseServiceRoleRequest } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -66,7 +66,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "chatId and message are required." }, { status: 400 });
     }
 
-    await consumeOneCredit(user.id);
+    await guardAiRequest(request.headers.get("authorization"), "chat");
 
     await supabaseServiceRoleRequest("/rest/v1/messages", {
       method: "POST",
@@ -95,6 +95,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ assistantMessage: rows?.[0], text: assistantText });
   } catch (error) {
+    const guardError = toAiGuardErrorResponse(error);
+    if (guardError) return guardError;
     return NextResponse.json({ error: error instanceof Error ? error.message : "Chat failed." }, { status: 500 });
   }
 }

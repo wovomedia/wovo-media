@@ -10,6 +10,7 @@ import { resolveAiAccessState } from "@/lib/wovo-ai/access";
 import type { UnifiedSubscriptionResponse } from "@/lib/wovo-ai/contracts";
 import { EMPTY_BUSINESS_CONTEXT, type BusinessContext } from "@/lib/wovo-ai/business-context";
 import type { CaptionPlatform } from "@/lib/wovo-ai/prompt-context";
+import { getCreditTone, getPromptCreditCost, userHasEnoughCredits } from "@/lib/wovo-ai/usage";
 
 type ChatSummary = { id: string; title: string; created_at: string };
 type ChatMessage = { id: string; role: "user" | "assistant"; content: string; created_at: string };
@@ -78,26 +79,26 @@ const planOptions: PlanOption[] = [
   {
     name: "Starter",
     price: "$24.99/mo",
-    credits: "25 credits",
+    credits: "50 credits",
     priceId: "price_1T76wyFmIvQosWF9UoGSKAe2",
     badge: null,
-    perks: ["25 AI credits / month", "Caption generator", "Basic image prompts", "Standard speed"],
+    perks: ["50 AI credits / month", "Caption generator", "Basic image prompts", "Standard speed"],
   },
   {
     name: "Growth",
     price: "$49.99/mo",
-    credits: "50 credits",
+    credits: "150 credits",
     priceId: "price_1T76wSFmIvQosWF9u3GWCWBV",
     badge: null,
-    perks: ["50 AI credits / month", "Everything in Starter", "Faster generations", "Saved chats"],
+    perks: ["150 AI credits / month", "Everything in Starter", "Faster generations", "Saved chats"],
   },
   {
     name: "Pro",
     price: "$99/mo",
-    credits: "100 credits",
+    credits: "300 credits",
     priceId: "price_1T76vlFmIvQosWF9gmdPrCVT",
     badge: "Most Benefits",
-    perks: ["100 AI credits / month", "Priority AI generations", "Best value per credit", "Advanced templates", "Brand voice presets", "Priority support"],
+    perks: ["300 AI credits / month", "Priority AI generations", "Best value per credit", "Advanced templates", "Brand voice presets", "Priority support"],
   },
 ];
 
@@ -268,7 +269,12 @@ export default function WovoAiPage() {
   };
 
   const send = async () => {
-    if (!promptText.trim() || !chatId || !canSend) return;
+    if (!promptText.trim() || !chatId || !canSend) {
+      if (!hasEnoughCredits) {
+        setError("Not enough credits for this action.");
+      }
+      return;
+    }
 
     const inputMessage = promptText.trim();
     const activeChatId = chatId;
@@ -291,7 +297,7 @@ export default function WovoAiPage() {
 
       if (mode === "image") {
         const imageRequest = buildRequestPayload({ prompt: inputMessage });
-        const imageRes = await fetch("/api/wovo/image", {
+        const imageRes = await authedFetch("/api/wovo/image", {
           method: "POST",
           ...imageRequest,
         });
@@ -305,7 +311,7 @@ export default function WovoAiPage() {
         };
       } else if (mode === "caption_image") {
         const captionImageRequest = buildRequestPayload({ prompt: inputMessage });
-        const captionImageRes = await fetch("/api/wovo/caption-image", {
+        const captionImageRes = await authedFetch("/api/wovo/caption-image", {
           method: "POST",
           ...captionImageRequest,
         });
@@ -320,7 +326,7 @@ export default function WovoAiPage() {
         };
       } else {
         const chatRequest = buildRequestPayload({ message: inputMessage, history, mode });
-        const chatRes = await fetch("/api/wovo/chat", {
+        const chatRes = await authedFetch("/api/wovo/chat", {
           method: "POST",
           ...chatRequest,
         });
@@ -355,7 +361,16 @@ export default function WovoAiPage() {
   };
 
   const creditsRemaining = subscription?.remaining_credits ?? subscription?.remainingCredits ?? subscription?.remaining?.credits_remaining ?? 0;
-  const canSend = creditsRemaining > 0 && !sending;
+  const requiredCredits = getPromptCreditCost(mode);
+  const hasEnoughCredits = userHasEnoughCredits(creditsRemaining, mode);
+  const canSend = hasEnoughCredits && !sending;
+  const creditTone = getCreditTone(creditsRemaining);
+  const toneClasses =
+    creditTone === "green"
+      ? "border-emerald-300/60 bg-emerald-500/15 text-emerald-200"
+      : creditTone === "yellow"
+        ? "border-amber-300/60 bg-amber-500/15 text-amber-200"
+        : "border-red-300/60 bg-red-500/15 text-red-200";
 
   const filteredChats = useMemo(() => chats.filter((c) => c.title.toLowerCase().includes(search.toLowerCase())), [chats, search]);
 
@@ -541,7 +556,10 @@ export default function WovoAiPage() {
                     🎤
                   </button>
                 </div>
-                {creditsRemaining <= 0 ? (
+                <div className={`rounded-full border px-3 py-2 text-sm font-semibold ${toneClasses}`}>
+                  {creditsRemaining} credits
+                </div>
+                {!hasEnoughCredits ? (
                   <button
                     type="button"
                     onClick={() => void authedFetch("/api/stripe/buy-credits", { method: "POST" }).then((r) => r.json()).then((d: { url?: string }) => d.url && (window.location.href = d.url))}
@@ -730,7 +748,11 @@ export default function WovoAiPage() {
               </section>
               </div>
 
-            {creditsRemaining <= 0 && <p className="mt-3 text-sm text-amber-300">You are out of credits. Buy credits to continue sending.</p>}
+            {!hasEnoughCredits && (
+              <p className="mt-3 text-sm text-amber-300">
+                {creditsRemaining <= 0 ? "You are out of credits. Buy credits to continue sending." : `Not enough credits for this action. This mode requires ${requiredCredits} credits.`}
+              </p>
+            )}
             {error && <p className="mt-3 text-sm text-red-300">{error}</p>}
           </div>
         </section>

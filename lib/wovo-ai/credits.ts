@@ -55,22 +55,27 @@ export async function maybeResetMonthlyUsage(userId: string): Promise<void> {
 }
 
 export async function consumeOneCredit(userId: string): Promise<{ remaining: number; monthly_used: number }> {
+  return consumePromptCredits(userId, 1);
+}
+
+export async function consumePromptCredits(userId: string, creditCost: number): Promise<{ remaining: number; monthly_used: number }> {
   await maybeResetMonthlyUsage(userId);
   const profile = await getProfileCredits(userId);
   const remaining = profile.monthly_limit - profile.monthly_used + profile.extra_credits;
 
-  if (remaining <= 0) {
-    throw new Error("No credits remaining. Please upgrade or buy extra credits.");
+  if (creditCost <= 0) {
+    throw new Error("Invalid credit cost.");
   }
 
-  let nextMonthlyUsed = profile.monthly_used;
-  let nextExtraCredits = profile.extra_credits;
-
-  if (profile.monthly_used < profile.monthly_limit) {
-    nextMonthlyUsed = profile.monthly_used + 1;
-  } else {
-    nextExtraCredits = Math.max(profile.extra_credits - 1, 0);
+  if (remaining < creditCost) {
+    throw new Error("Not enough credits for this action.");
   }
+
+  const monthlyCreditsRemaining = Math.max(profile.monthly_limit - profile.monthly_used, 0);
+  const monthlyToUse = Math.min(monthlyCreditsRemaining, creditCost);
+  const extraToUse = creditCost - monthlyToUse;
+  const nextMonthlyUsed = profile.monthly_used + monthlyToUse;
+  const nextExtraCredits = Math.max(profile.extra_credits - extraToUse, 0);
 
   await supabaseServiceRoleRequest(`/rest/v1/profiles?user_id=eq.${userId}`, {
     method: "PATCH",

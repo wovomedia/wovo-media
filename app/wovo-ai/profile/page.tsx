@@ -17,9 +17,9 @@ type PlanOption = {
 };
 
 const PLANS: PlanOption[] = [
-  { name: "Starter", priceLabel: "$24.99/mo", credits: "25 credits/mo", priceId: "price_1T76wyFmIvQosWF9UoGSKAe2", badge: null, perks: ["25 AI credits every month", "Core Wovo AI tools", "Fast setup"] },
-  { name: "Growth", priceLabel: "$49.99/mo", credits: "50 credits/mo", priceId: "price_1T76wSFmIvQosWF9u3GWCWBV", badge: null, perks: ["50 AI credits every month", "More output for active teams", "Better monthly value"] },
-  { name: "Pro", priceLabel: "$99/mo", credits: "100 credits/mo", priceId: "price_1T76vlFmIvQosWF9gmdPrCVT", badge: "Most Benefits", perks: ["100 AI credits every month", "Most Benefits + best value", "Priority tier for serious creators"] },
+  { name: "Starter", priceLabel: "$24.99/mo", credits: "50 credits/mo", priceId: "price_1T76wyFmIvQosWF9UoGSKAe2", badge: null, perks: ["50 AI credits every month", "Core Wovo AI tools", "Fast setup"] },
+  { name: "Growth", priceLabel: "$49.99/mo", credits: "150 credits/mo", priceId: "price_1T76wSFmIvQosWF9u3GWCWBV", badge: null, perks: ["150 AI credits every month", "More output for active teams", "Better monthly value"] },
+  { name: "Pro", priceLabel: "$99/mo", credits: "300 credits/mo", priceId: "price_1T76vlFmIvQosWF9gmdPrCVT", badge: "Most Benefits", perks: ["300 AI credits every month", "Most Benefits + best value", "Priority tier for serious creators"] },
 ];
 
 export default function WovoAiProfilePage() {

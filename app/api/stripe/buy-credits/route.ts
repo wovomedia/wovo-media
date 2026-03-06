@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createCheckoutSession } from "@/lib/stripe";
 import { requireServerUser } from "@/lib/supabase/server";
 import { ensureStripeCustomerForUser } from "@/lib/wovo-ai/billing";
-import { EXTRA_CREDITS_PRICE_ID } from "@/lib/wovo-ai/plans";
+import { EXTRA_CREDITS_PRICE_ID, getCreditPackByPriceId } from "@/lib/wovo-ai/plans";
 
 function getSiteUrlFromRequest(request: Request): string {
   const envUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
@@ -20,16 +20,20 @@ function getSiteUrlFromRequest(request: Request): string {
 export async function POST(request: Request) {
   try {
     const { user } = await requireServerUser(request.headers.get("authorization"));
+    const body = (await request.json().catch(() => ({}))) as { priceId?: string };
+    const requestedPack = getCreditPackByPriceId(body.priceId);
+    const selectedPriceId = requestedPack?.priceId ?? EXTRA_CREDITS_PRICE_ID;
     const stripeCustomerId = await ensureStripeCustomerForUser(user.id, user.email);
     const siteUrl = getSiteUrlFromRequest(request);
 
     const session = await createCheckoutSession({
       customerId: stripeCustomerId,
-      priceId: EXTRA_CREDITS_PRICE_ID,
+      priceId: selectedPriceId,
       userId: user.id,
       successUrl: `${siteUrl}/wovo-ai`,
       cancelUrl: `${siteUrl}/wovo-ai`,
       mode: "payment",
+      metadata: { creditPackPriceId: selectedPriceId },
     });
 
     if (!session.url) {
