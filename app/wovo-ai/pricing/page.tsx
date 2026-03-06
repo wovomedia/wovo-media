@@ -30,7 +30,13 @@ export default function WovoPricingPage() {
     setToken(s.access_token);
     void fetch("/api/wovo-ai/subscription", { headers: { Authorization: `Bearer ${s.access_token}` } })
       .then((r) => r.json())
-      .then((data) => setSubscription(data as UnifiedSubscriptionResponse));
+      .then((data) => {
+        const payload = data as UnifiedSubscriptionResponse;
+        setSubscription(payload);
+        if (payload.has_access) {
+          router.replace("/wovo-ai");
+        }
+      });
   }, [router]);
 
   const choose = async (plan: "starter" | "pro" | "business") => {

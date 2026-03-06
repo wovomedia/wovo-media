@@ -13,8 +13,20 @@ export type AuthAccessState = {
   needsPlan: boolean;
   hasAppAccess: boolean;
   effectivePlan: "none" | "starter" | "pro" | "business";
+  monthlyPlanCredits: number;
   showPaywall: boolean;
 };
+
+function getMonthlyPlanCredits(plan: "none" | "starter" | "pro" | "business", subscription?: UnifiedSubscriptionResponse | null): number {
+  if (typeof subscription?.remaining?.monthly_limit === "number") {
+    return subscription.remaining.monthly_limit;
+  }
+
+  if (plan === "starter") return 50;
+  if (plan === "business") return 300;
+  if (plan === "pro") return 150;
+  return 0;
+}
 
 export function resolveAiAccessState(subscription: UnifiedSubscriptionResponse | null | undefined, userEmail?: string | null): AiAccessState {
   const adminAccess = isAdminProEmail(userEmail);
@@ -39,6 +51,7 @@ export function getAuthAccessState(params: {
   const accessState = resolveAiAccessState(params.subscription, email);
   const hasAppAccess = isAuthenticated && (adminAccess || accessState.hasAccess);
   const effectivePlan = adminAccess ? "pro" : (params.subscription?.plan ?? "none");
+  const monthlyPlanCredits = adminAccess ? 300 : getMonthlyPlanCredits(effectivePlan, params.subscription);
   const needsPlan = isAuthenticated && !hasAppAccess;
 
   return {
@@ -46,6 +59,7 @@ export function getAuthAccessState(params: {
     needsPlan,
     hasAppAccess,
     effectivePlan,
+    monthlyPlanCredits,
     showPaywall: needsPlan,
   };
 }
