@@ -6,6 +6,7 @@ create table if not exists public.profiles (
   business_type text,
   location text,
   contact text,
+  avatar_url text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
