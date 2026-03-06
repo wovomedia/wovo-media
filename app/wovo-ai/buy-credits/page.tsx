@@ -23,7 +23,7 @@ export default function BuyCreditsPage() {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     const payload = (await response.json()) as UnifiedSubscriptionResponse;
-    const remaining = payload?.remaining_credits ?? payload?.remainingCredits ?? payload?.remaining?.credits_remaining ?? 0;
+    const remaining = payload.remaining.credits_remaining;
     setCreditsRemaining(remaining);
   };
 
