@@ -122,6 +122,7 @@ export default function WovoAiPage() {
   const [renameChatId, setRenameChatId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [businessContext, setBusinessContext] = useState<BusinessContext>(EMPTY_BUSINESS_CONTEXT);
+  const [showLowCreditPrompt, setShowLowCreditPrompt] = useState(false);
 
   const authedFetch = async (input: string, init?: RequestInit) => {
     const nextHeaders = new Headers(init?.headers);
@@ -372,6 +373,17 @@ export default function WovoAiPage() {
         ? "border-amber-300/60 bg-amber-500/15 text-amber-200"
         : "border-red-300/60 bg-red-500/15 text-red-200";
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const storageKey = "wovo-low-credit-alert-seen";
+    const alreadySeen = window.sessionStorage.getItem(storageKey) === "1";
+
+    if (creditsRemaining <= 10 && !alreadySeen) {
+      setShowLowCreditPrompt(true);
+      window.sessionStorage.setItem(storageKey, "1");
+    }
+  }, [creditsRemaining]);
+
   const filteredChats = useMemo(() => chats.filter((c) => c.title.toLowerCase().includes(search.toLowerCase())), [chats, search]);
 
   const beginRename = () => {
@@ -443,6 +455,12 @@ export default function WovoAiPage() {
     setPromptText(selectedAction);
   };
 
+
+
+  const goToBuyCredits = () => {
+    router.push("/wovo-ai/buy-credits");
+  };
+
   const startCheckout = async (priceId: string) => {
     if (!token) return;
     const r = await fetch("/api/stripe/checkout", {
@@ -497,7 +515,7 @@ export default function WovoAiPage() {
                 <div className="absolute right-0 z-20 mt-2 w-56 space-y-1 rounded-xl border border-white/10 bg-[#111313] p-2 text-sm shadow-xl">
                   <p className="rounded px-2 py-1 text-xs text-zinc-400">Credits left: {creditsRemaining}</p>
                   <Link href="/wovo-ai/profile" className="block rounded px-2 py-1 hover:bg-white/10">Profile</Link>
-                  <button className="block w-full rounded px-2 py-1 text-left hover:bg-white/10" onClick={() => void authedFetch("/api/stripe/buy-credits", { method: "POST" }).then((r) => r.json()).then((d: { url?: string }) => d.url && (window.location.href = d.url))}>Buy credits</button>
+                  <button className="block w-full rounded px-2 py-1 text-left hover:bg-white/10" onClick={goToBuyCredits}>Buy credits</button>
                   <button className="block w-full rounded px-2 py-1 text-left hover:bg-white/10" onClick={() => void authedFetch("/api/stripe/portal", { method: "POST" }).then((r) => r.json()).then((d: { url?: string }) => d.url && (window.location.href = d.url))}>Manage billing</button>
                   <button className="block w-full rounded px-2 py-1 text-left hover:bg-white/10" onClick={async () => { const v = window.prompt("Type DELETE to confirm"); if (v === "DELETE") { await authedFetch("/api/account/delete", { method: "POST" }); clearSession(); router.push("/"); } }}>Delete account</button>
                   <button className="block w-full rounded px-2 py-1 text-left hover:bg-white/10" onClick={async () => { const email = window.prompt("New email"); if (email) await authedFetch("/api/account/change-email", { method: "POST", body: JSON.stringify({ email }) }); }}>Change email</button>
@@ -562,7 +580,7 @@ export default function WovoAiPage() {
                 {!hasEnoughCredits ? (
                   <button
                     type="button"
-                    onClick={() => void authedFetch("/api/stripe/buy-credits", { method: "POST" }).then((r) => r.json()).then((d: { url?: string }) => d.url && (window.location.href = d.url))}
+                    onClick={goToBuyCredits}
                     className="rounded-full bg-amber-400 px-5 py-2 text-sm font-semibold text-black transition hover:bg-amber-300"
                   >
                     Buy Credits
@@ -757,6 +775,29 @@ export default function WovoAiPage() {
           </div>
         </section>
       </div>
+
+      {showLowCreditPrompt && (
+        <div className="fixed bottom-6 right-6 z-40 w-full max-w-xs rounded-xl border border-amber-400/30 bg-[#111313] p-4 shadow-xl">
+          <p className="text-sm font-semibold text-zinc-100">You're running low on credits.</p>
+          <p className="mt-1 text-xs text-zinc-400">Top up now to keep generating content.</p>
+          <div className="mt-3 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={goToBuyCredits}
+              className="rounded-lg bg-emerald-400 px-3 py-1.5 text-xs font-semibold text-black transition hover:bg-emerald-300"
+            >
+              Buy Credits
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowLowCreditPrompt(false)}
+              className="rounded-lg border border-white/15 px-3 py-1.5 text-xs font-semibold text-zinc-200 hover:bg-white/10"
+            >
+              Maybe Later
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
