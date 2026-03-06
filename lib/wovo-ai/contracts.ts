@@ -17,4 +17,10 @@ export type UnifiedSubscriptionResponse = {
   requires_subscription: boolean;
   can_generate: boolean;
   message?: string;
+  admin_access?: boolean;
+  has_app_access?: boolean;
+  needs_plan?: boolean;
+  show_paywall?: boolean;
+  effective_plan?: ResponsePlan;
+  monthly_plan_credits?: number;
 };
