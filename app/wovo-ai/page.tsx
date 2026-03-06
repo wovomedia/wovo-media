@@ -10,6 +10,7 @@ import type { UnifiedSubscriptionResponse } from "@/lib/wovo-ai/contracts";
 
 type ChatSummary = { id: string; title: string; created_at: string };
 type ChatMessage = { id: string; role: "user" | "assistant"; content: string; created_at: string };
+type WovoMode = "chat" | "caption" | "ideas" | "engagement" | "calendar" | "image" | "caption_image";
 type PlanOption = {
   name: string;
   price: string;
@@ -28,6 +29,40 @@ const quickActions = [
   "Write an Instagram post",
   "Draft a posting schedule for next month",
 ] as const;
+
+const modeOptions: Array<{ value: WovoMode; label: string }> = [
+  { value: "chat", label: "Chat" },
+  { value: "caption", label: "Caption" },
+  { value: "ideas", label: "Ideas" },
+  { value: "engagement", label: "Engagement" },
+  { value: "calendar", label: "Calendar" },
+  { value: "image", label: "Image" },
+  { value: "caption_image", label: "Caption + Image" },
+];
+
+type StoredAssistantPayload = {
+  text: string;
+  image?: string;
+  imagePrompt?: string;
+};
+
+const assistantPayloadPrefix = "__WOVO_ASSISTANT_JSON__";
+
+function serializeAssistantPayload(payload: StoredAssistantPayload): string {
+  return `${assistantPayloadPrefix}${JSON.stringify(payload)}`;
+}
+
+function deserializeAssistantPayload(content: string): StoredAssistantPayload {
+  if (!content.startsWith(assistantPayloadPrefix)) {
+    return { text: content };
+  }
+
+  try {
+    return JSON.parse(content.slice(assistantPayloadPrefix.length)) as StoredAssistantPayload;
+  } catch {
+    return { text: content };
+  }
+}
 
 const planOptions: PlanOption[] = [
   {
@@ -69,7 +104,7 @@ export default function WovoAiPage() {
   const [search, setSearch] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
-  const [action, setAction] = useState<(typeof quickActions)[number]>(quickActions[0]);
+  const [mode, setMode] = useState<WovoMode>("chat");
   const [attachment, setAttachment] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [renameChatId, setRenameChatId] = useState<string | null>(null);
@@ -176,36 +211,98 @@ export default function WovoAiPage() {
     const data = (await res.json()) as { chat: ChatSummary };
     setChats((prev) => [data.chat, ...prev]);
     setChatId(data.chat.id);
+    setMessages([]);
+    setPromptText("");
+    setError("");
+  };
+
+  const saveMessage = async (activeChatId: string, role: "user" | "assistant", content: string) => {
+    const saveRes = await authedFetch(`/api/wovo-ai/chats/${activeChatId}/messages`, {
+      method: "POST",
+      body: JSON.stringify({ role, content }),
+    });
+    const saveData = (await saveRes.json()) as { error?: string; message?: ChatMessage };
+    if (!saveRes.ok || !saveData.message) {
+      throw new Error(saveData.error ?? "Failed to save message.");
+    }
+    return saveData.message;
   };
 
   const send = async () => {
     if (!promptText.trim() || !chatId || sending) return;
+
+    const inputMessage = promptText.trim();
+    const activeChatId = chatId;
+    const localUserId = `local-user-${Date.now()}`;
+
     setSending(true);
     setError("");
+    setMessages((prev) => [...prev, { id: localUserId, role: "user", content: inputMessage, created_at: new Date().toISOString() }]);
+    setPromptText("");
     try {
-      const normalizedQuickAction = action.toLowerCase().replace(/[^a-z0-9]/g, "");
-      const body = attachment
-        ? (() => {
-          const form = new FormData();
-          form.append("message", promptText);
-          form.append("chatId", chatId);
-          form.append("quickAction", normalizedQuickAction);
-          form.append("file", attachment);
-          return form;
-        })()
-        : JSON.stringify({ message: promptText, chatId, quickAction: normalizedQuickAction });
-      const res = await authedFetch("/api/ai/chat", { method: "POST", body });
-      const data = (await res.json()) as { error?: string };
-      if (!res.ok) throw new Error(data.error ?? "Failed");
-      setPromptText("");
+      const history = messages.map((message) => ({
+        role: message.role,
+        content: deserializeAssistantPayload(message.content).text,
+      }));
+
+      const userSavedMessage = await saveMessage(activeChatId, "user", inputMessage);
+      setMessages((prev) => prev.map((item) => (item.id === localUserId ? userSavedMessage : item)));
+
+      let assistantPayload: StoredAssistantPayload = { text: "" };
+
+      if (mode === "image") {
+        const imageRes = await fetch("/api/wovo/image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: inputMessage }),
+        });
+        const imageData = (await imageRes.json()) as { error?: string; image?: string };
+        if (!imageRes.ok || !imageData.image) {
+          throw new Error(imageData.error ?? "Failed to generate image.");
+        }
+        assistantPayload = {
+          text: "Here is your generated marketing image:",
+          image: imageData.image,
+        };
+      } else if (mode === "caption_image") {
+        const captionImageRes = await fetch("/api/wovo/caption-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: inputMessage }),
+        });
+        const captionImageData = (await captionImageRes.json()) as { error?: string; caption?: string; imagePrompt?: string; image?: string };
+        if (!captionImageRes.ok || !captionImageData.caption || !captionImageData.image) {
+          throw new Error(captionImageData.error ?? "Failed to generate caption and image.");
+        }
+        assistantPayload = {
+          text: captionImageData.caption,
+          imagePrompt: captionImageData.imagePrompt,
+          image: captionImageData.image,
+        };
+      } else {
+        const chatRes = await fetch("/api/wovo/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: inputMessage, history, mode }),
+        });
+        const chatData = (await chatRes.json()) as { error?: string; reply?: string };
+        if (!chatRes.ok || !chatData.reply) {
+          throw new Error(chatData.error ?? "Failed to generate response.");
+        }
+        assistantPayload = { text: chatData.reply };
+      }
+
+      const assistantSaved = await saveMessage(activeChatId, "assistant", serializeAssistantPayload(assistantPayload));
+      setMessages((prev) => [...prev, assistantSaved]);
+
       setAttachment(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
-      const messagesRes = await authedFetch(`/api/wovo-ai/chats/${chatId}/messages`);
-      setMessages(((await messagesRes.json()) as { messages: ChatMessage[] }).messages ?? []);
       const subRes = await authedFetch("/api/wovo-ai/subscription");
       setSubscription((await subRes.json()) as UnifiedSubscriptionResponse);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed");
+      const messagesRes = await authedFetch(`/api/wovo-ai/chats/${activeChatId}/messages`);
+      setMessages(((await messagesRes.json()) as { messages: ChatMessage[] }).messages ?? []);
     } finally {
       setSending(false);
     }
@@ -255,7 +352,6 @@ export default function WovoAiPage() {
   };
 
   const handleQuickActionSelect = (selectedAction: (typeof quickActions)[number]) => {
-    setAction(selectedAction);
     setPromptText(selectedAction);
   };
 
@@ -357,8 +453,8 @@ export default function WovoAiPage() {
               <div className="mt-4 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search chats" className="rounded-full border border-zinc-300 bg-zinc-50 px-3 py-1.5 text-xs" />
-                  <select value={action} onChange={(e) => setAction(e.target.value as (typeof quickActions)[number])} className="rounded-full border border-zinc-300 bg-zinc-50 px-3 py-1.5 text-xs font-medium">
-                    {quickActions.map((q) => <option key={q} value={q}>{q}</option>)}
+                  <select value={mode} onChange={(e) => setMode(e.target.value as WovoMode)} className="rounded-full border border-zinc-300 bg-zinc-50 px-3 py-1.5 text-xs font-medium">
+                    {modeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                   </select>
                   <button
                     type="button"
@@ -426,7 +522,21 @@ export default function WovoAiPage() {
               <div className="max-h-64 space-y-3 overflow-y-auto">
                 {messages.map((m) => (
                   <div key={m.id} className={`max-w-[85%] whitespace-pre-wrap rounded-xl px-3 py-2 text-sm ${m.role === "user" ? "ml-auto bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-900"}`}>
-                    {m.content}
+                    {(() => {
+                      const payload = deserializeAssistantPayload(m.content);
+                      return (
+                        <>
+                          {payload.text}
+                          {payload.image && (
+                            <img
+                              src={payload.image}
+                              alt="Generated marketing visual"
+                              className="mt-3 h-auto max-w-full rounded-lg border border-zinc-200"
+                            />
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                 ))}
               </div>
