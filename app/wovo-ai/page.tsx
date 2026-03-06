@@ -124,6 +124,20 @@ export default function WovoAiPage() {
   const [businessContext, setBusinessContext] = useState<BusinessContext>(EMPTY_BUSINESS_CONTEXT);
   const [showLowCreditPrompt, setShowLowCreditPrompt] = useState(false);
 
+  const handlePaywallBack = () => {
+    if (typeof window !== "undefined" && window.location.pathname === "/wovo-ai") {
+      router.push("/");
+      return;
+    }
+    router.push("/wovo-ai");
+  };
+
+  const handlePaywallSignOut = async () => {
+    await supabase.auth.signOut();
+    clearSession();
+    router.push("/login");
+  };
+
   const authedFetch = async (input: string, init?: RequestInit) => {
     const nextHeaders = new Headers(init?.headers);
     nextHeaders.set("Authorization", `Bearer ${token}`);
@@ -362,6 +376,20 @@ export default function WovoAiPage() {
   };
 
   const creditsRemaining = subscription?.remaining_credits ?? subscription?.remainingCredits ?? subscription?.remaining?.credits_remaining ?? 0;
+  const planName = String(subscription?.plan ?? "none").toLowerCase();
+  const mappedPlanCredits = planName === "starter" ? 50 : planName === "growth" ? 150 : planName === "pro" ? 300 : 300;
+  const totalCredits = Math.max(subscription?.remaining?.monthly_limit ?? mappedPlanCredits, 1);
+  const usagePercent = Math.min((creditsRemaining / totalCredits) * 100, 100);
+  const progressTone = usagePercent > 60 ? "bg-emerald-400" : usagePercent > 25 ? "bg-amber-400" : "bg-red-400";
+  const periodEndRaw = subscription?.subscription_current_period_end ?? subscription?.current_period_end ?? subscription?.period_end ?? null;
+  const periodEndDate = periodEndRaw ? new Date(periodEndRaw) : null;
+  const hasValidPeriodEnd = Boolean(periodEndDate && !Number.isNaN(periodEndDate.getTime()));
+  const daysUntilReset = hasValidPeriodEnd
+    ? Math.max(Math.ceil(((periodEndDate?.getTime() ?? 0) - Date.now()) / (1000 * 60 * 60 * 24)), 0)
+    : null;
+  const nextResetLabel = hasValidPeriodEnd
+    ? (periodEndDate?.toLocaleDateString("en-US", { month: "long", day: "numeric" }) ?? "")
+    : null;
   const requiredCredits = getPromptCreditCost(mode);
   const hasEnoughCredits = userHasEnoughCredits(creditsRemaining, mode);
   const canSend = hasEnoughCredits && !sending;
@@ -480,23 +508,80 @@ export default function WovoAiPage() {
     <main className="min-h-screen bg-[#060807] text-white">
       {showPlanModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur">
-          <div className="w-full max-w-5xl rounded-2xl border border-white/10 bg-[#0d1110] p-6 text-white shadow-xl">
+          <div className="relative w-full max-w-5xl overflow-hidden rounded-2xl border border-white/10 bg-[#0d1110] p-6 text-white shadow-xl">
+            <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.16),_transparent_60%)]" />
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={handlePaywallBack}
+                className="rounded-full border border-white/15 bg-transparent px-3 py-1.5 text-sm text-zinc-200 transition hover:-translate-y-0.5 hover:border-white/30 hover:bg-white/5 hover:shadow-[0_0_18px_rgba(255,255,255,0.08)]"
+              >
+                ← Back
+              </button>
+              <button
+                type="button"
+                onClick={() => void handlePaywallSignOut()}
+                className="rounded-full border border-red-400/40 bg-red-500/5 px-3 py-1 text-xs font-medium text-red-200 transition hover:-translate-y-0.5 hover:border-red-300/80 hover:bg-red-500/10"
+              >
+                Sign out
+              </button>
+            </div>
+
             <h2 className="mb-2 text-xl font-semibold">Choose your Wovo AI plan</h2>
-            <p className="mb-6 text-zinc-400">Pick a plan to start generating AI content. Your account stays locked until an active subscription is detected.</p>
+            <p className="text-zinc-400">Pick a plan to start generating AI content. Your account stays locked until an active subscription is detected.</p>
+            <p className="mb-5 mt-3 text-xs text-zinc-500">Secure checkout powered by Stripe • Cancel anytime</p>
+
+            <div className="mb-6 rounded-xl border border-white/10 bg-black/30 p-4">
+              <p className="text-sm font-medium text-zinc-200">{creditsRemaining} / {totalCredits} credits remaining</p>
+              <div className="mt-3 h-3 w-full overflow-hidden rounded-full bg-zinc-800">
+                <div className={`h-full rounded-full transition-all duration-500 ${progressTone}`} style={{ width: `${usagePercent}%` }} />
+              </div>
+              {hasValidPeriodEnd && (
+                <p className="mt-2 text-xs text-zinc-400">
+                  {daysUntilReset !== null && daysUntilReset <= 14 ? `Credits reset in ${daysUntilReset} day${daysUntilReset === 1 ? "" : "s"}` : `Next credit refresh: ${nextResetLabel}`}
+                </p>
+              )}
+            </div>
+
             <div className="grid gap-4 md:grid-cols-3">
               {planOptions.map((plan) => (
-                <article key={plan.priceId} className={`rounded-xl border p-4 ${plan.name === "Pro" ? "border-emerald-400/80 bg-emerald-500/10" : "border-white/10 bg-black/30"}`}>
+                <article key={plan.priceId} className={`rounded-xl border p-4 transition duration-200 hover:scale-[1.02] ${plan.name === "Pro" ? "border-emerald-400/80 bg-emerald-500/10" : "border-white/10 bg-black/30"}`}>
                   {plan.badge && (<p className="mb-2 inline-block rounded-full bg-emerald-500 px-2 py-0.5 text-xs font-semibold text-black">{plan.badge}</p>)}
                   <h3 className="text-lg font-semibold">{plan.name}</h3>
                   <p className="text-zinc-200">{plan.price}</p>
                   <p className="text-sm text-zinc-400">{plan.credits}</p>
                   <ul className="mt-3 space-y-1 text-sm text-zinc-300">{plan.perks.map((perk) => <li key={perk}>• {perk}</li>)}</ul>
-                  <button className="mt-4 w-full rounded-lg bg-emerald-400 py-2 font-semibold text-black hover:bg-emerald-300" onClick={() => void startCheckout(plan.priceId)}>
+                  <button className="mt-4 w-full rounded-lg bg-emerald-400 py-2 font-semibold text-black transition hover:-translate-y-0.5 hover:bg-emerald-300 hover:shadow-[0_0_22px_rgba(16,185,129,0.35)]" onClick={() => void startCheckout(plan.priceId)}>
                     Choose {plan.name}
                   </button>
                 </article>
               ))}
             </div>
+
+            <div className="mt-5 rounded-xl border border-white/10 bg-black/25 p-4">
+              <h3 className="text-sm font-semibold text-zinc-200">Plan comparison</h3>
+              <div className="mt-3 grid gap-3 text-sm text-zinc-300 sm:grid-cols-3">
+                <div>
+                  <p className="font-semibold text-white">Starter</p>
+                  <p>$24.99/mo</p>
+                  <p>50 credits</p>
+                  <p className="mt-1 text-xs text-zinc-500">basic usage</p>
+                </div>
+                <div>
+                  <p className="font-semibold text-white">Growth</p>
+                  <p>$49.99/mo</p>
+                  <p>150 credits</p>
+                  <p className="mt-1 text-xs text-zinc-500">frequent posting</p>
+                </div>
+                <div>
+                  <p className="font-semibold text-white">Pro</p>
+                  <p>$99/mo</p>
+                  <p>300 credits</p>
+                  <p className="mt-1 text-xs text-zinc-500">heavy AI usage</p>
+                </div>
+              </div>
+            </div>
+
             <p className="mt-5 text-xs text-zinc-500">Already paid? Refresh after checkout and you’ll be unlocked automatically.</p>
             <p className="mt-2 text-xs text-zinc-500">Canceling your subscription pauses all unused credits. Your credits will become available again once your subscription is reactivated.</p>
           </div>
