@@ -40,3 +40,22 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ch
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to rename chat." }, { status: 500 });
   }
 }
+
+export async function DELETE(request: Request, { params }: { params: Promise<{ chatId: string }> }) {
+  try {
+    const { user } = await requireServerUser(request.headers.get("authorization"));
+    const { chatId } = await params;
+
+    await supabaseServiceRoleRequest<null>(`/rest/v1/messages?chat_id=eq.${encodeChatId(chatId)}&user_id=eq.${user.id}`, {
+      method: "DELETE",
+    });
+
+    await supabaseServiceRoleRequest<null>(`/rest/v1/chats?id=eq.${encodeChatId(chatId)}&user_id=eq.${user.id}`, {
+      method: "DELETE",
+    });
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to delete chat." }, { status: 500 });
+  }
+}
