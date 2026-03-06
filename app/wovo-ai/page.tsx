@@ -351,6 +351,37 @@ export default function WovoAiPage() {
     }
   };
 
+  const deleteChat = async (chatToDeleteId: string) => {
+    try {
+      const response = await authedFetch(`/api/wovo-ai/chats/${chatToDeleteId}`, { method: "DELETE" });
+      const payload = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Unable to delete chat.");
+      }
+
+      const remainingChats = chats.filter((chat) => chat.id !== chatToDeleteId);
+      setChats(remainingChats);
+
+      if (renameChatId === chatToDeleteId) {
+        setRenameChatId(null);
+        setRenameValue("");
+      }
+
+      if (chatId === chatToDeleteId) {
+        if (remainingChats.length > 0) {
+          setChatId(remainingChats[0].id);
+        } else {
+          await createChat();
+        }
+      }
+
+      setError("");
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Unable to delete chat.");
+    }
+  };
+
   const handleQuickActionSelect = (selectedAction: (typeof quickActions)[number]) => {
     setPromptText(selectedAction);
   };
@@ -371,21 +402,21 @@ export default function WovoAiPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f4f4f5] text-zinc-900">
+    <main className="min-h-screen bg-[#060807] text-white">
       {showPlanModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur">
-          <div className="w-full max-w-5xl rounded-2xl border border-zinc-800 bg-zinc-900 p-6 text-white shadow-xl">
+          <div className="w-full max-w-5xl rounded-2xl border border-white/10 bg-[#0d1110] p-6 text-white shadow-xl">
             <h2 className="mb-2 text-xl font-semibold">Choose your Wovo AI plan</h2>
             <p className="mb-6 text-zinc-400">Pick a plan to start generating AI content. Your account stays locked until an active subscription is detected.</p>
             <div className="grid gap-4 md:grid-cols-3">
               {planOptions.map((plan) => (
-                <article key={plan.priceId} className={`rounded-xl border p-4 ${plan.name === "Pro" ? "border-violet-400 bg-violet-500/10" : "border-zinc-700 bg-zinc-950"}`}>
-                  {plan.badge && (<p className="mb-2 inline-block rounded-full bg-violet-500 px-2 py-0.5 text-xs font-semibold text-white">{plan.badge}</p>)}
+                <article key={plan.priceId} className={`rounded-xl border p-4 ${plan.name === "Pro" ? "border-emerald-400/80 bg-emerald-500/10" : "border-white/10 bg-black/30"}`}>
+                  {plan.badge && (<p className="mb-2 inline-block rounded-full bg-emerald-500 px-2 py-0.5 text-xs font-semibold text-black">{plan.badge}</p>)}
                   <h3 className="text-lg font-semibold">{plan.name}</h3>
                   <p className="text-zinc-200">{plan.price}</p>
                   <p className="text-sm text-zinc-400">{plan.credits}</p>
                   <ul className="mt-3 space-y-1 text-sm text-zinc-300">{plan.perks.map((perk) => <li key={perk}>• {perk}</li>)}</ul>
-                  <button className="mt-4 w-full rounded-lg bg-white py-2 font-semibold text-zinc-900 hover:opacity-90" onClick={() => void startCheckout(plan.priceId)}>
+                  <button className="mt-4 w-full rounded-lg bg-emerald-400 py-2 font-semibold text-black hover:bg-emerald-300" onClick={() => void startCheckout(plan.priceId)}>
                     Choose {plan.name}
                   </button>
                 </article>
@@ -397,32 +428,33 @@ export default function WovoAiPage() {
       )}
       <div className="min-h-screen">
         <section className="flex min-h-screen flex-col">
-          <header className="flex items-center justify-between border-b border-zinc-200 bg-white px-6 py-4">
+          <header className="flex items-center justify-between border-b border-white/10 bg-black/30 px-6 py-4 backdrop-blur">
             <div className="flex items-center gap-3">
               <h1 className="text-xl font-semibold">Wovo AI</h1>
-              <span className="rounded-md bg-violet-100 px-2 py-0.5 text-xs font-semibold text-violet-700">Beta</span>
+              <span className="rounded-md bg-emerald-500/20 px-2 py-0.5 text-xs font-semibold text-emerald-300">Beta</span>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={() => void createChat()} className="rounded-lg px-3 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-100">+ New chat</button>
+              <button onClick={() => void createChat()} className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-zinc-100 hover:bg-white/10">+ New chat</button>
               <details className="relative">
-                <summary className="cursor-pointer rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm">Account</summary>
-                <div className="absolute right-0 z-20 mt-2 w-56 space-y-1 rounded-xl border border-zinc-200 bg-white p-2 text-sm shadow-xl">
-                  <p className="rounded px-2 py-1 text-xs text-zinc-500">Credits left: {subscription?.remaining_credits ?? subscription?.remainingCredits ?? subscription?.remaining?.credits_remaining ?? 0}</p>
-                  <Link href="/wovo-ai/profile" className="block rounded px-2 py-1 hover:bg-zinc-100">Profile</Link>
-                  <button className="block w-full rounded px-2 py-1 text-left hover:bg-zinc-100" onClick={() => void authedFetch("/api/stripe/buy-credits", { method: "POST" }).then((r) => r.json()).then((d: { url?: string }) => d.url && (window.location.href = d.url))}>Buy credits</button>
-                  <button className="block w-full rounded px-2 py-1 text-left hover:bg-zinc-100" onClick={() => void authedFetch("/api/stripe/portal", { method: "POST" }).then((r) => r.json()).then((d: { url?: string }) => d.url && (window.location.href = d.url))}>Manage billing</button>
-                  <button className="block w-full rounded px-2 py-1 text-left hover:bg-zinc-100" onClick={async () => { const v = window.prompt("Type DELETE to confirm"); if (v === "DELETE") { await authedFetch("/api/account/delete", { method: "POST" }); clearSession(); router.push("/"); } }}>Delete account</button>
-                  <button className="block w-full rounded px-2 py-1 text-left hover:bg-zinc-100" onClick={async () => { const email = window.prompt("New email"); if (email) await authedFetch("/api/account/change-email", { method: "POST", body: JSON.stringify({ email }) }); }}>Change email</button>
-                  <button className="block w-full rounded px-2 py-1 text-left hover:bg-zinc-100" onClick={async () => { const password = window.prompt("New password"); if (password) await authedFetch("/api/account/change-password", { method: "POST", body: JSON.stringify({ password }) }); }}>Change password</button>
-                  <button className="block w-full rounded px-2 py-1 text-left hover:bg-zinc-100" onClick={() => { clearSession(); router.push("/login"); }}>Sign out</button>
+                <summary className="cursor-pointer rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-zinc-100">Account</summary>
+                <div className="absolute right-0 z-20 mt-2 w-56 space-y-1 rounded-xl border border-white/10 bg-[#111313] p-2 text-sm shadow-xl">
+                  <p className="rounded px-2 py-1 text-xs text-zinc-400">Credits left: {subscription?.remaining_credits ?? subscription?.remainingCredits ?? subscription?.remaining?.credits_remaining ?? 0}</p>
+                  <Link href="/wovo-ai/profile" className="block rounded px-2 py-1 hover:bg-white/10">Profile</Link>
+                  <button className="block w-full rounded px-2 py-1 text-left hover:bg-white/10" onClick={() => void authedFetch("/api/stripe/buy-credits", { method: "POST" }).then((r) => r.json()).then((d: { url?: string }) => d.url && (window.location.href = d.url))}>Buy credits</button>
+                  <button className="block w-full rounded px-2 py-1 text-left hover:bg-white/10" onClick={() => void authedFetch("/api/stripe/portal", { method: "POST" }).then((r) => r.json()).then((d: { url?: string }) => d.url && (window.location.href = d.url))}>Manage billing</button>
+                  <button className="block w-full rounded px-2 py-1 text-left hover:bg-white/10" onClick={async () => { const v = window.prompt("Type DELETE to confirm"); if (v === "DELETE") { await authedFetch("/api/account/delete", { method: "POST" }); clearSession(); router.push("/"); } }}>Delete account</button>
+                  <button className="block w-full rounded px-2 py-1 text-left hover:bg-white/10" onClick={async () => { const email = window.prompt("New email"); if (email) await authedFetch("/api/account/change-email", { method: "POST", body: JSON.stringify({ email }) }); }}>Change email</button>
+                  <button className="block w-full rounded px-2 py-1 text-left hover:bg-white/10" onClick={async () => { const password = window.prompt("New password"); if (password) await authedFetch("/api/account/change-password", { method: "POST", body: JSON.stringify({ password }) }); }}>Change password</button>
+                  <button className="block w-full rounded px-2 py-1 text-left hover:bg-white/10" onClick={() => { clearSession(); router.push("/login"); }}>Sign out</button>
                 </div>
               </details>
             </div>
           </header>
 
-          <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col px-6 py-10">
+          <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-6 py-8">
             <h2 className="text-center text-4xl font-semibold">How can Wovo AI help?</h2>
-            <div className="mt-7 rounded-2xl border border-zinc-300 bg-white p-5 shadow-sm">
+            <p className="mt-2 text-center text-sm text-zinc-400">Create content, generate visuals, and keep your campaigns moving.</p>
+            <div className="mt-7 rounded-2xl border border-white/10 bg-[#101212] p-5 shadow-2xl shadow-black/20">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -433,9 +465,9 @@ export default function WovoAiPage() {
                   setAttachment(f);
                 }}
               />
-              <textarea value={promptText} onChange={(e) => setPromptText(e.target.value)} onKeyDown={onKey} placeholder="Ask Wovo AI a question" className="h-24 w-full resize-none border-none bg-transparent text-lg outline-none placeholder:text-zinc-500" />
+              <textarea value={promptText} onChange={(e) => setPromptText(e.target.value)} onKeyDown={onKey} placeholder="Ask Wovo AI a question" className="h-24 w-full resize-none border-none bg-transparent text-lg text-white outline-none placeholder:text-zinc-500" />
               {attachment && (
-                <div className="mt-3 inline-flex max-w-full items-center gap-2 rounded-full border border-zinc-300 bg-zinc-100 px-3 py-1 text-xs text-zinc-700">
+                <div className="mt-3 inline-flex max-w-full items-center gap-2 rounded-full border border-white/15 bg-black/40 px-3 py-1 text-xs text-zinc-300">
                   <span className="truncate">{attachment.name}</span>
                   <button
                     type="button"
@@ -443,95 +475,122 @@ export default function WovoAiPage() {
                       setAttachment(null);
                       if (fileInputRef.current) fileInputRef.current.value = "";
                     }}
-                    className="rounded-full px-1 hover:bg-zinc-200"
+                    className="rounded-full px-1 hover:bg-white/10"
                     aria-label="Remove attachment"
                   >
                     ×
                   </button>
                 </div>
               )}
-              <div className="mt-4 flex items-center justify-between">
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search chats" className="rounded-full border border-zinc-300 bg-zinc-50 px-3 py-1.5 text-xs" />
-                  <select value={mode} onChange={(e) => setMode(e.target.value as WovoMode)} className="rounded-full border border-zinc-300 bg-zinc-50 px-3 py-1.5 text-xs font-medium">
+                  <select value={mode} onChange={(e) => setMode(e.target.value as WovoMode)} className="rounded-full border border-white/15 bg-black/40 px-3 py-1.5 text-xs font-medium text-zinc-100">
                     {modeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                   </select>
                   <button
                     type="button"
-                    className="rounded-full border border-zinc-300 bg-zinc-50 px-2.5 py-1.5 text-xs font-semibold text-zinc-700 hover:bg-zinc-100"
+                    className="rounded-full border border-white/15 bg-black/40 px-2.5 py-1.5 text-xs font-semibold text-zinc-200 hover:bg-white/10"
                     onClick={() => fileInputRef.current?.click()}
                     aria-label="Attach a file"
                   >
                     📎
                   </button>
+                  <button type="button" className="rounded-full border border-white/15 bg-black/40 px-2.5 py-1.5 text-xs font-semibold text-zinc-200 hover:bg-white/10" aria-label="Voice input">
+                    🎤
+                  </button>
                 </div>
-                <button onClick={() => void send()} disabled={sending} className="rounded-full bg-zinc-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{sending ? "..." : "Send"}</button>
+                <button onClick={() => void send()} disabled={sending} className="rounded-full bg-emerald-400 px-5 py-2 text-sm font-semibold text-black transition hover:bg-emerald-300 disabled:opacity-50">{sending ? "..." : "Send"}</button>
               </div>
             </div>
 
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               {quickActions.map((q) => (
-                <button key={q} onClick={() => handleQuickActionSelect(q)} className="rounded-full bg-zinc-200 px-5 py-2 text-sm font-medium text-zinc-800 transition hover:bg-zinc-300">
+                <button key={q} onClick={() => handleQuickActionSelect(q)} className="rounded-full border border-white/10 bg-[#111313] px-5 py-2 text-sm font-medium text-zinc-200 transition hover:border-emerald-400/70 hover:text-emerald-300">
                   {q}
                 </button>
               ))}
             </div>
 
-            <div className="mt-8 space-y-3 rounded-2xl border border-zinc-200 bg-white p-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-zinc-500">Chats</h3>
-                <button
-                  type="button"
-                  onClick={beginRename}
-                  disabled={!chatId}
-                  className="rounded-md px-2 py-1 text-xs font-medium text-zinc-600 hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Rename
-                </button>
-              </div>
-              <div className="max-h-40 space-y-2 overflow-y-auto">
-                {filteredChats.map((chat) => <button key={chat.id} onClick={() => setChatId(chat.id)} className={`w-full rounded-lg p-2 text-left text-sm ${chat.id === chatId ? "bg-zinc-900 text-white" : "bg-zinc-100"}`}>{chat.title}</button>)}
-              </div>
-            </div>
+            <div className="mt-8 grid flex-1 gap-6 lg:grid-cols-[290px_minmax(0,1fr)]">
+              <aside className="rounded-2xl border border-white/10 bg-[#101212] p-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-zinc-300">Chats</h3>
+                  <button
+                    type="button"
+                    onClick={beginRename}
+                    disabled={!chatId}
+                    className="rounded-md border border-white/10 px-2 py-1 text-xs font-medium text-zinc-300 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Rename
+                  </button>
+                </div>
+                <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search chats" className="mb-3 w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-xs text-zinc-100 placeholder:text-zinc-500" />
+                <div className="max-h-[54vh] space-y-2 overflow-y-auto pr-1">
+                  {filteredChats.map((chat) => (
+                    <div key={chat.id} className={`group flex items-center gap-2 rounded-lg border px-2 py-2 text-sm transition ${chat.id === chatId ? "border-emerald-400/70 bg-emerald-500/10" : "border-white/5 bg-black/30 hover:border-white/20 hover:bg-white/5"}`}>
+                      <button onClick={() => setChatId(chat.id)} className="min-w-0 flex-1 text-left">
+                        <span className="block truncate text-zinc-100">{chat.title}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void deleteChat(chat.id);
+                        }}
+                        className="rounded-md p-1.5 text-zinc-500 transition hover:bg-red-500/10 hover:text-red-300"
+                        aria-label={`Delete ${chat.title}`}
+                      >
+                        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                          <path d="M3 6h18" />
+                          <path d="M8 6V4h8v2" />
+                          <path d="M19 6l-1 14H6L5 6" />
+                          <path d="M10 11v6M14 11v6" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </aside>
 
-            <div className="mt-6 space-y-3 rounded-2xl border border-zinc-200 bg-white p-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-zinc-500">Conversation</h3>
-                {renameChatId && (
-                  <input
-                    value={renameValue}
-                    maxLength={60}
-                    autoFocus
-                    onChange={(event) => setRenameValue(event.target.value)}
-                    onBlur={() => void saveRename()}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        event.preventDefault();
-                        void saveRename();
-                      }
-                      if (event.key === "Escape") {
-                        setRenameChatId(null);
-                        setRenameValue("");
-                      }
-                    }}
-                    className="w-56 rounded-md border border-zinc-300 px-2 py-1 text-xs text-zinc-700"
-                    placeholder="Rename chat"
-                  />
-                )}
-              </div>
-              <div className="max-h-64 space-y-3 overflow-y-auto">
-                {messages.map((m) => (
-                  <div key={m.id} className={`max-w-[85%] whitespace-pre-wrap rounded-xl px-3 py-2 text-sm ${m.role === "user" ? "ml-auto bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-900"}`}>
+              <section className="space-y-3 rounded-2xl border border-white/10 bg-[#101212] p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-sm font-semibold text-zinc-300">Conversation</h3>
+                  {renameChatId && (
+                    <input
+                      value={renameValue}
+                      maxLength={60}
+                      autoFocus
+                      onChange={(event) => setRenameValue(event.target.value)}
+                      onBlur={() => void saveRename()}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          void saveRename();
+                        }
+                        if (event.key === "Escape") {
+                          setRenameChatId(null);
+                          setRenameValue("");
+                        }
+                      }}
+                      className="w-56 rounded-md border border-white/15 bg-black/40 px-2 py-1 text-xs text-zinc-100"
+                      placeholder="Rename chat"
+                    />
+                  )}
+                </div>
+                <div className="h-[65vh] min-h-[420px] space-y-3 overflow-y-auto rounded-xl border border-white/5 bg-black/25 p-4 lg:h-[70vh] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-2">
+                  {messages.map((m) => (
+                    <div key={m.id} className={`max-w-[90%] whitespace-pre-wrap rounded-xl px-3 py-2 text-sm ${m.role === "user" ? "ml-auto border border-emerald-400/40 bg-emerald-500/15 text-emerald-50" : "border border-white/10 bg-[#151819] text-zinc-100"}`}>
                     {(() => {
                       const payload = deserializeAssistantPayload(m.content);
                       return (
                         <>
                           {payload.text}
+                          {payload.imagePrompt && <p className="mt-2 text-xs text-zinc-400">Image prompt: {payload.imagePrompt}</p>}
                           {payload.image && (
                             <img
                               src={payload.image}
                               alt="Generated marketing visual"
-                              className="mt-3 h-auto max-w-full rounded-lg border border-zinc-200"
+                              className="mt-3 h-auto max-w-full rounded-xl border border-white/10 object-cover"
                             />
                           )}
                         </>
@@ -539,10 +598,12 @@ export default function WovoAiPage() {
                     })()}
                   </div>
                 ))}
+                  {messages.length === 0 && <p className="text-sm text-zinc-500">Start a conversation to generate content with Wovo AI.</p>}
+                </div>
+              </section>
               </div>
-            </div>
 
-            {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+            {error && <p className="mt-3 text-sm text-red-300">{error}</p>}
           </div>
         </section>
       </div>
