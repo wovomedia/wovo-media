@@ -159,6 +159,9 @@ export default function WovoAiProfilePage() {
                 <button disabled={busy} onClick={() => void openPortal()} className="rounded-lg border border-zinc-700 px-4 py-2 text-sm hover:bg-zinc-800 disabled:opacity-60">Manage Billing</button>
                 <button disabled={busy} onClick={() => void openPortal()} className="rounded-lg border border-red-500/70 px-4 py-2 text-sm text-red-300 hover:bg-red-500/10 disabled:opacity-60">Cancel subscription (in billing portal)</button>
               </div>
+              <p className="mt-3 text-xs text-zinc-500">
+                If your subscription is canceled, your remaining credits will be paused until your subscription is activated again.
+              </p>
               <div className="mt-5 grid gap-4 md:grid-cols-3">
                 {PLANS.map((plan) => (
                   <article key={`upgrade-${plan.priceId}`} className={`rounded-xl border p-4 ${plan.name === "Pro" ? "border-violet-400 bg-violet-500/10" : "border-zinc-800 bg-zinc-950"}`}>

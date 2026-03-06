@@ -60,6 +60,9 @@ export default function WovoPricingPage() {
           </article>
         ))}
       </div>
+      <p className="mx-auto mt-6 max-w-3xl text-center text-xs text-white/55">
+        Canceling your subscription pauses all unused credits. Your credits will become available again once your subscription is reactivated.
+      </p>
       {error && <p className="mt-5 text-center text-red-300">{error}</p>}
     </main>
   );
