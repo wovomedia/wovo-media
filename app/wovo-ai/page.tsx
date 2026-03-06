@@ -6,7 +6,7 @@ import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react"
 import { supabase } from "@/lib/supabase/client";
 import { clearSession, parseSessionFromHash, persistSession, readSessionFromStorage } from "@/lib/supabase/session-client";
 import { submitPendingOnboarding } from "@/lib/wovo-ai/onboarding-client";
-import { resolveAiAccessState } from "@/lib/wovo-ai/access";
+import { getAuthAccessState, resolveAiAccessState } from "@/lib/wovo-ai/access";
 import type { UnifiedSubscriptionResponse } from "@/lib/wovo-ai/contracts";
 import { EMPTY_BUSINESS_CONTEXT, type BusinessContext } from "@/lib/wovo-ai/business-context";
 import type { CaptionPlatform } from "@/lib/wovo-ai/prompt-context";
@@ -181,20 +181,56 @@ export default function WovoAiPage() {
     let mounted = true;
 
     const checkPlan = async () => {
+      const session = readSessionFromStorage();
+      const authState = getAuthAccessState({ session });
+      console.info("[wovo-ai] Route auth state", {
+        route: "/wovo-ai",
+        hasSession: authState.isAuthenticated,
+      });
+
+      if (!authState.isAuthenticated || !session?.access_token) {
+        console.warn("[wovo-ai] No valid session; redirecting to /login");
+        if (mounted) {
+          setShowPlanModal(false);
+          setLoadingPlan(false);
+        }
+        router.push("/login");
+        return;
+      }
+
       try {
-        const s = readSessionFromStorage();
         const res = await fetch("/api/wovo-ai/subscription", {
           cache: "no-store",
-          headers: s?.access_token ? { Authorization: `Bearer ${s.access_token}` } : undefined,
+          headers: { Authorization: `Bearer ${session.access_token}` },
         });
-        const data = await res.json();
+
+        if (res.status === 401) {
+          console.warn("[wovo-ai] Subscription endpoint returned 401; redirecting to /login");
+          if (mounted) {
+            setShowPlanModal(false);
+            setLoadingPlan(false);
+          }
+          router.push("/login");
+          return;
+        }
+
+        const data = (await res.json()) as UnifiedSubscriptionResponse;
         if (!mounted) return;
-        const subscriptionData = data as UnifiedSubscriptionResponse;
-        setSubscription(subscriptionData);
-        setShowPlanModal(resolveAiAccessState(subscriptionData).showPaywall);
+        const nextAuthState = getAuthAccessState({ session, subscription: data });
+        console.info("[wovo-ai] Route access decision", {
+          route: "/wovo-ai",
+          hasSession: nextAuthState.isAuthenticated,
+          needsPlan: nextAuthState.needsPlan,
+          hasAppAccess: nextAuthState.hasAppAccess,
+        });
+
+        setSubscription(data);
+        setShowPlanModal(nextAuthState.needsPlan);
       } catch (e) {
         console.error("Subscription check failed", e);
-        if (mounted) setShowPlanModal(true);
+        if (mounted) {
+          setShowPlanModal(true);
+        }
       } finally {
         if (mounted) setLoadingPlan(false);
       }
@@ -215,9 +251,8 @@ export default function WovoAiPage() {
     }
     const s = readSessionFromStorage();
     if (!s?.access_token) {
-      console.warn("[wovo-ai] No session found in storage; redirecting to login");
-      setLoadingPlan(false);
-      return router.push("/login");
+      console.info("[wovo-ai] Skipping app bootstrap from storage because no session was found");
+      return;
     }
     console.info("[wovo-ai] Session found in storage; loading app");
     void load(s.access_token).catch((e) => {
