@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { mapSupabaseAuthError } from "@/lib/supabase/auth-errors";
 import { supabase } from "@/lib/supabase/client";
 import { getBaseUrl } from "@/lib/site-url";
-import { persistSession } from "@/lib/supabase/session-client";
+import { persistSession, readSessionFromStorage } from "@/lib/supabase/session-client";
+import type { UnifiedSubscriptionResponse } from "@/lib/wovo-ai/contracts";
+import { getAuthAccessState } from "@/lib/wovo-ai/access";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -14,6 +16,42 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const siteUrl = getBaseUrl();
+
+  useEffect(() => {
+    const session = readSessionFromStorage();
+    const authState = getAuthAccessState({ session });
+    console.info("[login] Auth page guard", { route: "/login", isAuthenticated: authState.isAuthenticated });
+
+    if (!authState.isAuthenticated || !session?.access_token) {
+      return;
+    }
+
+    supabase.setAccessToken(session.access_token);
+    void fetch("/api/wovo-ai/subscription", {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+      cache: "no-store",
+    })
+      .then(async (response) => {
+        if (response.status === 401) {
+          return;
+        }
+
+        const payload = (await response.json()) as UnifiedSubscriptionResponse;
+        const nextAuthState = getAuthAccessState({ session, subscription: payload });
+        const target = nextAuthState.hasAppAccess ? "/wovo-ai" : "/wovo-ai";
+        console.info("[login] Authenticated user detected on auth page; redirecting", {
+          target,
+          hasAppAccess: nextAuthState.hasAppAccess,
+          needsPlan: nextAuthState.needsPlan,
+        });
+        router.replace(target);
+      })
+      .catch((err: unknown) => {
+        console.warn("[login] Failed to resolve subscription from auth page guard", err);
+        router.replace("/wovo-ai");
+      });
+  }, [router]);
+
 
   const loginWithGoogle = async () => {
     // Also configure Supabase Auth URL Configuration:

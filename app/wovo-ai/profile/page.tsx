@@ -4,7 +4,7 @@ import { type ChangeEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { readSessionFromStorage } from "@/lib/supabase/session-client";
-import { resolveAiAccessState } from "@/lib/wovo-ai/access";
+import { getAuthAccessState, resolveAiAccessState } from "@/lib/wovo-ai/access";
 import type { UnifiedSubscriptionResponse } from "@/lib/wovo-ai/contracts";
 
 type PlanOption = {
@@ -38,7 +38,9 @@ export default function WovoAiProfilePage() {
 
   useEffect(() => {
     const session = readSessionFromStorage();
-    if (!session?.access_token) {
+    const authState = getAuthAccessState({ session });
+    console.info("[wovo-profile] Route auth state", { route: "/wovo-ai/profile", isAuthenticated: authState.isAuthenticated });
+    if (!authState.isAuthenticated || !session?.access_token) {
       router.push("/login");
       return;
     }
