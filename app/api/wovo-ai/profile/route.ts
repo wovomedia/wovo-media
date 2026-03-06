@@ -10,13 +10,14 @@ type ProfilePayload = {
   contact?: string;
   topic?: string;
   goal?: string;
+  avatar_url?: string;
 };
 
 export async function GET(request: Request) {
   try {
     const { user } = await requireServerUser(request.headers.get("authorization"));
     const rows = await supabaseServiceRoleRequest<ProfilePayload[]>(
-      `/rest/v1/profiles?select=email,full_name,business_name,business_type,location,contact,topic,goal&user_id=eq.${user.id}&limit=1`,
+      `/rest/v1/profiles?select=email,full_name,business_name,business_type,location,contact,topic,goal,avatar_url&user_id=eq.${user.id}&limit=1`,
     );
 
     return NextResponse.json(rows?.[0] ?? null);
@@ -54,6 +55,7 @@ export async function POST(request: Request) {
         contact: body.contact?.trim() || null,
         topic: body.topic?.trim() || null,
         goal: body.goal?.trim() || null,
+        avatar_url: body.avatar_url?.trim() || null,
         updated_at: new Date().toISOString(),
       }),
     });

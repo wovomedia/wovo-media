@@ -17,7 +17,26 @@ function getSupabaseAnonKey() {
 export type AuthUser = {
   id: string;
   email?: string;
+  app_metadata?: {
+    provider?: string;
+    providers?: string[];
+  };
+  user_metadata?: {
+    full_name?: string;
+    name?: string;
+    avatar_url?: string;
+    picture?: string;
+  };
+  identities?: Array<{
+    provider?: string;
+  }>;
 };
+
+export function isGoogleAuthUser(user: AuthUser): boolean {
+  if (user.app_metadata?.provider === "google") return true;
+  if (user.app_metadata?.providers?.includes("google")) return true;
+  return user.identities?.some((identity) => identity.provider === "google") ?? false;
+}
 
 function getBearerToken(authHeader: string | null): string | null {
   if (!authHeader?.startsWith("Bearer ")) return null;
