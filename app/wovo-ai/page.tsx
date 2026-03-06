@@ -184,9 +184,10 @@ export default function WovoAiPage() {
 
     const subData = (await subRes.json()) as UnifiedSubscriptionResponse;
     const accessState = resolveAiAccessState(subData);
-    console.info("[wovo-ai] Subscription/access state", accessState);
+    const serverShowPaywall = subData.show_paywall ?? accessState.showPaywall;
+    console.info("[wovo-ai] Subscription/access state", { ...accessState, serverShowPaywall, adminAccess: subData.admin_access ?? false });
     setSubscription(subData);
-    setShowPlanModal(accessState.showPaywall);
+    setShowPlanModal(serverShowPaywall);
     setLoadingPlan(false);
     const chatPayload = (await chatsRes.json()) as { chats: ChatSummary[] };
     setChats(chatPayload.chats ?? []);
@@ -233,15 +234,18 @@ export default function WovoAiPage() {
         const data = (await res.json()) as UnifiedSubscriptionResponse;
         if (!mounted) return;
         const nextAuthState = getAuthAccessState({ session, subscription: data });
+        const nextShowPaywall = data.show_paywall ?? nextAuthState.showPaywall;
         console.info("[wovo-ai] Route access decision", {
           route: "/wovo-ai",
           hasSession: nextAuthState.isAuthenticated,
           needsPlan: nextAuthState.needsPlan,
           hasAppAccess: nextAuthState.hasAppAccess,
+          serverShowPaywall: nextShowPaywall,
+          adminAccess: data.admin_access ?? false,
         });
 
         setSubscription(data);
-        setShowPlanModal(nextAuthState.needsPlan);
+        setShowPlanModal(nextShowPaywall);
       } catch (e) {
         console.error("Subscription check failed", e);
         if (mounted) {
