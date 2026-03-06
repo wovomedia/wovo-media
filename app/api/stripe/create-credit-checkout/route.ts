@@ -27,19 +27,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid credit pack." }, { status: 400 });
     }
 
-    const stripeCustomerId = await ensureStripeCustomerForUser(user.id, user.email);
+    const userId = String(user.id ?? "");
+    const email = user.email?.trim() ?? "";
+    const creditPackPriceId = selectedPack.priceId;
+
+    const stripeCustomerId = await ensureStripeCustomerForUser(userId, email);
     const siteUrl = getSiteUrlFromRequest(request);
 
     const session = await createCheckoutSession({
       customerId: stripeCustomerId,
-      priceId: selectedPack.priceId,
-      userId: user.id,
+      priceId: creditPackPriceId,
+      userId,
       successUrl: `${siteUrl}/wovo-ai/buy-credits?success=1`,
       cancelUrl: `${siteUrl}/wovo-ai/buy-credits`,
       mode: "payment",
       metadata: {
-        creditPackPriceId: selectedPack.priceId,
-        email: user.email,
+        creditPackPriceId,
+        email,
+        userId,
       },
     });
 
