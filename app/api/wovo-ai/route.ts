@@ -173,7 +173,7 @@ export async function POST(request: Request) {
 
     let updatedCredits: { remaining: number; total: number; weekly_used: number; weekly_limit: number } | null = null;
 
-    const subscription = await getSubscriptionStatus(user.id);
+    const subscription = await getSubscriptionStatus(user.id, user.email);
     if (!isPaidStatus(subscription.status)) {
       return Response.json({ error: "An active subscription is required." }, { status: 402 });
     }

@@ -6,7 +6,7 @@ import { getSubscriptionStatus } from "@/lib/wovo-ai/subscription";
 export async function GET(request: Request) {
   try {
     const { user } = await requireServerUser(request.headers.get("authorization"));
-    const status = await getSubscriptionStatus(user.id);
+    const status = await getSubscriptionStatus(user.id, user.email);
     return NextResponse.json({ ...status, admin_access: isAdminEmail(user.email) });
   } catch (error) {
     if (error instanceof Error && (error.message.includes("Missing bearer token") || error.message.includes("Unable to verify session"))) {

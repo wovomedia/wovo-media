@@ -2,6 +2,7 @@ import { supabaseServiceRoleRequest } from "@/lib/supabase/server";
 import { type UnifiedSubscriptionResponse } from "@/lib/wovo-ai/contracts";
 import { getPlanConfig, getPlanFromPriceId, isPaidStatus, type PlanName } from "@/lib/wovo-ai/plans";
 import { maybeResetMonthlyUsage } from "@/lib/wovo-ai/credits";
+import { applyAutoProEntitlements, isAutoProEmail } from "@/lib/wovo-ai/auto-pro";
 import type { StripeSubscription } from "@/lib/stripe";
 
 type ProfileRow = {
@@ -17,15 +18,16 @@ type ProfileRow = {
   subscription_current_period_end: string | null;
 };
 
-function toStatusPayload(profile: ProfileRow | null, status?: string | null): UnifiedSubscriptionResponse {
-  const plan = profile?.plan ?? "none";
+function toStatusPayload(profile: ProfileRow | null, status?: string | null, isAutoPro = false): UnifiedSubscriptionResponse {
+  const plan = isAutoPro ? "pro" : profile?.plan ?? "none";
   const monthlyLimit = profile?.monthly_limit ?? (plan !== "none" ? getPlanConfig(plan).monthlyCredits : 0);
   const monthlyUsed = profile?.monthly_used ?? 0;
   const extraCredits = profile?.extra_credits ?? 0;
   const creditsRemaining = Math.max(monthlyLimit + extraCredits - monthlyUsed, 0);
+  const activeSubscription = isAutoPro || isPaidStatus(status);
 
   return {
-    status: isPaidStatus(status) ? "active" : "inactive",
+    status: activeSubscription ? "active" : "inactive",
     plan,
     remaining: {
       monthly_limit: monthlyLimit,
@@ -33,11 +35,12 @@ function toStatusPayload(profile: ProfileRow | null, status?: string | null): Un
       extra_credits: extraCredits,
       credits_remaining: creditsRemaining,
     },
-    can_generate: isPaidStatus(status) && creditsRemaining > 0,
+    can_generate: activeSubscription && creditsRemaining > 0,
   };
 }
 
-export async function getSubscriptionStatus(userId: string): Promise<UnifiedSubscriptionResponse> {
+export async function getSubscriptionStatus(userId: string, userEmail?: string | null): Promise<UnifiedSubscriptionResponse> {
+  const autoPro = await applyAutoProEntitlements(userId, userEmail);
   await maybeResetMonthlyUsage(userId);
   const rows = await supabaseServiceRoleRequest<ProfileRow[]>(
     `/rest/v1/profiles?select=user_id,plan,monthly_limit,monthly_used,extra_credits,stripe_customer_id,stripe_subscription_id,stripe_subscription_item_id,subscription_current_period_start,subscription_current_period_end&user_id=eq.${userId}&limit=1`,
@@ -47,7 +50,7 @@ export async function getSubscriptionStatus(userId: string): Promise<UnifiedSubs
     `/rest/v1/subscriptions?select=status&user_id=eq.${userId}&limit=1`,
   );
 
-  return toStatusPayload(profile, statusRows?.[0]?.status ?? null);
+  return toStatusPayload(profile, statusRows?.[0]?.status ?? null, autoPro || isAutoProEmail(userEmail));
 }
 
 export async function getRawSubscription(userId: string): Promise<{ stripe_customer_id: string | null; stripe_subscription_id: string | null; status: string | null } | null> {
