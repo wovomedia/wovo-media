@@ -159,11 +159,27 @@ export default function WovoAiPage() {
       fetch("/api/wovo-ai/chats", { headers: { Authorization: `Bearer ${accessToken}` } }),
       fetch("/api/wovo-ai/onboarding", { headers: { Authorization: `Bearer ${accessToken}` } }),
     ]);
-    const onboard = (await onboardRes.json()) as { complete?: boolean; is_google_user?: boolean };
-    console.info("[wovo-ai] Onboarding status", onboard);
-    if (!onboard.complete) {
-      console.info("[wovo-ai] Redirecting to /signup because onboarding is incomplete");
-      return router.push("/signup");
+
+    if (onboardRes.status === 401) {
+      console.warn("[wovo-ai] Onboarding endpoint returned 401; redirecting to /login");
+      return router.push("/login");
+    }
+
+    let onboard: { complete?: boolean; is_google_user?: boolean } | null = null;
+    if (onboardRes.ok) {
+      onboard = (await onboardRes.json()) as { complete?: boolean; is_google_user?: boolean };
+      console.info("[wovo-ai] Onboarding status", onboard);
+    } else {
+      const onboardingError = await onboardRes.text();
+      console.warn("[wovo-ai] Onboarding status unavailable; continuing authenticated flow", {
+        status: onboardRes.status,
+        onboardingError,
+      });
+    }
+
+    if (onboard && !onboard.complete && !onboard.is_google_user) {
+      console.info("[wovo-ai] Non-Google onboarding incomplete; redirecting to /wovo-ai/profile instead of /signup");
+      return router.push("/wovo-ai/profile");
     }
 
     const subData = (await subRes.json()) as UnifiedSubscriptionResponse;

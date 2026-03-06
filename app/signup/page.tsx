@@ -2,10 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { getBaseUrl } from "@/lib/site-url";
 import { clearPendingOnboarding, storePendingOnboarding } from "@/lib/wovo-ai/onboarding-client";
+import { readSessionFromStorage } from "@/lib/supabase/session-client";
+import type { UnifiedSubscriptionResponse } from "@/lib/wovo-ai/contracts";
+import { getAuthAccessState } from "@/lib/wovo-ai/access";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -17,6 +20,42 @@ export default function SignupPage() {
   const [gender, setGender] = useState<"boy" | "girl" | "other">("other");
   const [error, setError] = useState("");
   const siteUrl = getBaseUrl();
+
+  useEffect(() => {
+    const session = readSessionFromStorage();
+    const authState = getAuthAccessState({ session });
+    console.info("[signup] Auth page guard", { route: "/signup", isAuthenticated: authState.isAuthenticated });
+
+    if (!authState.isAuthenticated || !session?.access_token) {
+      return;
+    }
+
+    supabase.setAccessToken(session.access_token);
+    void fetch("/api/wovo-ai/subscription", {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+      cache: "no-store",
+    })
+      .then(async (response) => {
+        if (response.status === 401) {
+          return;
+        }
+
+        const payload = (await response.json()) as UnifiedSubscriptionResponse;
+        const nextAuthState = getAuthAccessState({ session, subscription: payload });
+        const target = nextAuthState.hasAppAccess ? "/wovo-ai" : "/wovo-ai";
+        console.info("[signup] Authenticated user detected on auth page; redirecting", {
+          target,
+          hasAppAccess: nextAuthState.hasAppAccess,
+          needsPlan: nextAuthState.needsPlan,
+        });
+        router.replace(target);
+      })
+      .catch((err: unknown) => {
+        console.warn("[signup] Failed to resolve subscription from auth page guard", err);
+        router.replace("/wovo-ai");
+      });
+  }, [router]);
+
 
   const onSignup = async () => {
     setError("");
