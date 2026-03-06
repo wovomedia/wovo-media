@@ -148,6 +148,7 @@ export default function WovoAiPage() {
   };
 
   const load = async (accessToken: string) => {
+    console.info("[wovo-ai] Starting authenticated bootstrap");
     setToken(accessToken);
     supabase.setAccessToken(accessToken);
 
@@ -158,12 +159,18 @@ export default function WovoAiPage() {
       fetch("/api/wovo-ai/chats", { headers: { Authorization: `Bearer ${accessToken}` } }),
       fetch("/api/wovo-ai/onboarding", { headers: { Authorization: `Bearer ${accessToken}` } }),
     ]);
-    const onboard = (await onboardRes.json()) as { complete?: boolean };
-    if (!onboard.complete) return router.push("/signup");
+    const onboard = (await onboardRes.json()) as { complete?: boolean; is_google_user?: boolean };
+    console.info("[wovo-ai] Onboarding status", onboard);
+    if (!onboard.complete) {
+      console.info("[wovo-ai] Redirecting to /signup because onboarding is incomplete");
+      return router.push("/signup");
+    }
 
     const subData = (await subRes.json()) as UnifiedSubscriptionResponse;
+    const accessState = resolveAiAccessState(subData);
+    console.info("[wovo-ai] Subscription/access state", accessState);
     setSubscription(subData);
-    setShowPlanModal(resolveAiAccessState(subData).showPaywall);
+    setShowPlanModal(accessState.showPaywall);
     setLoadingPlan(false);
     const chatPayload = (await chatsRes.json()) as { chats: ChatSummary[] };
     setChats(chatPayload.chats ?? []);
@@ -197,6 +204,7 @@ export default function WovoAiPage() {
 
     const fromHash = parseSessionFromHash(window.location.hash);
     if (fromHash) {
+      console.info("[wovo-ai] Session found in URL hash; persisting");
       persistSession(fromHash);
       window.history.replaceState({}, document.title, "/wovo-ai");
       void load(fromHash.access_token).catch((e) => {
@@ -207,9 +215,11 @@ export default function WovoAiPage() {
     }
     const s = readSessionFromStorage();
     if (!s?.access_token) {
+      console.warn("[wovo-ai] No session found in storage; redirecting to login");
       setLoadingPlan(false);
       return router.push("/login");
     }
+    console.info("[wovo-ai] Session found in storage; loading app");
     void load(s.access_token).catch((e) => {
       console.error("Failed to load Wovo AI", e);
       if (mounted) setLoadingPlan(false);

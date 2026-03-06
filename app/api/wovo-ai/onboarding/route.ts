@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { isGoogleAuthUser, requireServerUser, supabaseServiceRoleRequest } from "@/lib/supabase/server";
+import { ensureProfileForUser } from "@/lib/wovo-ai/profile-bootstrap";
 
 type OnboardingBody = { full_name?: string; username?: string; age?: number; gender?: "boy" | "girl" | "other" };
 
@@ -11,15 +12,12 @@ type OnboardingProfileRow = {
   email: string | null;
 };
 
-function resolveGoogleProfileDetails(user: Awaited<ReturnType<typeof requireServerUser>>["user"]) {
-  const fullName = user.user_metadata?.full_name?.trim() || user.user_metadata?.name?.trim() || null;
-  const avatarUrl = user.user_metadata?.avatar_url?.trim() || user.user_metadata?.picture?.trim() || null;
-  return { fullName, avatarUrl };
-}
-
 export async function GET(request: Request) {
   try {
     const { user } = await requireServerUser(request.headers.get("authorization"));
+    console.info("[onboarding] Session verified", { userId: user.id });
+    await ensureProfileForUser(user);
+
     const rows = await supabaseServiceRoleRequest<OnboardingProfileRow[]>(
       `/rest/v1/profiles?select=full_name,username,age,gender,email&user_id=eq.${user.id}&limit=1`,
     );
@@ -27,25 +25,10 @@ export async function GET(request: Request) {
     const isGoogleUser = isGoogleAuthUser(user);
 
     if (isGoogleUser) {
-      const { fullName, avatarUrl } = resolveGoogleProfileDetails(user);
-
-      await supabaseServiceRoleRequest("/rest/v1/profiles?on_conflict=user_id", {
-        method: "POST",
-        headers: { Prefer: "resolution=merge-duplicates,return=representation" },
-        body: JSON.stringify({
-          user_id: user.id,
-          email: user.email ?? profile?.email ?? null,
-          full_name: profile?.full_name ?? fullName,
-          username: profile?.username ?? null,
-          avatar_url: avatarUrl,
-          updated_at: new Date().toISOString(),
-        }),
-      });
-
       const refreshedRows = await supabaseServiceRoleRequest<OnboardingProfileRow[]>(
         `/rest/v1/profiles?select=full_name,username,age,gender,email&user_id=eq.${user.id}&limit=1`,
       );
-
+      console.info("[onboarding] Google user allowed to skip manual onboarding", { userId: user.id });
       return NextResponse.json({ profile: refreshedRows?.[0] ?? profile, complete: true, is_google_user: true });
     }
 

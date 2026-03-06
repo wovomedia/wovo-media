@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { mapSupabaseAuthError } from "@/lib/supabase/auth-errors";
 import { supabase } from "@/lib/supabase/client";
+import { getBaseUrl } from "@/lib/site-url";
 import { persistSession } from "@/lib/supabase/session-client";
 
 export default function LoginPage() {
@@ -12,10 +13,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const siteUrl = (
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    (typeof window !== "undefined" ? window.location.origin : "")
-  ).replace(/\/$/, "");
+  const siteUrl = getBaseUrl();
 
   const loginWithGoogle = async () => {
     // Also configure Supabase Auth URL Configuration:
