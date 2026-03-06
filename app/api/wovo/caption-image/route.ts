@@ -1,10 +1,12 @@
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
+import { formatBusinessContext, type BusinessContext, normalizeBusinessContext } from "@/lib/wovo-ai/business-context";
 
 export const runtime = "nodejs";
 
 type Body = {
   prompt?: string;
+  businessContext?: Partial<BusinessContext>;
 };
 
 const CAPTION_SYSTEM_PROMPT =
@@ -21,6 +23,8 @@ export async function POST(request: Request) {
 
     const body = (await request.json()) as Body;
     const prompt = body.prompt?.trim() ?? "";
+    const businessContext = normalizeBusinessContext(body.businessContext);
+    const businessContextBlock = formatBusinessContext(businessContext);
 
     if (!prompt) {
       return NextResponse.json({ error: "Prompt is required." }, { status: 400 });
@@ -31,7 +35,16 @@ export async function POST(request: Request) {
     const captionResponse = await client.responses.create({
       model: process.env.OPENAI_MODEL || "gpt-5",
       input: [
-        { role: "system", content: CAPTION_SYSTEM_PROMPT },
+        {
+          role: "system",
+          content: [
+            CAPTION_SYSTEM_PROMPT,
+            businessContextBlock,
+            "Instruction: Use the business context when relevant. Do not invent missing details. If a field is blank, ignore it.",
+          ]
+            .filter(Boolean)
+            .join("\n\n"),
+        },
         { role: "user", content: prompt },
       ],
     });
@@ -44,7 +57,16 @@ export async function POST(request: Request) {
     const imagePromptResponse = await client.responses.create({
       model: process.env.OPENAI_MODEL || "gpt-5",
       input: [
-        { role: "system", content: IMAGE_PROMPT_INSTRUCTION },
+        {
+          role: "system",
+          content: [
+            IMAGE_PROMPT_INSTRUCTION,
+            businessContextBlock,
+            "Instruction: Use business description and location details to improve relevance when available. Do not include phone numbers, email addresses, or text overlays unless explicitly requested by the user.",
+          ]
+            .filter(Boolean)
+            .join("\n\n"),
+        },
         { role: "user", content: caption },
       ],
     });
