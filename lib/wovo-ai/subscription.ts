@@ -20,7 +20,10 @@ type ProfileRow = {
 
 function toStatusPayload(profile: ProfileRow | null, status?: string | null, isAutoPro = false): UnifiedSubscriptionResponse {
   const plan = isAutoPro ? "pro" : profile?.plan ?? "none";
-  const monthlyLimit = profile?.monthly_limit ?? (plan !== "none" ? getPlanConfig(plan).monthlyCredits : 0);
+  const autoProMonthlyLimit = 300;
+  const monthlyLimit = isAutoPro
+    ? (profile?.monthly_limit ?? autoProMonthlyLimit)
+    : (profile?.monthly_limit ?? (plan !== "none" ? getPlanConfig(plan).monthlyCredits : 0));
   const monthlyUsed = profile?.monthly_used ?? 0;
   const extraCredits = profile?.extra_credits ?? 0;
   const creditsRemaining = Math.max(monthlyLimit + extraCredits - monthlyUsed, 0);
