@@ -570,10 +570,10 @@ export default function WovoAiPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#060807] text-white">
+    <main className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#060807] text-white">
       {showPlanModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur">
-          <div className="relative w-full max-w-5xl overflow-hidden rounded-2xl border border-white/10 bg-[#0d1110] p-6 text-white shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 px-4 py-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] backdrop-blur sm:p-0">
+          <div className="relative w-full min-w-0 max-w-full overflow-visible rounded-2xl border border-white/10 bg-[#0d1110] p-4 text-white shadow-xl sm:max-w-5xl sm:overflow-hidden sm:p-6">
             <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.16),_transparent_60%)]" />
             <div className="mb-5 flex items-center justify-between gap-3">
               <button
@@ -608,14 +608,14 @@ export default function WovoAiPage() {
               )}
             </div>
 
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid w-full min-w-0 gap-4 md:grid-cols-3">
               {planOptions.map((plan) => (
-                <article key={plan.priceId} className={`rounded-xl border p-4 transition duration-200 hover:scale-[1.02] ${plan.name === "Pro" ? "border-emerald-400/80 bg-emerald-500/10" : "border-white/10 bg-black/30"}`}>
+                <article key={plan.priceId} className={`w-full min-w-0 max-w-full rounded-xl border p-4 transition duration-200 md:hover:scale-[1.02] ${plan.name === "Pro" ? "border-emerald-400/80 bg-emerald-500/10" : "border-white/10 bg-black/30"}`}>
                   {plan.badge && (<p className="mb-2 inline-block rounded-full bg-emerald-500 px-2 py-0.5 text-xs font-semibold text-black">{plan.badge}</p>)}
                   <h3 className="text-lg font-semibold">{plan.name}</h3>
                   <p className="text-zinc-200">{plan.price}</p>
                   <p className="text-sm text-zinc-400">{plan.credits}</p>
-                  <ul className="mt-3 space-y-1 text-sm text-zinc-300">{plan.perks.map((perk) => <li key={perk}>• {perk}</li>)}</ul>
+                  <ul className="mt-3 space-y-1 text-sm text-zinc-300">{plan.perks.map((perk) => <li key={perk} className="break-words">• {perk}</li>)}</ul>
                   <button className="mt-4 w-full rounded-lg bg-emerald-400 py-2 font-semibold text-black transition hover:-translate-y-0.5 hover:bg-emerald-300 hover:shadow-[0_0_22px_rgba(16,185,129,0.35)]" onClick={() => void startCheckout(plan.priceId)}>
                     Choose {plan.name}
                   </button>

@@ -54,15 +54,15 @@ export default function WovoPricingPage() {
   };
 
   return (
-    <main className="min-h-screen bg-black px-6 py-16 text-white">
-      <h1 className="text-center text-4xl font-bold">Wovo AI Pricing</h1>
-      <p className="mb-10 text-center text-white/70">Custom Wovo upgrade flow (no forced portal redirect).</p>
-      <div className="mx-auto grid max-w-6xl gap-6 md:grid-cols-3">
+    <main className="min-h-screen w-full max-w-full overflow-x-hidden bg-black py-16 text-white">
+      <h1 className="px-4 text-center text-4xl font-bold sm:px-6">Wovo AI Pricing</h1>
+      <p className="mb-10 px-4 text-center text-white/70 sm:px-6">Custom Wovo upgrade flow (no forced portal redirect).</p>
+      <div className="mx-auto grid w-full min-w-0 max-w-6xl gap-6 px-4 sm:px-6 md:grid-cols-3">
         {CARDS.map((card) => (
-          <article key={card.key} className="rounded-2xl border border-emerald-400/30 bg-zinc-950 p-6">
+          <article key={card.key} className="w-full min-w-0 max-w-full rounded-2xl border border-emerald-400/30 bg-zinc-950 p-6">
             <h2 className="text-2xl font-semibold">{card.title}</h2>
             <p className="mt-3 text-3xl font-bold text-emerald-300">{card.price}</p>
-            <p className="mt-1 text-white/75">{card.credits}</p>
+            <p className="mt-1 break-words text-white/75">{card.credits}</p>
             <button className="mt-8 w-full rounded-xl bg-emerald-400 px-4 py-3 font-semibold text-black" onClick={() => void choose(card.key).catch((e: unknown) => setError(e instanceof Error ? e.message : "Failed"))}>
               {active ? "Upgrade now" : "Start plan"}
             </button>
