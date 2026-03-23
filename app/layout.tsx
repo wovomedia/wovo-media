@@ -1,15 +1,12 @@
 import type { Metadata } from "next";
+import { SiteFooter } from "@/components/layout/site-footer";
+import { SiteHeader } from "@/components/layout/site-header";
 import "./globals.css";
-import { SiteFooter, SiteHeader } from "./components/site-chrome";
 
 export const metadata: Metadata = {
-  title: "Wovo Media",
-  description: "Wovo Media — Social • Web • AI • Drone Media",
-  applicationName: "Wovo Media",
-  icons: {
-    icon: "/favicon.ico",
-    apple: "/apple-touch-icon.png",
-  },
+  title: "Wovo Media | Content and AI for Restaurants and Small Businesses",
+  description:
+    "Wovo Media helps restaurants and small businesses grow with DIY AI tools and done-for-you content, ads, and conversion systems.",
 };
 
 export default function RootLayout({
@@ -19,7 +16,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased bg-black text-white">
+      <body className="antialiased">
         <SiteHeader />
         {children}
         <SiteFooter />
