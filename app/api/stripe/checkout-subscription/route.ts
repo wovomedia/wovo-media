@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getEnv } from "@/lib/env";
 import { createCheckoutSession } from "@/lib/stripe";
 import { requireServerUser } from "@/lib/supabase/server";
 import { ensureStripeCustomerForUser } from "@/lib/wovo-ai/billing";
@@ -14,7 +15,7 @@ export async function POST(request: Request) {
     }
 
     const customerId = await ensureStripeCustomerForUser(user.id, user.email);
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? new URL(request.url).origin;
+    const siteUrl = getEnv("NEXT_PUBLIC_SITE_URL").replace(/\/$/, "") || new URL(request.url).origin;
     const session = await createCheckoutSession({
       customerId,
       priceId,

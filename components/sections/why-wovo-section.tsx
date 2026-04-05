@@ -7,22 +7,13 @@ export function WhyWovoSection() {
   return (
     <section className="bg-[var(--wm-muted)] py-16 sm:py-20">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        <SectionHeading
-          eyebrow="Why Wovo"
-          title="Built for practical growth, not marketing noise"
-          description="A founder-led team, transparent pricing paths, and execution that works for busy owners."
-        />
-
+        <SectionHeading eyebrow="Why Wovo" title="Built for every business, not just restaurants" description="We work with any industry — healthcare, government, farms, contractors, retail, and more. Licensed, insured, drone certified, 24/7." />
         <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {whyWovo.map((item, index) => (
-            <FadeIn key={item.title} delay={index * 0.05}>
+          {whyWovo.map((item, i) => (
+            <FadeIn key={item.title} delay={i * 0.05}>
               <Card className="h-full">
-                <CardHeader>
-                  <CardTitle className="text-lg">{item.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-slate-600">{item.description}</p>
-                </CardContent>
+                <CardHeader><CardTitle className="text-lg">{item.title}</CardTitle></CardHeader>
+                <CardContent><p className="text-sm text-slate-600">{item.description}</p></CardContent>
               </Card>
             </FadeIn>
           ))}

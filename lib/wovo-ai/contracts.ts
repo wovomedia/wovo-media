@@ -23,4 +23,9 @@ export type UnifiedSubscriptionResponse = {
   show_paywall?: boolean;
   effective_plan?: ResponsePlan;
   monthly_plan_credits?: number;
+  subscription_current_period_end?: string | null;
+  remainingCredits?: number;
+  remaining_credits?: number;
+  current_period_end?: string | null;
+  period_end?: string | null;
 };

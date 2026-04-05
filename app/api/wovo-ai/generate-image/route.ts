@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
+import { getEnv } from "@/lib/env";
 import { requireServerUser } from "@/lib/supabase/server";
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const OPENAI_API_KEY = getEnv("OPENAI_API_KEY");
 
 type GenerateImageBody = {
   imagePrompt?: string;

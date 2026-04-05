@@ -17,8 +17,8 @@ export default function ResultsPage() {
     <main>
       <PageIntro
         eyebrow="Results"
-        title="Proof from campaigns across restaurants and local businesses"
-        description="From viral restaurant clips to lead-focused service campaigns, Wovo is built around measurable outcomes."
+        title="Proof from restaurant-focused campaigns"
+        description="From viral restaurant clips to offer-driven bookings, Wovo is built around measurable outcomes."
         primaryCta={{ label: "Book a Call", href: "/contact" }}
         secondaryCta={{ label: "See Pricing", href: "/pricing" }}
       />

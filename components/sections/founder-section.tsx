@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { FadeIn } from "@/components/motion/fade-in";
 import { SectionHeading } from "@/components/sections/section-heading";
 import { brand, founder } from "@/data/site-content";
@@ -7,40 +6,26 @@ import { Button } from "@/components/ui/button";
 export function FounderSection() {
   return (
     <section className="py-16 sm:py-20">
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
+      <div className="mx-auto grid max-w-6xl gap-8 px-4 sm:px-6 lg:grid-cols-2 lg:items-center">
         <FadeIn>
-          {/* TODO: Replace this placeholder with a professional founder portrait. */}
-          <Image
-            src="/images/founder-placeholder.svg"
-            alt="Placeholder portrait card for Payton Cody"
-            width={740}
-            height={820}
-            className="w-full rounded-3xl border border-slate-200 bg-white object-cover shadow-[0_16px_44px_rgba(15,23,36,0.08)]"
-          />
+          <div className="flex h-80 w-full items-center justify-center rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-900 to-slate-800 shadow-[0_16px_44px_rgba(15,23,36,0.12)]">
+            <div className="text-center text-white">
+              <div className="mb-3 text-6xl font-black text-[var(--wm-accent)]">W</div>
+              <p className="text-xl font-bold">Payton Cody</p>
+              <p className="text-sm text-slate-400">Founder & CEO, Wovo Media</p>
+            </div>
+          </div>
         </FadeIn>
-
         <FadeIn delay={0.08} className="space-y-6">
-          <SectionHeading
-            eyebrow="Founder-led"
-            title={`${founder.name}, ${founder.title}`}
-            description={founder.bio}
-          />
-          <p className="text-sm leading-relaxed text-slate-600">
-            Prefer direct communication? Email{" "}
-            <a className="font-semibold text-slate-900 underline" href={`mailto:${brand.email}`}>
-              {brand.email}
-            </a>{" "}
-            or call/text{" "}
-            <a className="font-semibold text-slate-900 underline" href={`tel:${brand.phone}`}>
-              {brand.phoneDisplay}
-            </a>
-            .
-          </p>
+          <SectionHeading eyebrow="Founder-led" title={`${founder.name}, ${founder.title}`} description={founder.bio} />
+          <div className="space-y-1 text-sm text-slate-600">
+            <p>📧 Personal: <a className="font-semibold text-slate-900 underline" href={`mailto:${brand.email}`}>{brand.email}</a></p>
+            <p>🛟 Support: <a className="font-semibold text-slate-900 underline" href={`mailto:${brand.supportEmail}`}>{brand.supportEmail}</a></p>
+            <p>📞 Call/Text: <a className="font-semibold text-slate-900 underline" href={`tel:${brand.phone}`}>{brand.phoneDisplay}</a></p>
+          </div>
           <div className="flex flex-wrap gap-3">
-            <Button href="/about">Read our story</Button>
-            <Button href="/contact" variant="outline">
-              Start a conversation
-            </Button>
+            <Button href="/about">Our Story</Button>
+            <Button href="/contact" variant="outline">Book a Call</Button>
           </div>
         </FadeIn>
       </div>

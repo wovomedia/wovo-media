@@ -1,9 +1,13 @@
 import { requireServerUser, supabaseServiceRoleRequest } from "@/lib/supabase/server";
+import { getEnv } from "@/lib/env";
 import { isPaidStatus } from "@/lib/wovo-ai/plans";
 import { getSubscriptionStatus } from "@/lib/wovo-ai/subscription";
+import { resolveUserEmail } from "@/lib/wovo-ai/admin";
+import { getModerationStateForUser } from "@/lib/wovo-ai/moderation";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+const OPENAI_API_KEY = getEnv("OPENAI_API_KEY");
 
 type WovoAiRequestBody = {
   business_name?: string;
@@ -102,7 +106,7 @@ Business context:
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      Authorization: `Bearer ${OPENAI_API_KEY}`,
     },
     body: JSON.stringify({
       model: "gpt-4o-mini",
@@ -136,7 +140,7 @@ async function generateImage(imagePrompt: string): Promise<string | null> {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      Authorization: `Bearer ${OPENAI_API_KEY}`,
     },
     body: JSON.stringify({
       model: "gpt-image-1",
@@ -158,11 +162,16 @@ async function generateImage(imagePrompt: string): Promise<string | null> {
 
 export async function POST(request: Request) {
   try {
-    if (!process.env.OPENAI_API_KEY) {
+    if (!OPENAI_API_KEY) {
       return Response.json({ error: "Missing OPENAI_API_KEY environment variable" }, { status: 500 });
     }
 
     const { user } = await requireServerUser(request.headers.get("authorization"));
+    const moderation = await getModerationStateForUser(user.id);
+    if (moderation.banned) {
+      return Response.json({ error: "Your account is currently restricted." }, { status: 403 });
+    }
+    const resolvedEmail = resolveUserEmail(user);
 
     const body = (await request.json()) as WovoAiRequestBody;
     const topic = body.topic?.trim() ?? "";
@@ -173,7 +182,7 @@ export async function POST(request: Request) {
 
     let updatedCredits: { remaining: number; total: number; weekly_used: number; weekly_limit: number } | null = null;
 
-    const subscription = await getSubscriptionStatus(user.id, user.email);
+    const subscription = await getSubscriptionStatus(user.id, resolvedEmail);
     if (!isPaidStatus(subscription.status)) {
       return Response.json({ error: "An active subscription is required." }, { status: 402 });
     }

@@ -8,14 +8,18 @@ import { ProcessSection } from "@/components/sections/process-section";
 import { ResultsSection } from "@/components/sections/results-section";
 import { ServicePathsSection } from "@/components/sections/service-paths-section";
 import { WhyWovoSection } from "@/components/sections/why-wovo-section";
+import { ClientShowcaseSection } from "@/components/sections/client-showcase-section";
+import { NetworkPromoSection } from "@/components/sections/network-promo-section";
 
 export default function HomePage() {
   return (
     <main>
       <HeroSection />
       <ResultsSection />
+      <ClientShowcaseSection />
       <ServicePathsSection />
       <AIFeatureSection />
+      <NetworkPromoSection />
       <ProcessSection />
       <WhyWovoSection />
       <CaseStudyPreviewSection />

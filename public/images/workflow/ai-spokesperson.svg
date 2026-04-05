@@ -1,0 +1,11 @@
+<svg width="960" height="640" viewBox="0 0 960 640" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="960" height="640" rx="28" fill="#F0FDF4"/>
+  <rect x="36" y="36" width="888" height="568" rx="24" fill="white" stroke="#BBF7D0"/>
+  <rect x="74" y="86" width="332" height="458" rx="20" fill="#DCFCE7"/>
+  <circle cx="240" cy="220" r="80" fill="#86EFAC"/>
+  <rect x="114" y="334" width="252" height="20" rx="10" fill="#22C55E" opacity="0.5"/>
+  <rect x="114" y="366" width="192" height="20" rx="10" fill="#22C55E" opacity="0.5"/>
+  <rect x="438" y="86" width="454" height="120" rx="18" fill="#ECFDF3"/>
+  <rect x="438" y="224" width="454" height="320" rx="18" fill="#F0FDF4"/>
+  <text x="86" y="122" fill="#14532D" font-family="Trebuchet MS, Arial" font-size="20" font-weight="700">AI Spokesperson</text>
+</svg>

@@ -1,14 +1,9 @@
 import { FadeIn } from "@/components/motion/fade-in";
 import { Button } from "@/components/ui/button";
 
-type CtaBannerProps = {
-  title: string;
-  description: string;
-  primary: { label: string; href: string };
-  secondary?: { label: string; href: string };
-};
+type Props = { title: string; description: string; primary: { label: string; href: string }; secondary?: { label: string; href: string } };
 
-export function CtaBanner({ title, description, primary, secondary }: CtaBannerProps) {
+export function CtaBanner({ title, description, primary, secondary }: Props) {
   return (
     <section className="py-14 sm:py-16">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
@@ -16,14 +11,8 @@ export function CtaBanner({ title, description, primary, secondary }: CtaBannerP
           <h2 className="text-3xl font-semibold tracking-tight text-slate-900">{title}</h2>
           <p className="mt-3 max-w-2xl text-slate-600">{description}</p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <Button href={primary.href} size="lg">
-              {primary.label}
-            </Button>
-            {secondary ? (
-              <Button href={secondary.href} size="lg" variant="outline">
-                {secondary.label}
-              </Button>
-            ) : null}
+            <Button href={primary.href} size="lg">{primary.label}</Button>
+            {secondary && <Button href={secondary.href} size="lg" variant="outline">{secondary.label}</Button>}
           </div>
         </FadeIn>
       </div>

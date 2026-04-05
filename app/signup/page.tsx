@@ -1,125 +1,54 @@
 "use client";
-
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { getBaseUrl } from "@/lib/site-url";
 import { clearPendingOnboarding, storePendingOnboarding } from "@/lib/wovo-ai/onboarding-client";
-import { readSessionFromStorage } from "@/lib/supabase/session-client";
-import type { UnifiedSubscriptionResponse } from "@/lib/wovo-ai/contracts";
-import { getAuthAccessState } from "@/lib/wovo-ai/access";
 
 export default function SignupPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [username, setUsername] = useState("");
-  const [age, setAge] = useState(18);
-  const [gender, setGender] = useState<"boy" | "girl" | "other">("other");
   const [error, setError] = useState("");
-  const siteUrl = getBaseUrl();
-
-  useEffect(() => {
-    const session = readSessionFromStorage();
-    const authState = getAuthAccessState({ session });
-    console.info("[signup] Auth page guard", { route: "/signup", isAuthenticated: authState.isAuthenticated });
-
-    if (!authState.isAuthenticated || !session?.access_token) {
-      return;
-    }
-
-    supabase.setAccessToken(session.access_token);
-    void fetch("/api/wovo-ai/subscription", {
-      headers: { Authorization: `Bearer ${session.access_token}` },
-      cache: "no-store",
-    })
-      .then(async (response) => {
-        if (response.status === 401) {
-          return;
-        }
-
-        const payload = (await response.json()) as UnifiedSubscriptionResponse;
-        const nextAuthState = getAuthAccessState({ session, subscription: payload });
-        const target = nextAuthState.hasAppAccess ? "/wovo-ai" : "/wovo-ai";
-        console.info("[signup] Authenticated user detected on auth page; redirecting", {
-          target,
-          hasAppAccess: nextAuthState.hasAppAccess,
-          needsPlan: nextAuthState.needsPlan,
-        });
-        router.replace(target);
-      })
-      .catch((err: unknown) => {
-        console.warn("[signup] Failed to resolve subscription from auth page guard", err);
-        router.replace("/wovo-ai");
-      });
-  }, [router]);
-
-
-  const onSignup = async () => {
-    setError("");
-    const onboarding = { full_name: fullName.trim(), username: username.trim(), age, gender };
-    storePendingOnboarding(onboarding);
-
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${siteUrl}/auth/callback`,
-      },
-    });
-
-    if (error) {
-      clearPendingOnboarding();
-      setError(error.message);
-    } else {
-      router.push("/wovo-ai");
-    }
-  };
+  const [loading, setLoading] = useState(false);
 
   const signupWithGoogle = async () => {
-    // Also configure Supabase Auth URL Configuration:
-    // Site URL: https://wovomedia.com
-    // Redirect URLs: https://wovomedia.com/auth/callback, https://wovomedia.com/login
-    const { data } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${siteUrl}/auth/callback`,
-      },
-    });
+    const { data } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: `${getBaseUrl()}/auth/callback` } });
     if (data?.url) window.location.href = data.url;
   };
 
+  const onSignup = async () => {
+    if (!fullName.trim() || !email || !password) { setError("Please fill in all fields."); return; }
+    setLoading(true); setError("");
+    storePendingOnboarding({ full_name: fullName.trim(), username: email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g,""), age: 18, gender: "other" });
+    const { error: err } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: `${getBaseUrl()}/auth/callback` } });
+    setLoading(false);
+    if (err) { clearPendingOnboarding(); setError(err.message); return; }
+    router.push("/wovo-ai");
+  };
+
   return (
-    <main className="flex min-h-screen items-center justify-center bg-black p-6 text-white">
-      <div className="w-full max-w-lg rounded-2xl border border-emerald-400/30 bg-zinc-950 p-5">
-        <h1 className="text-2xl font-semibold">Create your Wovo AI account</h1>
-        <p className="mt-1.5 text-sm text-white/65">Choose one signup method and stick with it.</p>
-        <div className="mt-3 grid gap-2 md:grid-cols-2">
-          <input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Full name" className="rounded-xl border border-white/20 bg-black p-3" />
-          <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Username" className="rounded-xl border border-white/20 bg-black p-3" />
-          <input type="number" value={age} onChange={(e) => setAge(Number(e.target.value))} placeholder="Age" className="rounded-xl border border-white/20 bg-black p-3" />
-          <select value={gender} onChange={(e) => setGender(e.target.value as "boy" | "girl" | "other")} className="rounded-xl border border-white/20 bg-black p-3">
-            <option value="boy">Boy</option><option value="girl">Girl</option><option value="other">Other</option>
-          </select>
+    <main className="flex min-h-screen items-center justify-center bg-[#060807] p-6 text-white">
+      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-zinc-950 p-6">
+        <div className="mb-6 text-center">
+          <div className="text-2xl font-black text-emerald-400 mb-1">Wovo Media AI</div>
+          <h1 className="text-xl font-bold text-white">Create your account</h1>
+          <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-4 py-1.5 text-xs font-semibold text-emerald-300">
+            🎁 7-day free trial — no charge until it ends
+          </div>
         </div>
-        <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="mt-2 w-full rounded-xl border border-white/20 bg-black p-3" />
-        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" className="mt-2 w-full rounded-xl border border-white/20 bg-black p-3" />
-        <button
-          onClick={() => void onSignup()}
-          className="mt-3 w-full rounded-xl bg-emerald-400 p-3 font-semibold text-black"
-        >
-          Create account
-        </button>
-        <button
-          onClick={() => void signupWithGoogle()}
-          className="mt-2 w-full rounded-xl border border-white/25 p-3"
-        >
-          Continue with Google
-        </button>
-        <p className="mt-2.5 text-sm text-white/70">Already have an account? <Link href="/login" className="text-emerald-300">Sign in</Link></p>
-        {error && <p className="mt-2 text-sm text-red-300">{error}</p>}
+        <button onClick={() => void signupWithGoogle()} className="w-full rounded-xl border border-white/20 bg-white/5 py-3 text-sm font-semibold text-white hover:bg-white/10 transition mb-4">Continue with Google</button>
+        <div className="relative mb-4"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10"/></div><div className="relative flex justify-center"><span className="bg-zinc-950 px-3 text-xs text-zinc-500">or email</span></div></div>
+        <input value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Full name" className="mb-3 w-full rounded-xl border border-white/20 bg-black px-4 py-3 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-emerald-400/50"/>
+        <input value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" type="email" className="mb-3 w-full rounded-xl border border-white/20 bg-black px-4 py-3 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-emerald-400/50"/>
+        <input value={password} onChange={e => setPassword(e.target.value)} placeholder="Password (min 6 chars)" type="password" className="mb-4 w-full rounded-xl border border-white/20 bg-black px-4 py-3 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-emerald-400/50"/>
+        <button onClick={() => void onSignup()} disabled={loading} className="w-full rounded-xl bg-emerald-400 py-3 text-sm font-bold text-black hover:bg-emerald-300 disabled:opacity-50 transition">{loading ? "Creating account..." : "Start 7-Day Free Trial →"}</button>
+        {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
+        <p className="mt-3 text-center text-xs text-zinc-600">By signing up you agree to our terms. Cancel any time during trial.</p>
+        <p className="mt-3 text-center text-sm text-zinc-500">Already have an account? <Link href="/login" className="text-emerald-400 font-semibold">Sign in</Link></p>
+        <p className="mt-2 text-center text-xs text-zinc-600"><a href="/" className="hover:text-zinc-400">← Back to wovomedia.com</a></p>
       </div>
     </main>
   );

@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
+import { getEnv } from "@/lib/env";
 import { guardAiRequest, toAiGuardErrorResponse } from "@/lib/wovo-ai/request-guard";
 import { requireServerUser, supabaseServiceRoleRequest } from "@/lib/supabase/server";
 
@@ -32,7 +33,7 @@ function systemPrompt(action?: string): string {
 
 export async function POST(request: Request) {
   try {
-    const openAiApiKey = process.env.OPENAI_API_KEY;
+    const openAiApiKey = getEnv("OPENAI_API_KEY");
     if (!openAiApiKey) {
       return NextResponse.json({ error: "Missing OPENAI_API_KEY" }, { status: 500 });
     }

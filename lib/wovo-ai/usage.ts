@@ -1,10 +1,10 @@
 export type PromptActionType = "chat" | "caption" | "caption_image" | "image";
 
 export function getPromptCreditCost(type: string): number {
-  if (type === "chat") return 1;
-  if (type === "caption") return 1;
+  if (type === "chat")          return 1;
+  if (type === "caption")       return 1;
   if (type === "caption_image") return 2;
-  if (type === "image") return 3;
+  if (type === "image")         return 3;
   return 1;
 }
 

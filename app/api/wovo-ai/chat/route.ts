@@ -1,4 +1,6 @@
 import { requireServerUser, supabaseServiceRoleRequest } from "@/lib/supabase/server";
+import { getEnv } from "@/lib/env";
+import { normalizeRole, resolveEffectiveRole, resolveRoleForEmail, resolveUserEmail } from "@/lib/wovo-ai/admin";
 
 export const runtime = "nodejs";
 
@@ -35,33 +37,54 @@ function getSystemPrompt(quickAction?: string): string {
 
 export async function POST(request: Request) {
   try {
-    if (!process.env.OPENAI_API_KEY) {
+    const openAiKey = getEnv("OPENAI_API_KEY");
+    if (!openAiKey) {
       return Response.json({ error: "Missing OPENAI_API_KEY environment variable" }, { status: 500 });
     }
 
     const { user } = await requireServerUser(request.headers.get("authorization"));
     const body = (await request.json()) as ChatRequestBody;
     const message = body.message?.trim() ?? "";
+    const resolvedEmail = resolveUserEmail(user);
 
     if (!message) {
       return Response.json({ error: "Message is required." }, { status: 400 });
     }
 
-    const consumeRows = await supabaseServiceRoleRequest<ConsumeCreditRow[]>("/rest/v1/rpc/consume_generation_credit", {
-      method: "POST",
-      body: JSON.stringify({ p_user_id: user.id }),
-    });
+    const emailRole = resolveRoleForEmail(resolvedEmail);
+    let userRole = normalizeRole(emailRole);
+    try {
+      const roleRows = await supabaseServiceRoleRequest<Array<{ role: string | null }>>(
+        `/rest/v1/users?select=role&id=eq.${encodeURIComponent(user.id)}&limit=1`,
+      );
+      userRole = resolveEffectiveRole({
+        role: roleRows?.[0]?.role ?? userRole,
+        email: resolvedEmail,
+      });
+    } catch {
+      userRole = resolveEffectiveRole({
+        role: userRole,
+        email: resolvedEmail,
+      });
+    }
 
-    const consume = consumeRows?.[0];
-    if (!consume?.consumed || consume.remaining_credits < 0) {
-      return Response.json({ error: "No credits remaining" }, { status: 402 });
+    if (emailRole !== "admin" && userRole !== "admin") {
+      const consumeRows = await supabaseServiceRoleRequest<ConsumeCreditRow[]>("/rest/v1/rpc/consume_generation_credit", {
+        method: "POST",
+        body: JSON.stringify({ p_user_id: user.id }),
+      });
+
+      const consume = consumeRows?.[0];
+      if (!consume?.consumed || consume.remaining_credits < 0) {
+        return Response.json({ error: "No credits remaining" }, { status: 402 });
+      }
     }
 
     const openAiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        Authorization: `Bearer ${openAiKey}`,
       },
       body: JSON.stringify({
         model: "gpt-4o-mini",

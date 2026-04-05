@@ -1,18 +1,14 @@
-export const ADMIN_PRO_EMAILS = ["payton@wovomedia.com"];
+export const ADMIN_PRO_EMAILS = ["Payton@wovomedia.com", "payton@wovomedia.com"];
 
 function getAdminProEmails(): string[] {
   const envEmails = (process.env.ADMIN_EMAILS ?? "")
-    .split(",")
-    .map((email) => email.trim().toLowerCase())
-    .filter(Boolean);
-
-  return Array.from(new Set([...ADMIN_PRO_EMAILS, ...envEmails]));
+    .split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
+  return Array.from(new Set([...ADMIN_PRO_EMAILS.map(e => e.toLowerCase()), ...envEmails]));
 }
 
 export function isAdminProEmail(email?: string | null): boolean {
   if (!email) return false;
-  const normalized = email.trim().toLowerCase();
-  return getAdminProEmails().includes(normalized);
+  return getAdminProEmails().includes(email.trim().toLowerCase());
 }
 
 export function isAdminEmail(email: string | undefined | null): boolean {

@@ -1,0 +1,12 @@
+<svg width="960" height="640" viewBox="0 0 960 640" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="960" height="640" rx="28" fill="#EEF2FF"/>
+  <rect x="36" y="36" width="888" height="568" rx="24" fill="white" stroke="#C7D2FE"/>
+  <rect x="68" y="86" width="824" height="76" rx="18" fill="#E0E7FF"/>
+  <rect x="68" y="184" width="258" height="360" rx="20" fill="#EEF2FF"/>
+  <rect x="350" y="184" width="258" height="360" rx="20" fill="#F5F3FF"/>
+  <rect x="632" y="184" width="258" height="360" rx="20" fill="#EDE9FE"/>
+  <circle cx="197" cy="296" r="58" fill="#A5B4FC"/>
+  <circle cx="479" cy="296" r="58" fill="#C4B5FD"/>
+  <circle cx="761" cy="296" r="58" fill="#DDD6FE"/>
+  <text x="84" y="132" fill="#312E81" font-family="Trebuchet MS, Arial" font-size="20" font-weight="700">Mascot Generator</text>
+</svg>

@@ -12,9 +12,11 @@ export function parseSessionFromHash(hash: string): Session | null {
 }
 
 export function readSessionFromStorage(): Session | null {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return null;
-  return JSON.parse(raw) as Session;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as Session;
+  } catch { return null; }
 }
 
 export function persistSession(session: Session) {

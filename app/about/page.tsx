@@ -18,7 +18,7 @@ export default function AboutPage() {
       <PageIntro
         eyebrow="About Wovo"
         title="A founder-led media company built for local growth"
-        description="Wovo Media combines practical AI tooling with high-output creative services for restaurants and small businesses."
+        description="Wovo Media combines practical AI tooling with high-output creative services for restaurants."
         primaryCta={{ label: "Contact the Team", href: "/contact" }}
         secondaryCta={{ label: "See Results", href: "/results" }}
       />

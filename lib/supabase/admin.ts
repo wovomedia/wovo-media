@@ -1,13 +1,11 @@
-function getRequiredEnv(value: string | undefined, name: string): string {
-  if (!value) throw new Error(`Missing ${name}`);
-  return value;
-}
+import { requireEnvAny } from "@/lib/env";
 
-const buildUrl = (path: string) => `${getRequiredEnv(process.env.NEXT_PUBLIC_SUPABASE_URL, "NEXT_PUBLIC_SUPABASE_URL")}${path}`;
+const buildUrl = (path: string) =>
+  `${requireEnvAny(["NEXT_PUBLIC_SUPABASE_URL", "EXPO_PUBLIC_SUPABASE_URL", "SUPABASE_URL"])}${path}`;
 
 export const supabaseAdmin = {
   async query<T = unknown>(path: string, init?: RequestInit): Promise<T> {
-    const supabaseServiceRoleKey = getRequiredEnv(process.env.SUPABASE_SERVICE_ROLE_KEY, "SUPABASE_SERVICE_ROLE_KEY");
+    const supabaseServiceRoleKey = requireEnvAny(["SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_SECRET_KEY"]);
 
     const response = await fetch(buildUrl(path), {
       ...init,

@@ -9,7 +9,7 @@ import { agencyDeliverables, agencyOfferNote, agencyPlans } from "@/data/site-co
 
 export const metadata: Metadata = {
   title: "Services | Wovo Media",
-  description: "Done-for-you restaurant and small business marketing services from Wovo Media.",
+  description: "Done-for-you restaurant marketing services from Wovo Media.",
 };
 
 export default function ServicesPage() {
@@ -25,11 +25,11 @@ export default function ServicesPage() {
 
       <section className="py-16 sm:py-20">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <SectionHeading
-            eyebrow="What we handle"
-            title="Execution built for local business growth"
-            description="Use us as your external media team, from filming to lead capture."
-          />
+        <SectionHeading
+          eyebrow="What we handle"
+          title="Execution built for restaurant growth"
+          description="Use us as your external media team, from filming to booking-focused campaigns."
+        />
           <div className="mt-8 grid gap-4 md:grid-cols-2">
             {agencyDeliverables.map((item, index) => (
               <FadeIn key={item.title} delay={index * 0.05}>
