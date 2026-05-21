@@ -268,3 +268,4 @@ export default function OwnerDashboard() {
     </div>
   )
 }
+// Employee management is accessible via /dashboard/owner (team tab)
