@@ -104,8 +104,8 @@ function WovoAIContent() {
               <div className="card card-accent" style={{maxWidth:480}}>
                 <h3 style={{fontSize:18,fontWeight:600,marginBottom:20}}>Create your account</h3>
                 <form onSubmit={handleSignup} style={{display:'flex',flexDirection:'column',gap:14}}>
-                  <div><label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:6}}>Your name</label><input className="input" value={name} onChange={e=>setName(e.target.value)} placeholder="Payton Cody" required/></div>
-                  <div><label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:6}}>Business name</label><input className="input" value={business} onChange={e=>setBusiness(e.target.value)} placeholder="Mojo Tacos" required/></div>
+                  <div><label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:6}}>Your name</label><input className="input" value={name} onChange={e=>setName(e.target.value)} placeholder="Your full name" required/></div>
+                  <div><label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:6}}>Business name</label><input className="input" value={business} onChange={e=>setBusiness(e.target.value)} placeholder="Your business name" required/></div>
                   <div><label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:6}}>Email</label><input className="input" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@business.com" required/></div>
                   <div><label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:6}}>Password</label><input className="input" type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Min 8 characters" minLength={8} required/></div>
                   <button className="btn btn-primary" type="submit" style={{width:'100%',padding:13,marginTop:4}} disabled={loading}>{loading?'Creating account...':'Create account & continue'}</button>
@@ -154,14 +154,14 @@ function WovoAIContent() {
               <div className="card card-accent" style={{maxWidth:560}}>
                 <h3 style={{fontSize:16,fontWeight:600,marginBottom:20}}>Tell us about your business</h3>
                 <div style={{display:'flex',flexDirection:'column',gap:14}}>
-                  <div><label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:6}}>Business name</label><input className="input" value={wbData.businessName} onChange={e=>setWbData(d=>({...d,businessName:e.target.value}))} placeholder="Mojo Tacos"/></div>
+                  <div><label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:6}}>Business name</label><input className="input" value={wbData.businessName} onChange={e=>setWbData(d=>({...d,businessName:e.target.value}))} placeholder="Your business name"/></div>
                   <div><label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:6}}>Business type</label>
                     <select className="input" value={wbData.type} onChange={e=>setWbData(d=>({...d,type:e.target.value}))}>
                       <option value="">Select type...</option>
                       {['Restaurant / Food','Retail / Boutique','Service Business','Healthcare','Bar / Nightlife','Other'].map(o=><option key={o}>{o}</option>)}
                     </select>
                   </div>
-                  <div><label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:6}}>Location</label><input className="input" value={wbData.location} onChange={e=>setWbData(d=>({...d,location:e.target.value}))} placeholder="Columbia, TN"/></div>
+                  <div><label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:6}}>Location</label><input className="input" value={wbData.location} onChange={e=>setWbData(d=>({...d,location:e.target.value}))} placeholder="City, State"/></div>
                   <div><label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:6}}>Tagline / what makes you special</label><input className="input" value={wbData.tagline} onChange={e=>setWbData(d=>({...d,tagline:e.target.value}))} placeholder="Best tacos in Middle Tennessee"/></div>
                   <div><label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:6}}>Website style</label>
                     <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>

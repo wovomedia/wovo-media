@@ -3,127 +3,79 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 
 // ─── BOOKING FLOW ────────────────────────────────────────────────────────────
-const HOURS = ['9:00 AM','9:30 AM','10:00 AM','10:30 AM','11:00 AM','11:30 AM','12:00 PM','12:30 PM','1:00 PM','1:30 PM','2:00 PM','2:30 PM','3:00 PM','3:30 PM','4:00 PM','4:30 PM']
-
-function getWeekdays(count = 14) {
-  const days: string[] = []
-  const d = new Date()
-  d.setDate(d.getDate() + 1)
-  while (days.length < count) {
-    const day = d.getDay()
-    if (day !== 0 && day !== 6) {
-      days.push(d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }))
-    }
-    d.setDate(d.getDate() + 1)
-  }
-  return days
-}
-
 function BookingFlow({ onClose }: { onClose: () => void }) {
-  const [step, setStep] = useState(0)
   const [data, setData] = useState({ name:'', business:'', email:'', phone:'', type:'Restaurant / Food & Drink', budget:'$300 – $600', notes:'' })
-  const [date, setDate] = useState('')
-  const [time, setTime] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
-  const days = getWeekdays()
 
-  const submit = async () => {
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault()
     setSubmitting(true)
-    await fetch('/api/book', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ ...data, date, time }) })
+    await fetch('/api/book', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data) })
     setDone(true)
     setSubmitting(false)
   }
 
   if (done) return (
     <div style={{textAlign:'center',padding:'20px 0'}}>
-      <div style={{fontSize:48,marginBottom:16}}>🎉</div>
-      <h3 style={{fontSize:20,fontWeight:700,marginBottom:8}}>You're booked!</h3>
-      <p style={{color:'var(--text-2)',fontSize:14,marginBottom:8}}>
-        <strong style={{color:'var(--text)'}}>{date} at {time} CT</strong>
+      <div style={{fontSize:52,marginBottom:18}}>✅</div>
+      <h3 style={{fontSize:22,fontWeight:700,marginBottom:12}}>Request received!</h3>
+      <p style={{color:'var(--text-2)',fontSize:15,lineHeight:1.7,marginBottom:8}}>
+        A member of our team will reach out to <strong style={{color:'var(--text)'}}>{data.email}</strong> within 24 hours to confirm your strategy call and send a Google Meet link.
       </p>
-      <p style={{color:'var(--text-3)',fontSize:13,marginBottom:24}}>Check your email for confirmation. Payton will call you at {data.phone}.</p>
-      <button className="btn btn-primary" style={{width:'100%'}} onClick={onClose}>Done</button>
+      <p style={{color:'var(--text-3)',fontSize:13,marginBottom:28}}>Mon–Fri · 9am–5pm CT · Or pick a time right now 👇</p>
+      <a href="https://calendly.com/wovomedia/wovo-media-strategy-call" target="_blank" rel="noreferrer">
+        <button className="btn btn-primary" style={{width:'100%',marginBottom:10,padding:14,fontSize:15}}>Pick a time on Calendly →</button>
+      </a>
+      <button className="btn btn-ghost" style={{width:'100%'}} onClick={onClose}>Done for now</button>
     </div>
   )
 
   return (
-    <div>
-      {/* Progress */}
-      <div style={{display:'flex',gap:4,marginBottom:24}}>
-        {[0,1,2,3].map(i=><div key={i} style={{flex:1,height:2,borderRadius:2,background:i<=step?'var(--accent)':'var(--bg-4)',transition:'background 0.3s'}}/>)}
+    <form onSubmit={submit} style={{display:'flex',flexDirection:'column',gap:16}}>
+      <h3 style={{fontSize:20,fontWeight:700,marginBottom:2}}>Book a Free Strategy Call</h3>
+      <p style={{fontSize:14,color:'var(--text-2)',marginBottom:4,lineHeight:1.6}}>Tell us about your business and a team member will reach out within 24 hours with a Google Meet link.</p>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+        <div>
+          <label style={{fontSize:13,color:'var(--text-2)',display:'block',marginBottom:6,fontWeight:500}}>Your name *</label>
+          <input className="input" value={data.name} onChange={e=>setData(d=>({...d,name:e.target.value}))} placeholder="Your full name" required/>
+        </div>
+        <div>
+          <label style={{fontSize:13,color:'var(--text-2)',display:'block',marginBottom:6,fontWeight:500}}>Business name *</label>
+          <input className="input" value={data.business} onChange={e=>setData(d=>({...d,business:e.target.value}))} placeholder="Your business name" required/>
+        </div>
+        <div>
+          <label style={{fontSize:13,color:'var(--text-2)',display:'block',marginBottom:6,fontWeight:500}}>Email address *</label>
+          <input className="input" type="email" value={data.email} onChange={e=>setData(d=>({...d,email:e.target.value}))} placeholder="Your email address" required/>
+        </div>
+        <div>
+          <label style={{fontSize:13,color:'var(--text-2)',display:'block',marginBottom:6,fontWeight:500}}>Phone number *</label>
+          <input className="input" value={data.phone} onChange={e=>setData(d=>({...d,phone:e.target.value}))} placeholder="(000) 000-0000" required/>
+        </div>
       </div>
-
-      {step===0 && (
-        <div>
-          <h3 style={{fontSize:18,fontWeight:600,marginBottom:4}}>Tell us about your business</h3>
-          <p style={{fontSize:13,color:'var(--text-3)',marginBottom:20}}>So Payton can come prepared with ideas for you.</p>
-          <div style={{display:'flex',flexDirection:'column',gap:12}}>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-              <div><label style={{fontSize:11,color:'var(--text-3)',display:'block',marginBottom:5,textTransform:'uppercase',letterSpacing:'0.06em'}}>Your name *</label><input className="input" value={data.name} onChange={e=>setData(d=>({...d,name:e.target.value}))} placeholder="Payton Cody"/></div>
-              <div><label style={{fontSize:11,color:'var(--text-3)',display:'block',marginBottom:5,textTransform:'uppercase',letterSpacing:'0.06em'}}>Business name *</label><input className="input" value={data.business} onChange={e=>setData(d=>({...d,business:e.target.value}))} placeholder="Mojo Tacos"/></div>
-              <div><label style={{fontSize:11,color:'var(--text-3)',display:'block',marginBottom:5,textTransform:'uppercase',letterSpacing:'0.06em'}}>Email *</label><input className="input" type="email" value={data.email} onChange={e=>setData(d=>({...d,email:e.target.value}))} placeholder="you@business.com"/></div>
-              <div><label style={{fontSize:11,color:'var(--text-3)',display:'block',marginBottom:5,textTransform:'uppercase',letterSpacing:'0.06em'}}>Phone *</label><input className="input" value={data.phone} onChange={e=>setData(d=>({...d,phone:e.target.value}))} placeholder="(931) 000-0000"/></div>
-            </div>
-            <div><label style={{fontSize:11,color:'var(--text-3)',display:'block',marginBottom:5,textTransform:'uppercase',letterSpacing:'0.06em'}}>Business type</label>
-              <select className="input" value={data.type} onChange={e=>setData(d=>({...d,type:e.target.value}))}>
-                {['Restaurant / Food & Drink','Retail / Boutique','Service Business','Healthcare / Wellness','Bar / Nightlife','Other'].map(o=><option key={o}>{o}</option>)}
-              </select>
-            </div>
-            <div><label style={{fontSize:11,color:'var(--text-3)',display:'block',marginBottom:5,textTransform:'uppercase',letterSpacing:'0.06em'}}>Monthly marketing budget</label>
-              <select className="input" value={data.budget} onChange={e=>setData(d=>({...d,budget:e.target.value}))}>
-                {['Under $300','$300 – $600','$600 – $1,000','$1,000 – $1,500','$1,500+'].map(o=><option key={o}>{o}</option>)}
-              </select>
-            </div>
-            <div><label style={{fontSize:11,color:'var(--text-3)',display:'block',marginBottom:5,textTransform:'uppercase',letterSpacing:'0.06em'}}>Anything you want to cover? (optional)</label><textarea className="input" value={data.notes} onChange={e=>setData(d=>({...d,notes:e.target.value}))} rows={2} style={{resize:'none'}} placeholder="Main goals, current struggles, questions..."/></div>
-          </div>
-          <button className="btn btn-primary" style={{width:'100%',marginTop:20,padding:13}} onClick={()=>setStep(1)} disabled={!data.name||!data.business||!data.email||!data.phone}>Pick a date →</button>
-        </div>
-      )}
-
-      {step===1 && (
-        <div>
-          <h3 style={{fontSize:18,fontWeight:600,marginBottom:4}}>Pick a date</h3>
-          <p style={{fontSize:13,color:'var(--text-3)',marginBottom:20}}>Monday–Friday · All times are Central Time</p>
-          <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,maxHeight:280,overflowY:'auto'}}>
-            {days.map(d=>(
-              <button key={d} onClick={()=>{setDate(d);setStep(2)}} style={{padding:'10px 6px',borderRadius:8,fontSize:12,cursor:'pointer',border:'0.5px solid',borderColor:date===d?'var(--accent-border)':'var(--border-2)',background:date===d?'var(--accent-dim)':'var(--bg-3)',color:date===d?'var(--accent)':'var(--text-2)',fontFamily:'inherit',textAlign:'center',lineHeight:1.4}}>{d}</button>
-            ))}
-          </div>
-          <button className="btn btn-ghost btn-sm" style={{marginTop:16}} onClick={()=>setStep(0)}>← Back</button>
-        </div>
-      )}
-
-      {step===2 && (
-        <div>
-          <h3 style={{fontSize:18,fontWeight:600,marginBottom:4}}>Pick a time</h3>
-          <p style={{fontSize:13,color:'var(--text-3)',marginBottom:20}}>{date} · Central Time</p>
-          <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8}}>
-            {HOURS.map(h=>(
-              <button key={h} onClick={()=>{setTime(h);setStep(3)}} style={{padding:'10px 6px',borderRadius:8,fontSize:13,cursor:'pointer',border:'0.5px solid',borderColor:time===h?'var(--accent-border)':'var(--border-2)',background:time===h?'var(--accent-dim)':'var(--bg-3)',color:time===h?'var(--accent)':'var(--text-2)',fontFamily:'inherit',textAlign:'center'}}>{h}</button>
-            ))}
-          </div>
-          <button className="btn btn-ghost btn-sm" style={{marginTop:16}} onClick={()=>setStep(1)}>← Back</button>
-        </div>
-      )}
-
-      {step===3 && (
-        <div>
-          <h3 style={{fontSize:18,fontWeight:600,marginBottom:20}}>Confirm your booking</h3>
-          <div style={{background:'var(--bg-3)',borderRadius:12,padding:20,marginBottom:20}}>
-            <div style={{fontSize:18,fontWeight:600,color:'var(--accent)',marginBottom:4}}>{date}</div>
-            <div style={{fontSize:15,color:'var(--text)',marginBottom:16}}>{time} Central Time</div>
-            {[['Name',data.name],['Business',data.business],['Email',data.email],['Phone',data.phone],['Type',data.type],['Budget',data.budget]].map(([l,v])=>(
-              <div key={l} style={{display:'flex',justifyContent:'space-between',padding:'5px 0',borderTop:'0.5px solid var(--border)',fontSize:13}}>
-                <span style={{color:'var(--text-3)'}}>{l}</span><span style={{color:'var(--text)'}}>{v}</span>
-              </div>
-            ))}
-          </div>
-          <button className="btn btn-primary" style={{width:'100%',padding:13}} onClick={submit} disabled={submitting}>{submitting?'Confirming...':'Confirm booking →'}</button>
-          <button className="btn btn-ghost btn-sm" style={{width:'100%',marginTop:8}} onClick={()=>setStep(2)}>← Change time</button>
-        </div>
-      )}
-    </div>
+      <div>
+        <label style={{fontSize:13,color:'var(--text-2)',display:'block',marginBottom:6,fontWeight:500}}>Business type</label>
+        <select className="input" value={data.type} onChange={e=>setData(d=>({...d,type:e.target.value}))}>
+          {['Restaurant / Food & Drink','Retail / Boutique','Service Business','Healthcare / Wellness','Bar / Nightlife','Other'].map(o=><option key={o}>{o}</option>)}
+        </select>
+      </div>
+      <div>
+        <label style={{fontSize:13,color:'var(--text-2)',display:'block',marginBottom:6,fontWeight:500}}>Monthly marketing budget</label>
+        <select className="input" value={data.budget} onChange={e=>setData(d=>({...d,budget:e.target.value}))}>
+          {['Under $300','$300 – $600','$600 – $1,000','$1,000 – $1,500','$1,500+'].map(o=><option key={o}>{o}</option>)}
+        </select>
+      </div>
+      <div>
+        <label style={{fontSize:13,color:'var(--text-2)',display:'block',marginBottom:6,fontWeight:500}}>Anything to cover? <span style={{color:'var(--text-3)',fontWeight:400}}>(optional)</span></label>
+        <textarea className="input" value={data.notes} onChange={e=>setData(d=>({...d,notes:e.target.value}))} rows={2} placeholder="Goals, current challenges, questions..."/>
+      </div>
+      <div style={{background:'var(--bg-3)',borderRadius:9,padding:'12px 16px',fontSize:13,color:'var(--text-3)'}}>
+        📅 Mon–Fri · 9am–5pm CT · Google Meet link sent after confirmation
+      </div>
+      <button className="btn btn-primary" type="submit" style={{padding:14,fontSize:16,width:'100%'}} disabled={submitting||!data.name||!data.business||!data.email||!data.phone}>
+        {submitting?'Submitting...':'Request Strategy Call →'}
+      </button>
+    </form>
   )
 }
 
