@@ -44,6 +44,13 @@ export default function MeetNova() {
         clearInterval(poll)
         setVideoUrl(sd.videoUrl)
         setVideoState('ready')
+        // Auto-play as soon as video is ready
+        setTimeout(() => {
+          videoRef.current?.play().catch(() => {
+            // Autoplay blocked by browser - show play button as fallback
+          })
+          setVideoState('playing')
+        }, 300)
       } else if (sd.status === 'failed') {
         clearInterval(poll)
         setVideoState('error')
@@ -55,11 +62,6 @@ export default function MeetNova() {
   const handleVideoEnd = () => {
     setVideoState('done')
     setShowOptions(true)
-  }
-
-  const handlePlay = () => {
-    setVideoState('playing')
-    videoRef.current?.play()
   }
 
   const handleOption = (nextId: string) => {
@@ -107,7 +109,7 @@ export default function MeetNova() {
         <div style={{borderRadius:20,overflow:'hidden',background:'#111',border:'1px solid rgba(255,255,255,0.08)',boxShadow:'0 24px 80px rgba(0,0,0,0.5)'}}>
 
           {/* Video area */}
-          <div style={{position:'relative',aspectRatio:'16/9',background:'#0a0a0a',cursor:videoState==='ready'?'pointer':'default'}} onClick={videoState==='ready'?handlePlay:undefined}>
+          <div style={{position:'relative',aspectRatio:'16/9',background:'#0a0a0a'}}>
 
             {/* Video element */}
             {videoUrl && (
@@ -135,13 +137,11 @@ export default function MeetNova() {
               </div>
             )}
 
-            {/* Ready to play overlay */}
+            {/* Auto-playing - brief pulse indicator */}
             {videoState === 'ready' && (
-              <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.35)'}}>
-                <div style={{width:64,height:64,borderRadius:'50%',background:'#00E5C8',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 0 40px rgba(0,229,200,0.5)',transition:'transform 0.2s'}}
-                  onMouseEnter={e=>(e.currentTarget as HTMLElement).style.transform='scale(1.1)'}
-                  onMouseLeave={e=>(e.currentTarget as HTMLElement).style.transform='scale(1)'}>
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="#0a0a0a"><polygon points="5,3 19,12 5,21"/></svg>
+              <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.15)'}}>
+                <div style={{width:48,height:48,borderRadius:'50%',background:'rgba(0,229,200,0.9)',display:'flex',alignItems:'center',justifyContent:'center',animation:'fadeOut 0.6s ease forwards 0.4s'}}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="#0a0a0a"><polygon points="5,3 19,12 5,21"/></svg>
                 </div>
               </div>
             )}
@@ -209,7 +209,7 @@ export default function MeetNova() {
             {videoState !== 'playing' && videoState !== 'done' && !showOptions && videoState !== 'error' && (
               <div style={{textAlign:'center',padding:'8px 0'}}>
                 <p style={{fontSize:13,color:'rgba(255,255,255,0.2)',margin:0}}>
-                  {videoState === 'ready' ? 'Press play to hear from Nova' : 'Preparing Nova\'s response...'}
+                  {videoState === 'ready' ? 'Starting Nova...' : 'Preparing Nova\'s response...'}
                 </p>
               </div>
             )}
@@ -225,6 +225,7 @@ export default function MeetNova() {
       <style>{`
         @keyframes ping { 0% { transform:scale(1); opacity:0.6; } 100% { transform:scale(1.8); opacity:0; } }
         @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+        @keyframes fadeOut { 0% { opacity:1; transform:scale(1); } 100% { opacity:0; transform:scale(1.3); } }
       `}</style>
     </div>
   )

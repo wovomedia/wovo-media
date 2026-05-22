@@ -163,12 +163,14 @@ export default function Home() {
             <h3 style={{fontSize:20,fontWeight:700,color:'#fff',marginBottom:10,letterSpacing:'-0.02em'}}>Not sure which plan is right for you?</h3>
             <p style={{fontSize:14,color:'rgba(255,255,255,0.55)',lineHeight:1.65,marginBottom:24}}>Nova is our AI guide. He'll ask you a few quick questions about your business and recommend the exact plan that fits — then walk you through it with a personalized video.</p>
             
-            {/* Video preview hint */}
-            <div style={{background:'rgba(0,229,200,0.06)',border:'1px solid rgba(0,229,200,0.15)',borderRadius:12,padding:'12px 16px',marginBottom:22,display:'flex',alignItems:'center',gap:10}}>
-              <div style={{width:32,height:32,borderRadius:'50%',background:'#00E5C8',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="#0a0a0a"><polygon points="5,3 19,12 5,21"/></svg>
-              </div>
-              <p style={{fontSize:13,color:'rgba(255,255,255,0.5)',margin:0,lineHeight:1.5}}>Interactive AI video · Nova speaks, you pick, Nova responds · ~2 min</p>
+            {/* Stats */}
+            <div style={{display:'flex',gap:16,marginBottom:22,padding:'12px 16px',background:'rgba(255,255,255,0.03)',borderRadius:10,border:'1px solid rgba(255,255,255,0.06)'}}>
+              {[['🎬','AI video'],['💬','You pick'],['🎯','Gets personalized']].map(([icon,label])=>(
+                <div key={label} style={{flex:1,textAlign:'center'}}>
+                  <div style={{fontSize:18,marginBottom:3}}>{icon}</div>
+                  <div style={{fontSize:11,color:'rgba(255,255,255,0.4)',fontWeight:500}}>{label}</div>
+                </div>
+              ))}
             </div>
 
             <div style={{display:'flex',flexDirection:'column',gap:9}}>
