@@ -29,16 +29,25 @@ export default function Login() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true); setError('')
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    })
-    const data = await res.json()
-    if (!res.ok) { setError(data.error || 'Login failed.'); setLoading(false); return }
-    // Set session client-side then redirect
-    await supabase.auth.setSession(data.session)
-    window.location.href = data.redirect || '/dashboard/client'
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error || 'Incorrect email or password.'); setLoading(false); return }
+      // Set session using access + refresh tokens
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+      })
+      if (sessionError) { setError('Login failed. Please try again.'); setLoading(false); return }
+      window.location.href = data.redirect || '/dashboard/client'
+    } catch {
+      setError('Network error. Please try again.')
+      setLoading(false)
+    }
   }
 
   const handleSignup = async (e: React.FormEvent) => {

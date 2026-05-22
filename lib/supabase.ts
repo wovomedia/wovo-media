@@ -1,27 +1,18 @@
 import { createClient } from '@supabase/supabase-js'
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-
-// Client-side Supabase client
-export const supabase = createClient(url, anon, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-    storageKey: 'wovo-auth',
+export const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      storageKey: 'wovo-auth-token',
+      storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+    }
   }
-})
-
-export const getUser = async () => {
-  const { data: { user } } = await supabase.auth.getUser()
-  return user
-}
-
-export const getProfile = async (userId: string) => {
-  const { data } = await supabase.from('profiles').select('*').eq('user_id', userId).single()
-  return data
-}
+)
 
 export const roleRoutes: Record<string, string> = {
   owner: '/dashboard/owner',
