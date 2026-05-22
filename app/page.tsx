@@ -367,6 +367,81 @@ export default function Home() {
           </div>
         </div>
 
+        {/* NOVA INLINE SECTION */}
+        <div style={{borderTop:'1px solid var(--border)',background:'var(--bg-2)'}}>
+          <div style={{maxWidth:860,margin:'0 auto',padding:'70px 40px'}}>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:48,alignItems:'center'}} className="grid-2">
+              
+              {/* LEFT — copy */}
+              <div>
+                <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:20}}>
+                  <div style={{width:44,height:44,borderRadius:'50%',overflow:'hidden',border:'2px solid var(--accent-border)',flexShrink:0}}>
+                    <img src="https://files2.heygen.ai/avatar/v3/79b245561ad448e796b7e77cd2773d0b_14263/preview_talk_11.webp" alt="Nova" style={{width:'100%',height:'140%',objectFit:'cover',objectPosition:'top center',marginTop:'-10%'}}/>
+                  </div>
+                  <div>
+                    <div style={{fontSize:15,fontWeight:700,color:'var(--text)'}}>Meet Nova</div>
+                    <div style={{fontSize:12,color:'var(--accent)',display:'flex',alignItems:'center',gap:5}}>
+                      <div style={{width:6,height:6,borderRadius:'50%',background:'var(--accent)',boxShadow:'0 0 6px var(--accent)'}}/>
+                      Wovo Media AI Guide
+                    </div>
+                  </div>
+                </div>
+                <h2 style={{fontSize:28,fontWeight:800,marginBottom:12,letterSpacing:'-0.03em',lineHeight:1.15}}>
+                  Not sure where<br/>to start?<br/><span style={{color:'var(--accent)'}}>Ask Nova.</span>
+                </h2>
+                <p style={{fontSize:15,color:'var(--text-2)',lineHeight:1.7,marginBottom:24}}>
+                  Nova is our AI guide. Answer a few quick questions and he'll recommend the exact plan for your business — with a personalized video response for each answer you pick.
+                </p>
+                <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:28}}>
+                  {[['🎬','AI video — Nova actually speaks to you'],['💬','You pick answers, Nova responds personally'],['🎯','Ends with a specific plan recommendation']].map(([icon,text])=>(
+                    <div key={text} style={{display:'flex',alignItems:'center',gap:10,fontSize:14,color:'var(--text-2)'}}>
+                      <span style={{fontSize:18}}>{icon}</span>{text}
+                    </div>
+                  ))}
+                </div>
+                <Link href="/meet-nova">
+                  <button className="btn btn-primary" style={{padding:'13px 28px',fontSize:15}}>
+                    Talk to Nova →
+                  </button>
+                </Link>
+              </div>
+
+              {/* RIGHT — video preview */}
+              <div style={{position:'relative'}}>
+                <div style={{borderRadius:16,overflow:'hidden',background:'#0a0a0a',border:'1px solid rgba(0,229,200,0.15)',boxShadow:'0 24px 60px rgba(0,0,0,0.2)',aspectRatio:'16/9',display:'flex',alignItems:'center',justifyContent:'center',position:'relative'}}>
+                  {/* Office background hint */}
+                  <div style={{position:'absolute',inset:0,background:'linear-gradient(135deg,#0d1a18 0%,#0a1412 100%)',opacity:0.95}}/>
+                  <div style={{position:'relative',zIndex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:12}}>
+                    <div style={{width:64,height:64,borderRadius:'50%',overflow:'hidden',border:'3px solid rgba(0,229,200,0.4)',boxShadow:'0 0 30px rgba(0,229,200,0.2)'}}>
+                      <img src="https://files2.heygen.ai/avatar/v3/79b245561ad448e796b7e77cd2773d0b_14263/preview_talk_11.webp" alt="Nova" style={{width:'100%',height:'140%',objectFit:'cover',objectPosition:'top center',marginTop:'-10%'}}/>
+                    </div>
+                    <Link href="/meet-nova">
+                      <div style={{width:48,height:48,borderRadius:'50%',background:'var(--accent)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',boxShadow:'0 0 30px rgba(0,229,200,0.4)',transition:'transform 0.2s'}}
+                        onMouseEnter={e=>(e.currentTarget as HTMLElement).style.transform='scale(1.1)'}
+                        onMouseLeave={e=>(e.currentTarget as HTMLElement).style.transform='scale(1)'}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="#0a0a0a"><polygon points="5,3 19,12 5,21"/></svg>
+                      </div>
+                    </Link>
+                    <p style={{fontSize:12,color:'rgba(255,255,255,0.4)',margin:0}}>Click to start your conversation</p>
+                  </div>
+                </div>
+                {/* Sample option pills */}
+                <div style={{marginTop:14,display:'flex',flexWrap:'wrap',gap:8}}>
+                  {['🍽️ Restaurant','🛍️ Retail','💼 Service','🏥 Healthcare'].map(opt=>(
+                    <Link key={opt} href="/meet-nova">
+                      <div style={{padding:'8px 14px',borderRadius:20,background:'var(--bg-3)',border:'1px solid var(--border-2)',fontSize:13,color:'var(--text-2)',cursor:'pointer',transition:'all 0.15s',fontWeight:500}}
+                        onMouseEnter={e=>{const el=e.currentTarget as HTMLElement;el.style.borderColor='var(--accent)';el.style.color='var(--accent)';el.style.background='var(--accent-dim)'}}
+                        onMouseLeave={e=>{const el=e.currentTarget as HTMLElement;el.style.borderColor='var(--border-2)';el.style.color='var(--text-2)';el.style.background='var(--bg-3)'}}>
+                        {opt}
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* PREMIUM CTA */}
         <div id="premium" style={{borderTop:'0.5px solid var(--border)'}}>
           <div style={{maxWidth:860,margin:'0 auto',padding:'70px 40px',textAlign:'center'}}>

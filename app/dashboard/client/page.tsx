@@ -48,6 +48,7 @@ export default function ClientDashboard() {
           ))}
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
+          <Link href="/dashboard/client/videos"><button className="btn btn-ghost btn-sm">🎬 AI Videos</button></Link>
           <Link href="/account"><button className="btn btn-ghost btn-sm">Account</button></Link>
           <a href="/"><button className="btn btn-ghost btn-sm">← Home</button></a>
           <button className="btn btn-ghost btn-sm" onClick={() => sb.auth.signOut().then(() => window.location.href = '/')}>Sign out</button>
