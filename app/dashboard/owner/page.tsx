@@ -147,7 +147,7 @@ export default function OwnerDashboard() {
           <Link href="/dashboard/owner/team"><button className="btn btn-ghost btn-sm">👥 Team</button></Link>
           <button className="btn btn-primary btn-sm" onClick={()=>setShowOnboard(true)}>+ Onboard Premium Client</button>
           <ThemeToggle/>
-          <button className="btn btn-ghost btn-sm" onClick={()=>sb.auth.signOut().then(()=>window.location.href='/')}>Sign out</button>
+          <button className="btn btn-ghost btn-sm" onClick={()=>sb.auth.signOut().then(()=>{document.cookie='wovo-auth=;expires=Thu,01 Jan 1970 00:00:00 GMT;path=/';window.location.href='/'})}>Sign out</button>
         </div>
       </nav>
 

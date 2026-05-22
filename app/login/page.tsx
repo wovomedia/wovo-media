@@ -37,12 +37,7 @@ export default function Login() {
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Incorrect email or password.'); setLoading(false); return }
-      // Set session using access + refresh tokens
-      const { error: sessionError } = await supabase.auth.setSession({
-        access_token: data.access_token,
-        refresh_token: data.refresh_token,
-      })
-      if (sessionError) { setError('Login failed. Please try again.'); setLoading(false); return }
+      // Session is set as a cookie by the server — just redirect
       window.location.href = data.redirect || '/dashboard/client'
     } catch {
       setError('Network error. Please try again.')

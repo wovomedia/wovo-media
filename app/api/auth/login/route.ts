@@ -49,12 +49,34 @@ export async function POST(req: NextRequest) {
   }
 
   const redirect = roleRoutes[profile.wovo_role] || '/dashboard/client'
-
-  // Return session tokens so client can set them
-  return NextResponse.json({
-    success: true,
-    redirect,
+  const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toUTCString()
+  const sessionValue = JSON.stringify({
     access_token: data.session.access_token,
     refresh_token: data.session.refresh_token,
+    expires_at: data.session.expires_at,
+    user: { id: data.user.id, email: data.user.email }
   })
+
+  const response = NextResponse.json({ success: true, redirect })
+
+  // Set session as a secure cookie — works on any device they log in from
+  response.cookies.set('wovo-auth', sessionValue, {
+    httpOnly: false, // needs to be readable by Supabase client
+    secure: true,
+    sameSite: 'lax',
+    expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    path: '/',
+  })
+
+  // Also set the Supabase-specific cookie key so it auto-picks up the session
+  const supabaseKey = `wovo-auth`
+  response.cookies.set(supabaseKey, sessionValue, {
+    httpOnly: false,
+    secure: true,
+    sameSite: 'lax',
+    expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    path: '/',
+  })
+
+  return response
 }
