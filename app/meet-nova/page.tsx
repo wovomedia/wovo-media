@@ -35,10 +35,20 @@ export default function MeetNova() {
     })
     const data = await res.json()
     if (!res.ok || !data.videoId) { setVideoState('error'); return }
+    // If already cached with URL, skip polling
+    if (data.videoUrl) {
+      setVideoUrl(data.videoUrl)
+      setVideoState('ready')
+      setTimeout(() => {
+        videoRef.current?.play().catch(() => {})
+        setVideoState('playing')
+      }, 300)
+      return
+    }
 
     // Poll for completion
     const poll = setInterval(async () => {
-      const s = await fetch(`/api/heygen/nova-flow?id=${data.videoId}`)
+      const s = await fetch(`/api/heygen/nova-flow?id=${data.videoId}&node=${id}`)
       const sd = await s.json()
       if (sd.status === 'completed' && sd.videoUrl) {
         clearInterval(poll)
@@ -135,7 +145,9 @@ export default function MeetNova() {
                   <div style={{position:'absolute',inset:0,borderRadius:'50%',border:'2px solid rgba(0,229,200,0.2)',animation:'ping 1.5s ease-out infinite'}}/>
                   <div style={{position:'absolute',inset:0,borderRadius:'50%',border:'2px solid rgba(0,229,200,0.1)',animation:'ping 1.5s ease-out infinite',animationDelay:'0.5s'}}/>
                   {/* Nova avatar - Tyler's face */}
-                  <div style={{width:72,height:72,borderRadius:'50%',background:'linear-gradient(135deg,#071a17,#0d3d34)',border:'2px solid rgba(0,229,200,0.4)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:26,fontWeight:700,color:'#00E5C8',fontFamily:'Outfit,sans-serif'}}>N</div>
+                  <div style={{width:72,height:72,borderRadius:'50%',border:'2px solid rgba(0,229,200,0.4)',overflow:'hidden',background:'#111'}}>
+                  <img src="https://files2.heygen.ai/avatar/v3/79b245561ad448e796b7e77cd2773d0b_14263/preview_talk_11.webp" alt="Nova" style={{width:'100%',height:'140%',objectFit:'cover',objectPosition:'top center',marginTop:'-10%'}} onError={(e)=>{(e.currentTarget as HTMLImageElement).style.display='none'}}/>
+                </div>
                 </div>
                 <p style={{color:'rgba(255,255,255,0.5)',fontSize:14,margin:0,fontWeight:500}}>Nova is getting ready...</p>
                 <p style={{color:'rgba(255,255,255,0.2)',fontSize:12,margin:'6px 0 0'}}>AI video generating · ~60 sec first time</p>
@@ -161,7 +173,9 @@ export default function MeetNova() {
 
             {/* NOVA label */}
             <div style={{position:'absolute',bottom:12,left:12,display:'flex',alignItems:'center',gap:7,background:'rgba(0,0,0,0.65)',backdropFilter:'blur(8px)',borderRadius:20,padding:'5px 12px 5px 8px',border:'1px solid rgba(255,255,255,0.1)'}}>
-              <div style={{width:20,height:20,borderRadius:'50%',background:'linear-gradient(135deg,#071a17,#0d3d34)',border:'1.5px solid #00E5C8',display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:700,color:'#00E5C8',fontFamily:'Outfit,sans-serif'}}>N</div>
+              <div style={{width:20,height:20,borderRadius:'50%',border:'1.5px solid #00E5C8',overflow:'hidden',background:'#111'}}>
+                <img src="https://files2.heygen.ai/avatar/v3/79b245561ad448e796b7e77cd2773d0b_14263/preview_talk_11.webp" alt="Nova" style={{width:'100%',height:'140%',objectFit:'cover',objectPosition:'top center',marginTop:'-10%'}}/>
+              </div>
               <span style={{fontSize:12,color:'rgba(255,255,255,0.8)',fontWeight:600}}>Nova</span>
               {videoState==='playing' && <span style={{fontSize:10,color:'#00E5C8',display:'flex',alignItems:'center',gap:3}}><div style={{width:5,height:5,borderRadius:'50%',background:'#00E5C8',animation:'pulse 1s infinite'}}/> Speaking</span>}
             </div>

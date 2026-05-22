@@ -150,7 +150,9 @@ export default function Home() {
             
             {/* Nova avatar */}
             <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:20}}>
-              <div style={{width:52,height:52,borderRadius:'50%',border:'2px solid rgba(0,229,200,0.4)',flexShrink:0,boxShadow:'0 0 20px rgba(0,229,200,0.15)',background:'linear-gradient(135deg,#071a17,#0d3d34)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,fontWeight:700,color:'#00E5C8',fontFamily:'Outfit,sans-serif'}}>N</div>
+              <div style={{width:52,height:52,borderRadius:'50%',border:'2px solid rgba(0,229,200,0.4)',flexShrink:0,boxShadow:'0 0 20px rgba(0,229,200,0.15)',overflow:'hidden',background:'#111'}}>
+              <img src="https://files2.heygen.ai/avatar/v3/79b245561ad448e796b7e77cd2773d0b_14263/preview_talk_11.webp" alt="Nova" style={{width:'100%',height:'140%',objectFit:'cover',objectPosition:'top center',marginTop:'-10%'}} onError={(e)=>{(e.currentTarget as HTMLImageElement).style.display='none'}}/>
+            </div>
               <div>
                 <div style={{fontSize:15,fontWeight:700,color:'#fff'}}>Meet Nova</div>
                 <div style={{fontSize:12,color:'rgba(0,229,200,0.8)',display:'flex',alignItems:'center',gap:5}}>

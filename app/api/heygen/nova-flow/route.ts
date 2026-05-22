@@ -1,108 +1,86 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { NOVA_FLOW } from '@/lib/nova-flow'
+import { createClient } from '@supabase/supabase-js'
 
-// Persistent video cache stored by node ID
-// Uses a module-level Map so it survives across requests on same instance
-const videoCache = new Map<string, string>()
+const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
-// Tyler in Suit - confirmed avatar ID from HeyGen
-const AVATAR_ID = 'Tyler-insuit-20220721'
-
-// Office/workspace background - a clean modern office background image
-// Using a publicly available office background URL
-const BACKGROUND_URL = 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1280&q=80'
-
-async function getTylerVoiceId(): Promise<string> {
-  // Fetch Tyler's actual default voice to ensure lip sync
-  try {
-    const res = await fetch('https://api.heygen.com/v2/avatars', {
-      headers: { 'X-Api-Key': process.env.HEYGEN_API_KEY! }
-    })
-    const data = await res.json()
-    const tyler = data?.data?.avatars?.find((a: any) => a.avatar_id === AVATAR_ID)
-    if (tyler?.default_voice_id) {
-      console.log('Tyler default voice:', tyler.default_voice_id)
-      return tyler.default_voice_id
-    }
-  } catch (e) {
-    console.error('Failed to fetch Tyler voice:', e)
-  }
-  // Fallback: Pro Confident Male voice ID (common HeyGen male voice)
-  return '2d5b0e6cf36f460aa7fc47e3eee4ba54'
-}
+const AVATAR_ID = 'Tyler-incasualsuit-20220721'
+// Pro Confident Male voice
+const VOICE_ID = 'f4ae3907c6e5446ea1daeab0c2f82bd5'
+const BG_URL = 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1280&q=80'
 
 export async function POST(req: NextRequest) {
   const { nodeId } = await req.json()
   const node = NOVA_FLOW[nodeId]
   if (!node) return NextResponse.json({ error: 'Node not found' }, { status: 404 })
 
-  // Return cached video ID if we already generated this node
-  if (videoCache.has(nodeId)) {
-    return NextResponse.json({ videoId: videoCache.get(nodeId), cached: true })
+  // Check Supabase cache first - persists across deploys and all users
+  const { data: cached } = await sb.from('nova_videos').select('*').eq('node_id', nodeId).single()
+
+  if (cached?.status === 'completed' && cached?.video_url) {
+    return NextResponse.json({ videoId: cached.heygen_video_id, videoUrl: cached.video_url, cached: true })
   }
 
-  const voiceId = await getTylerVoiceId()
+  // If already generating (pending), return the video ID so frontend can poll
+  if (cached?.status === 'generating' && cached?.heygen_video_id) {
+    return NextResponse.json({ videoId: cached.heygen_video_id, cached: false })
+  }
 
+  // Generate new video
   const body = {
     video_inputs: [{
-      character: {
-        type: 'avatar',
-        avatar_id: AVATAR_ID,
-        avatar_style: 'normal'
-      },
-      voice: {
-        type: 'text',
-        input_text: node.script,
-        voice_id: voiceId,
-        speed: 1.0,
-      },
-      background: {
-        type: 'image',
-        url: BACKGROUND_URL
-      }
+      character: { type: 'avatar', avatar_id: AVATAR_ID, avatar_style: 'normal' },
+      voice: { type: 'text', input_text: node.script, voice_id: VOICE_ID, speed: 1.0 },
+      background: { type: 'image', url: BG_URL }
     }],
     dimension: { width: 854, height: 480 },
-    aspect_ratio: '16:9',
   }
-
-  console.log('Generating Nova video for node:', nodeId, 'voice:', voiceId)
 
   const res = await fetch('https://api.heygen.com/v2/video/generate', {
     method: 'POST',
-    headers: {
-      'X-Api-Key': process.env.HEYGEN_API_KEY!,
-      'Content-Type': 'application/json'
-    },
+    headers: { 'X-Api-Key': process.env.HEYGEN_API_KEY!, 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   })
 
   const data = await res.json()
-  console.log('HeyGen response:', JSON.stringify(data))
-
   const videoId = data.data?.video_id
+
   if (!videoId) {
-    return NextResponse.json({
-      error: data.error || data.message || 'Generation failed',
-      details: data
-    }, { status: 500 })
+    return NextResponse.json({ error: data.error || data.message || 'HeyGen generation failed', raw: data }, { status: 500 })
   }
 
-  videoCache.set(nodeId, videoId)
-  return NextResponse.json({ videoId })
+  // Save to Supabase as generating
+  await sb.from('nova_videos').upsert({
+    node_id: nodeId,
+    heygen_video_id: videoId,
+    status: 'generating',
+  })
+
+  return NextResponse.json({ videoId, cached: false })
 }
 
 export async function GET(req: NextRequest) {
   const videoId = req.nextUrl.searchParams.get('id')
+  const nodeId = req.nextUrl.searchParams.get('node')
   if (!videoId) return NextResponse.json({ error: 'No ID' }, { status: 400 })
 
   const res = await fetch(`https://api.heygen.com/v1/video_status.get?video_id=${videoId}`, {
     headers: { 'X-Api-Key': process.env.HEYGEN_API_KEY! }
   })
   const data = await res.json()
-  return NextResponse.json({
-    status: data.data?.status,
-    videoUrl: data.data?.video_url,
-    thumbnailUrl: data.data?.thumbnail_url,
-    error: data.data?.error,
-  })
+  const status = data.data?.status
+  const videoUrl = data.data?.video_url
+
+  // If completed, save URL to Supabase so it's cached forever
+  if (status === 'completed' && videoUrl && nodeId) {
+    await sb.from('nova_videos').upsert({
+      node_id: nodeId,
+      heygen_video_id: videoId,
+      video_url: videoUrl,
+      status: 'completed',
+      completed_at: new Date().toISOString(),
+    })
+  }
+
+  return NextResponse.json({ status, videoUrl, error: data.data?.error })
 }
