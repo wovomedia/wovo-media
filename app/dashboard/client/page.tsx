@@ -100,7 +100,7 @@ export default function ClientDashboard() {
               <div className="card" style={{ textAlign: 'center', padding: '48px 32px' }}>
                 <div style={{ fontSize: 32, marginBottom: 12 }}>📊</div>
                 <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>Your first report is on the way</h3>
-                <p style={{ color: 'var(--text-2)', fontSize: 14 }}>Payton will send your monthly performance report soon. Check back here to track views, engagements, and more.</p>
+                <p style={{ color: 'var(--text-2)', fontSize: 14 }}>Your team will send your monthly performance report soon. Check back here to track views, engagements, and more.</p>
               </div>
             )}
 
@@ -108,8 +108,8 @@ export default function ClientDashboard() {
               <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 16 }}>Questions or updates?</h3>
               <p style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 16 }}>Reach out directly to your account manager.</p>
               <div style={{ display: 'flex', gap: 10 }}>
-                <a href="mailto:Payton@wovomedia.com"><button className="btn btn-primary btn-sm">Email Payton</button></a>
-                <a href="tel:9314583255"><button className="btn btn-ghost btn-sm">Call / Text</button></a>
+                <a href="mailto:support@wovomedia.com"><button className="btn btn-primary btn-sm">Email Support</button></a>
+                <a href="https://calendly.com/wovomedia/wovo-media-strategy-call" target="_blank"><button className="btn btn-ghost btn-sm">Book a Call</button></a>
               </div>
             </div>
           </>
