@@ -135,7 +135,7 @@ export const NOVA_FLOW: Record<string, NovaNode> = {
 
   budget_low_team: {
     id: 'budget_low_team',
-    script: `For a business with a team, I'd actually recommend Wovo AI Growth — it's forty-nine dollars a month and it gives every single team member their own AI character. Five posts a week, unlimited edits. For the price of a dinner out, your whole team is posting every week.`,
+    script: `For a team, Wovo AI Growth at forty-nine a month is perfect. Every team member gets their own AI character. Five posts a week, unlimited edits. Your whole team stays active and visible.`,
     options: [
       { label: '🚀 Start Wovo AI Growth — $49/mo', next: 'close_ai_growth' },
       { label: '📅 Book a call to learn more', next: 'close_call' },
@@ -144,7 +144,7 @@ export const NOVA_FLOW: Record<string, NovaNode> = {
 
   budget_mid: {
     id: 'budget_mid',
-    script: `With that budget you've got two solid options. Wovo AI Growth at forty-nine a month gets your whole team posting with AI characters. Or if you want real filming added on top, we can look at a Premium plan that fits your budget. Which direction feels right?`,
+    script: `Two great options for you — Wovo AI Growth at forty-nine a month for your whole team, or Premium with real filming if you're ready for that. Which direction feels right?`,
     options: [
       { label: '🤖 Wovo AI Growth — $49/mo', next: 'close_ai_growth' },
       { label: '🎬 I want real filming — let\'s talk Premium', next: 'close_premium' },
@@ -172,28 +172,28 @@ export const NOVA_FLOW: Record<string, NovaNode> = {
 
   close_ai_starter: {
     id: 'close_ai_starter',
-    script: `Amazing — you're going to love it. Get started right now and your AI character will be up and running in no time. Welcome to Wovo Media!`,
+    script: `Love it — let's get you started. Your AI character will be ready in no time. Welcome to Wovo Media!`,
     outcome: 'wovo_ai',
     cta: { label: 'Start Wovo AI Starter — $29/mo →', url: '/wovo-ai?plan=starter' }
   },
 
   close_ai_growth: {
     id: 'close_ai_growth',
-    script: `Great choice — your team is going to be so glad you did this. Let's get everyone set up with their own AI character. Welcome to Wovo Media!`,
+    script: `Great choice! Your whole team is going to love this. Let's get everyone their own AI character. Welcome to Wovo Media!`,
     outcome: 'wovo_ai',
     cta: { label: 'Start Wovo AI Growth — $49/mo →', url: '/wovo-ai?plan=growth' }
   },
 
   close_premium: {
     id: 'close_premium',
-    script: `I'm genuinely excited for you — Premium clients are the ones we see blow up the fastest. Book a free strategy call and Payton will personally reach out to build your plan. No commitment, no pressure — just a real conversation about what's possible for your business.`,
+    script: `You're going to love Premium. Book a free strategy call and our team will build a custom plan for you. No pressure — just a real conversation about what's possible.`,
     outcome: 'premium',
     cta: { label: 'Book a Free Strategy Call →', url: 'https://calendly.com/wovomedia/wovo-media-strategy-call' }
   },
 
   close_call: {
     id: 'close_call',
-    script: `Totally — let's get on a quick call and figure out exactly what makes sense for your business. Payton will walk you through everything and build a custom plan. It's free, no commitment, and usually takes about twenty minutes.`,
+    script: `Let's talk! Book a free call and we'll figure out exactly what fits your business. Takes about twenty minutes and there's zero commitment.`,
     outcome: 'both',
     cta: { label: 'Book a Free Strategy Call →', url: 'https://calendly.com/wovomedia/wovo-media-strategy-call' }
   },

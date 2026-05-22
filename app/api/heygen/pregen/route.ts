@@ -57,6 +57,30 @@ async function pollAll() {
 export async function GET(req: NextRequest) {
   const action = req.nextUrl.searchParams.get('action')
 
+  if (action === 'reset-failed') {
+    // Delete all failed entries so they get regenerated
+    await sb.from('nova_videos').delete().eq('status', 'failed')
+    return NextResponse.json({ reset: true })
+  }
+
+  if (action === 'check-error') {
+    // Check what error HeyGen returns for a test video
+    const testRes = await fetch('https://api.heygen.com/v2/video/generate', {
+      method: 'POST',
+      headers: { 'X-Api-Key': process.env.HEYGEN_API_KEY!, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        video_inputs: [{
+          character: { type: 'avatar', avatar_id: 'Tyler-incasualsuit-20220721', avatar_style: 'normal' },
+          voice: { type: 'text', input_text: 'Hello! This is a test.', voice_id: 'f4ae3907c6e5446ea1daeab0c2f82bd5', speed: 1.0 },
+          background: { type: 'color', value: '#0a0a0a' }
+        }],
+        dimension: { width: 854, height: 480 },
+      })
+    })
+    const testData = await testRes.json()
+    return NextResponse.json({ test: testData, status: testRes.status, apiKeySet: !!process.env.HEYGEN_API_KEY })
+  }
+
   if (action === 'poll') {
     const results = await pollAll()
     return NextResponse.json({ polled: results })
