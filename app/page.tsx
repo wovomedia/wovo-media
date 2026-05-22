@@ -150,7 +150,9 @@ export default function Home() {
             
             {/* Nova avatar */}
             <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:20}}>
-              <div style={{width:52,height:52,borderRadius:'50%',background:'linear-gradient(135deg,#0d1f1c,#0a3330)',border:'2px solid rgba(0,229,200,0.4)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,fontWeight:700,color:'#00E5C8',fontFamily:'Outfit,sans-serif',flexShrink:0,boxShadow:'0 0 20px rgba(0,229,200,0.15)'}}>N</div>
+              <div style={{width:52,height:52,borderRadius:'50%',border:'2px solid rgba(0,229,200,0.4)',overflow:'hidden',flexShrink:0,boxShadow:'0 0 20px rgba(0,229,200,0.15)'}}>
+              <img src="https://files2.heygen.ai/avatar/v3/Tyler-insuit-20220721/full/2.1/preview_target.webp" alt="Nova" style={{width:'100%',height:'100%',objectFit:'cover',objectPosition:'top'}}/>
+            </div>
               <div>
                 <div style={{fontSize:15,fontWeight:700,color:'#fff'}}>Meet Nova</div>
                 <div style={{fontSize:12,color:'rgba(0,229,200,0.8)',display:'flex',alignItems:'center',gap:5}}>
