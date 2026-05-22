@@ -176,7 +176,7 @@ export default function Home() {
         <div style={{fontFamily:'Outfit,sans-serif',fontSize:19,fontWeight:700}}>wovo<span style={{color:'var(--accent)'}}>media</span></div>
         <div style={{display:'flex',gap:24,alignItems:'center'}}>
           {[['Wovo AI','#plans'],['Premium','#premium'],['Pricing','#pricing'],['Results','#results']].map(([l,h])=>(
-            <a key={l} href={h} style={{color:'var(--text-2)',fontSize:13,textDecoration:'none'}}>{l}</a>
+            <a key={l} href={h} style={{color:'var(--text-2)',fontSize:13,textDecoration:'none',fontWeight:500}}>{l}</a>
           ))}
           <Link href="/login" style={{color:'var(--text-2)',fontSize:13,textDecoration:'none',fontWeight:600}}>Login</Link>
           <ThemeToggle/>
@@ -188,7 +188,7 @@ export default function Home() {
 
         {/* HERO */}
         <div style={{maxWidth:860,margin:'0 auto',padding:'90px 40px 70px'}}>
-          <div className="fade-up" style={{display:'inline-flex',alignItems:'center',gap:16,background:'var(--bg-2)',border:'0.5px solid var(--accent-border)',borderRadius:40,padding:'7px 18px',marginBottom:24}}>
+          <div className="fade-up proof-bar" style={{display:'inline-flex',alignItems:'center',gap:16,background:'var(--bg-2)',border:'1px solid var(--accent-border)',borderRadius:40,padding:'7px 18px',marginBottom:24,boxShadow:'var(--shadow)'}}>
             {[['11+','Clients'],['100M+','Views & Engagements'],['24hr','Response']].map(([n,l])=>(
               <div key={n} style={{display:'flex',alignItems:'center',gap:5}}>
                 <span style={{fontFamily:'Outfit,sans-serif',fontWeight:700,color:'var(--accent)',fontSize:13}}>{n}</span>

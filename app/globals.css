@@ -204,3 +204,32 @@ tr:hover td { background:var(--bg-3); }
   transition:transform 0.2s; position:absolute; left:3px;
 }
 [data-theme="dark"] .theme-toggle-knob { transform:translateX(20px); }
+
+/* ── NAV SPECIFIC LIGHT MODE FIXES ───────────────────── */
+[data-theme="light"] nav a,
+[data-theme="light"] nav span {
+  color: var(--text-2) !important;
+}
+[data-theme="light"] nav { 
+  background: rgba(245,245,245,0.95) !important;
+  border-bottom: 1px solid rgba(0,0,0,0.1) !important;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.06);
+}
+
+/* Social proof bar light mode */
+[data-theme="light"] .proof-bar {
+  background: #ffffff !important;
+  border-color: rgba(0,157,138,0.25) !important;
+  box-shadow: 0 1px 8px rgba(0,0,0,0.08) !important;
+}
+
+/* Stat cards light mode */
+[data-theme="light"] .stat-card {
+  background: #ffffff;
+  border-color: rgba(0,0,0,0.08);
+}
+
+/* Glow line light mode */
+[data-theme="light"] .glow-line {
+  background: linear-gradient(90deg, transparent, rgba(0,157,138,0.3), transparent);
+}
