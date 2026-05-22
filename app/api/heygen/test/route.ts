@@ -1,36 +1,37 @@
 import { NextResponse } from 'next/server'
 
 export async function GET() {
-  const [avatarRes, voiceRes] = await Promise.all([
+  const [avatarRes, voiceRes, bgRes] = await Promise.all([
     fetch('https://api.heygen.com/v2/avatars', {
       headers: { 'X-Api-Key': process.env.HEYGEN_API_KEY! }
     }),
     fetch('https://api.heygen.com/v2/voices', {
       headers: { 'X-Api-Key': process.env.HEYGEN_API_KEY! }
+    }),
+    fetch('https://api.heygen.com/v1/background.list', {
+      headers: { 'X-Api-Key': process.env.HEYGEN_API_KEY! }
     })
   ])
+
   const avatars = await avatarRes.json()
   const voices = await voiceRes.json()
+  const bgs = await bgRes.json()
 
-  // Show all avatars with their default voice
-  const avatarList = avatars?.data?.avatars?.map((a: any) => ({
-    id: a.avatar_id,
-    name: a.avatar_name,
-    default_voice: a.default_voice_id,
-    gender: a.gender,
-    preview: a.preview_image_url
-  }))
+  // Find Tyler
+  const tyler = avatars?.data?.avatars?.find((a: any) => 
+    a.avatar_id === 'Tyler-insuit-20220721' || a.avatar_name?.toLowerCase().includes('tyler')
+  )
 
-  // Show male English voices
-  const maleVoices = voices?.data?.voices
-    ?.filter((v: any) => v.gender?.toLowerCase() === 'male')
-    ?.map((v: any) => ({
-      id: v.voice_id,
-      name: v.display_name,
-      language: v.language,
-      gender: v.gender,
-      preview: v.preview_audio
-    }))
+  // Find Pro Confident Male voice
+  const proMale = voices?.data?.voices?.filter((v: any) => 
+    v.display_name?.toLowerCase().includes('confident') || 
+    v.display_name?.toLowerCase().includes('pro') ||
+    (v.gender?.toLowerCase() === 'male' && v.language === 'English')
+  )?.slice(0, 10)
 
-  return NextResponse.json({ avatarList, maleVoices }, { status: 200 })
+  return NextResponse.json({
+    tyler,
+    proMaleVoices: proMale,
+    backgrounds: bgs?.data?.backgrounds?.slice(0, 10)
+  })
 }
