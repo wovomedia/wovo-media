@@ -41,7 +41,7 @@ export default function Account() {
     <div style={{minHeight:'100vh',background:'var(--bg)',position:'relative'}}>
       <div className="grid-bg"/><div className="grid-fade"/>
       <nav style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'18px 48px',borderBottom:'0.5px solid var(--border)',background:'rgba(8,8,8,0.92)',backdropFilter:'blur(12px)',position:'sticky',top:0,zIndex:100}}>
-        <Link href="/" style={{fontFamily:'Syne,sans-serif',fontSize:20,fontWeight:700,color:'var(--text)',textDecoration:'none'}}>wovo<span style={{color:'var(--accent)'}}>media</span></Link>
+        <Link href="/" style={{fontFamily:'Outfit,sans-serif',fontSize:20,fontWeight:700,color:'var(--text)',textDecoration:'none'}}>wovo<span style={{color:'var(--accent)'}}>media</span></Link>
         <div style={{display:'flex',gap:12}}>
           <Link href="/dashboard/client"><button className="btn btn-ghost btn-sm">← Dashboard</button></Link>
           <button className="btn btn-ghost btn-sm" onClick={signOut}>Sign out</button>

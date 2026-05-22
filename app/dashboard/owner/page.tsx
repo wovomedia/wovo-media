@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import Link from 'next/link'
+import ThemeToggle from '@/components/ThemeToggle'
 
 const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
 
@@ -143,6 +144,7 @@ export default function OwnerDashboard() {
         </div>
         <div style={{display:'flex',gap:8}}>
           <button className="btn btn-primary btn-sm" onClick={()=>setShowOnboard(true)}>+ Onboard Premium Client</button>
+          <ThemeToggle/>
           <button className="btn btn-ghost btn-sm" onClick={()=>sb.auth.signOut().then(()=>window.location.href='/')}>Sign out</button>
         </div>
       </nav>

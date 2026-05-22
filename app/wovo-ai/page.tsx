@@ -10,11 +10,86 @@ const PLANS = [
   {key:'website',name:'Website Builder',price:'$99/mo',desc:'Wovo AI builds your website.',features:['Full AI website generation','Choose your style','Business info → live site','Easy to update anytime','Hosted and deployed']},
 ]
 
+
+function VideoGenerator() {
+  const [script, setScript] = useState('')
+  const [style, setStyle] = useState('professional')
+  const [generating, setGenerating] = useState(false)
+  const [videoId, setVideoId] = useState('')
+  const [videoUrl, setVideoUrl] = useState('')
+  const [status, setStatus] = useState('')
+  const [error, setError] = useState('')
+
+  const generate = async () => {
+    if (!script.trim()) return
+    setGenerating(true); setError(''); setVideoId(''); setVideoUrl(''); setStatus('processing')
+    const res = await fetch('/api/heygen/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ script, type: 'custom' })
+    })
+    const data = await res.json()
+    if (data.error) { setError(data.error); setGenerating(false); return }
+    setVideoId(data.videoId)
+    // Poll for completion
+    const poll = setInterval(async () => {
+      const s = await fetch(`/api/heygen/status?id=${data.videoId}`)
+      const sd = await s.json()
+      setStatus(sd.status)
+      if (sd.status === 'completed' && sd.videoUrl) {
+        setVideoUrl(sd.videoUrl)
+        setGenerating(false)
+        clearInterval(poll)
+      } else if (sd.status === 'failed') {
+        setError('Video generation failed. Please try again.')
+        setGenerating(false)
+        clearInterval(poll)
+      }
+    }, 5000)
+  }
+
+  return (
+    <div style={{maxWidth:600}}>
+      <div className="card" style={{marginBottom:16}}>
+        <h3 style={{fontSize:16,fontWeight:600,marginBottom:16}}>Generate a video</h3>
+        <div style={{marginBottom:14}}>
+          <label style={{fontSize:13,color:'var(--text-2)',display:'block',marginBottom:6,fontWeight:600}}>Video style</label>
+          <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+            {[['professional','Professional'],['casual','Casual & Friendly'],['exciting','High Energy']].map(([v,l])=>(
+              <button key={v} onClick={()=>setStyle(v)} style={{padding:'7px 14px',borderRadius:8,fontSize:13,cursor:'pointer',border:'1px solid',borderColor:style===v?'var(--accent)':'var(--border-2)',background:style===v?'var(--accent-dim)':'transparent',color:style===v?'var(--accent)':'var(--text-2)',fontFamily:'inherit',fontWeight:500}}>{l}</button>
+            ))}
+          </div>
+        </div>
+        <div style={{marginBottom:16}}>
+          <label style={{fontSize:13,color:'var(--text-2)',display:'block',marginBottom:6,fontWeight:600}}>Script — what should the avatar say?</label>
+          <textarea className="input" value={script} onChange={e=>setScript(e.target.value)} rows={5} placeholder="e.g. Hey everyone! Come check out our new summer menu — we've got something for everyone. See you soon!"/>
+          <p style={{fontSize:12,color:'var(--text-3)',marginTop:5}}>{script.length} characters · ~{Math.ceil(script.split(' ').length/150)} min video</p>
+        </div>
+        {error && <div className="alert alert-error" style={{marginBottom:12}}>{error}</div>}
+        <button className="btn btn-primary" style={{width:'100%',padding:12,fontSize:15}} onClick={generate} disabled={generating||!script.trim()}>
+          {generating ? (status === 'processing' ? 'Generating video...' : `Status: ${status}`) : 'Generate AI Video ✨'}
+        </button>
+        {generating && <p style={{fontSize:12,color:'var(--text-3)',textAlign:'center',marginTop:8}}>Takes 2–5 minutes. You can leave this page.</p>}
+      </div>
+      {videoUrl && (
+        <div className="card card-accent">
+          <div style={{fontSize:11,color:'var(--accent)',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:12}}>Your video is ready ✓</div>
+          <video src={videoUrl} controls style={{width:'100%',borderRadius:10,marginBottom:14}}/>
+          <a href={videoUrl} download><button className="btn btn-primary btn-sm" style={{width:'100%'}}>Download Video</button></a>
+        </div>
+      )}
+      <div className="card" style={{marginTop:16,background:'var(--bg-3)'}}>
+        <p style={{fontSize:13,color:'var(--text-2)',lineHeight:1.6}}>💡 <strong>Tips:</strong> Keep scripts under 60 seconds for social. Mention your business name early. End with a clear call to action.</p>
+      </div>
+    </div>
+  )
+}
+
 function WovoAIContent() {
   const params = useSearchParams()
   const plan = params.get('plan') || ''
   const [selectedPlan, setSelectedPlan] = useState(plan)
-  const [activeTab, setActiveTab] = useState<'content'|'team'|'website'>('content')
+  const [activeTab, setActiveTab] = useState<'content'|'team'|'website'|'video'>('content')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [business, setBusiness] = useState('')
@@ -68,10 +143,10 @@ function WovoAIContent() {
     <div style={{minHeight:'100vh',background:'var(--bg)',position:'relative'}}>
       <div className="grid-bg"/><div className="grid-fade"/>
       <nav style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'18px 48px',borderBottom:'0.5px solid var(--border)',background:'rgba(8,8,8,0.92)',backdropFilter:'blur(12px)',position:'sticky',top:0,zIndex:100}}>
-        <Link href="/" style={{fontFamily:'Syne,sans-serif',fontSize:20,fontWeight:700,color:'var(--text)',textDecoration:'none'}}>wovo<span style={{color:'var(--accent)'}}>media</span></Link>
+        <Link href="/" style={{fontFamily:'Outfit,sans-serif',fontSize:20,fontWeight:700,color:'var(--text)',textDecoration:'none'}}>wovo<span style={{color:'var(--accent)'}}>media</span></Link>
         <div style={{display:'flex',gap:8}}>
-          {(['content','team','website'] as const).map(t=>(
-            <button key={t} onClick={()=>setActiveTab(t)} style={{background:activeTab===t?'var(--accent-dim)':'transparent',border:'0.5px solid',borderColor:activeTab===t?'var(--accent-border)':'transparent',color:activeTab===t?'var(--accent)':'var(--text-2)',padding:'7px 16px',borderRadius:8,fontSize:13,cursor:'pointer',fontFamily:'inherit',textTransform:'capitalize'}}>{t==='website'?'Website Builder':t}</button>
+          {(['content','team','website','video'] as const).map(t=>(
+            <button key={t} onClick={()=>setActiveTab(t)} style={{background:activeTab===t?'var(--accent-dim)':'transparent',border:'0.5px solid',borderColor:activeTab===t?'var(--accent-border)':'transparent',color:activeTab===t?'var(--accent)':'var(--text-2)',padding:'7px 16px',borderRadius:8,fontSize:13,cursor:'pointer',fontFamily:'inherit',textTransform:'capitalize'}}>{t==='website'?'Website Builder':t==='video'?'AI Videos':t}</button>
           ))}
         </div>
         <Link href="/"><button className="btn btn-ghost btn-sm">← Home</button></Link>
@@ -89,7 +164,7 @@ function WovoAIContent() {
                   <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:12}}>
                     <div>
                       <div style={{fontSize:11,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:'0.1em',fontWeight:500,marginBottom:6}}>{p.name}</div>
-                      <div style={{fontSize:28,fontWeight:700,fontFamily:'Syne,sans-serif',color:'var(--text)'}}>{p.price}</div>
+                      <div style={{fontSize:28,fontWeight:700,fontFamily:'Outfit,sans-serif',color:'var(--text)'}}>{p.price}</div>
                     </div>
                     <div style={{width:20,height:20,borderRadius:'50%',border:`2px solid ${selectedPlan===p.key?'var(--accent)':'var(--border-2)'}`,background:selectedPlan===p.key?'var(--accent)':'transparent',transition:'all 0.2s',display:'flex',alignItems:'center',justifyContent:'center'}}>
                       {selectedPlan===p.key&&<div style={{width:8,height:8,borderRadius:'50%',background:'#080808'}}/>}
@@ -220,6 +295,13 @@ function WovoAIContent() {
             )}
           </>
         )}
+      {activeTab==='video' && (
+        <>
+          <h1 style={{fontSize:30,fontWeight:700,marginBottom:8}}>AI <span style={{color:'var(--accent)'}}>Video Generator</span></h1>
+          <p style={{color:'var(--text-2)',marginBottom:32,fontSize:15}}>Generate short AI avatar videos for social media. Available on Growth and above.</p>
+          <VideoGenerator/>
+        </>
+      )}
       </div>
     </div>
   )

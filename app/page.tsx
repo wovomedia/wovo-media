@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import ThemeToggle from '@/components/ThemeToggle'
 
 // ─── BOOKING FLOW ────────────────────────────────────────────────────────────
 function BookingFlow({ onClose }: { onClose: () => void }) {
@@ -162,7 +163,7 @@ export default function Home() {
         <div onClick={()=>setBookOpen(false)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.82)',zIndex:600,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
           <div onClick={e=>e.stopPropagation()} className="slide-up" style={{background:'var(--bg-2)',border:'0.5px solid var(--border-2)',borderRadius:20,padding:28,width:520,maxWidth:'96vw',maxHeight:'92vh',overflowY:'auto',position:'relative'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
-              <div style={{fontFamily:'Syne,sans-serif',fontSize:17,fontWeight:700}}>wovo<span style={{color:'var(--accent)'}}>media</span><span style={{fontSize:12,color:'var(--text-3)',fontWeight:400,marginLeft:6}}>Strategy Call</span></div>
+              <div style={{fontFamily:'Outfit,sans-serif',fontSize:17,fontWeight:700}}>wovo<span style={{color:'var(--accent)'}}>media</span><span style={{fontSize:12,color:'var(--text-3)',fontWeight:400,marginLeft:6}}>Strategy Call</span></div>
               <button onClick={()=>setBookOpen(false)} style={{background:'var(--bg-3)',border:'0.5px solid var(--border-2)',borderRadius:'50%',width:28,height:28,cursor:'pointer',color:'var(--text-2)',fontSize:18,display:'flex',alignItems:'center',justifyContent:'center'}}>×</button>
             </div>
             <BookingFlow onClose={()=>setBookOpen(false)}/>
@@ -172,12 +173,13 @@ export default function Home() {
 
       {/* NAV */}
       <nav style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'16px 40px',borderBottom:'0.5px solid var(--border)',position:'sticky',top:0,background:'rgba(8,8,8,0.94)',backdropFilter:'blur(14px)',zIndex:100}}>
-        <div style={{fontFamily:'Syne,sans-serif',fontSize:19,fontWeight:700}}>wovo<span style={{color:'var(--accent)'}}>media</span></div>
+        <div style={{fontFamily:'Outfit,sans-serif',fontSize:19,fontWeight:700}}>wovo<span style={{color:'var(--accent)'}}>media</span></div>
         <div style={{display:'flex',gap:24,alignItems:'center'}}>
           {[['Wovo AI','#plans'],['Premium','#premium'],['Pricing','#pricing'],['Results','#results']].map(([l,h])=>(
             <a key={l} href={h} style={{color:'var(--text-2)',fontSize:13,textDecoration:'none'}}>{l}</a>
           ))}
-          <Link href="/login" style={{color:'var(--text-2)',fontSize:13,textDecoration:'none'}}>Login</Link>
+          <Link href="/login" style={{color:'var(--text-2)',fontSize:13,textDecoration:'none',fontWeight:600}}>Login</Link>
+          <ThemeToggle/>
           <button className="btn btn-primary btn-sm" onClick={()=>setBookOpen(true)}>Book a call</button>
         </div>
       </nav>
@@ -189,7 +191,7 @@ export default function Home() {
           <div className="fade-up" style={{display:'inline-flex',alignItems:'center',gap:16,background:'var(--bg-2)',border:'0.5px solid var(--accent-border)',borderRadius:40,padding:'7px 18px',marginBottom:24}}>
             {[['11+','Clients'],['100M+','Views & Engagements'],['24hr','Response']].map(([n,l])=>(
               <div key={n} style={{display:'flex',alignItems:'center',gap:5}}>
-                <span style={{fontFamily:'Syne,sans-serif',fontWeight:700,color:'var(--accent)',fontSize:13}}>{n}</span>
+                <span style={{fontFamily:'Outfit,sans-serif',fontWeight:700,color:'var(--accent)',fontSize:13}}>{n}</span>
                 <span style={{fontSize:11,color:'var(--text-3)'}}>{l}</span>
               </div>
             ))}
@@ -215,7 +217,7 @@ export default function Home() {
               <div key={p.tag} className={`card${p.accent?' card-accent':''}`}>
                 <span className="tag" style={!p.accent?{background:'rgba(255,255,255,0.04)',color:'var(--text-3)',borderColor:'var(--border-2)'}:{}}>{p.tag}</span>
                 <h3 style={{fontSize:17,fontWeight:600,color:'var(--text)',marginTop:12,marginBottom:4}}>{p.title}</h3>
-                <div style={{fontSize:32,fontWeight:700,fontFamily:'Syne,sans-serif',color:p.accent?'var(--text)':'var(--text-2)',margin:'10px 0 6px',letterSpacing:'-0.02em'}}>{p.price}<span style={{fontSize:14,color:'var(--text-3)',fontWeight:400}}>{p.sub}</span></div>
+                <div style={{fontSize:32,fontWeight:700,fontFamily:'Outfit,sans-serif',color:p.accent?'var(--text)':'var(--text-2)',margin:'10px 0 6px',letterSpacing:'-0.02em'}}>{p.price}<span style={{fontSize:14,color:'var(--text-3)',fontWeight:400}}>{p.sub}</span></div>
                 <p style={{fontSize:12,color:'var(--text-3)',marginBottom:16}}>{p.desc}</p>
                 {p.features.map(f=><div key={f} style={{display:'flex',gap:8,marginTop:8,fontSize:12.5,color:'var(--text-2)'}}><span style={{color:p.accent?'var(--accent)':'var(--text-3)',flexShrink:0}}>✓</span>{f}</div>)}
                 {p.book
@@ -257,7 +259,7 @@ export default function Home() {
                 <div key={p.name} className={`card${p.popular?' card-accent':''}`} style={{position:'relative'}}>
                   {p.popular&&<div style={{position:'absolute',top:-10,left:'50%',transform:'translateX(-50%)',background:'var(--accent)',color:'#080808',fontSize:10,fontWeight:600,padding:'3px 12px',borderRadius:20,whiteSpace:'nowrap'}}>Most popular</div>}
                   <div style={{fontSize:11,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:'0.1em',fontWeight:500,marginBottom:8}}>{p.name}</div>
-                  <div style={{fontSize:30,fontWeight:700,fontFamily:'Syne,sans-serif',color:'var(--text)'}}>{p.price}<span style={{fontSize:13,color:'var(--text-3)',fontWeight:400}}>/mo</span></div>
+                  <div style={{fontSize:30,fontWeight:700,fontFamily:'Outfit,sans-serif',color:'var(--text)'}}>{p.price}<span style={{fontSize:13,color:'var(--text-3)',fontWeight:400}}>/mo</span></div>
                   <div style={{marginTop:14}}>
                     {p.features.map(f=><div key={f} style={{fontSize:13,color:'var(--text-2)',padding:'6px 0',borderTop:'0.5px solid var(--border)',display:'flex',gap:7}}><span style={{color:'var(--accent)',flexShrink:0}}>✓</span>{f}</div>)}
                   </div>
@@ -273,7 +275,7 @@ export default function Home() {
                 <div key={p.name} className={`card${(p as any).new?' card-accent':''}`}>
                   {(p as any).new&&<div style={{fontSize:11,color:'var(--accent)',fontWeight:500,marginBottom:4}}>🌐 NEW</div>}
                   <div style={{fontSize:11,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:'0.1em',fontWeight:500,marginBottom:8}}>{p.name}</div>
-                  <div style={{fontSize:30,fontWeight:700,fontFamily:'Syne,sans-serif',color:'var(--text)'}}>{p.price}<span style={{fontSize:13,color:'var(--text-3)',fontWeight:400}}>/mo</span></div>
+                  <div style={{fontSize:30,fontWeight:700,fontFamily:'Outfit,sans-serif',color:'var(--text)'}}>{p.price}<span style={{fontSize:13,color:'var(--text-3)',fontWeight:400}}>/mo</span></div>
                   <div style={{marginTop:14}}>
                     {p.features.map(f=><div key={f} style={{fontSize:13,color:'var(--text-2)',padding:'6px 0',borderTop:'0.5px solid var(--border)',display:'flex',gap:7}}><span style={{color:'var(--accent)',flexShrink:0}}>✓</span>{f}</div>)}
                   </div>
@@ -296,7 +298,7 @@ export default function Home() {
               </div>
               {!qDone ? (
                 <>
-                  <div style={{fontSize:17,fontWeight:600,color:'var(--text)',marginBottom:18,fontFamily:'Syne,sans-serif'}}>{QUIZ[qStep].q}</div>
+                  <div style={{fontSize:17,fontWeight:600,color:'var(--text)',marginBottom:18,fontFamily:'Outfit,sans-serif'}}>{QUIZ[qStep].q}</div>
                   <div style={{display:'flex',flexDirection:'column',gap:8}}>
                     {QUIZ[qStep].opts.map(opt=>(
                       <button key={opt} onClick={()=>qPick(opt)} className="btn btn-ghost" style={{justifyContent:'flex-start',padding:'11px 14px',fontSize:13,textAlign:'left'}}>{opt}</button>
@@ -313,7 +315,7 @@ export default function Home() {
                   <div style={{textAlign:'center'}}>
                     <div style={{fontSize:11,color:'var(--accent)',fontWeight:500,letterSpacing:'0.08em',textTransform:'uppercase',marginBottom:8}}>Your plan</div>
                     <h3 style={{fontSize:20,fontWeight:700,color:'var(--text)',marginBottom:6}}>{r.plan}</h3>
-                    <div style={{fontSize:44,fontWeight:800,fontFamily:'Syne,sans-serif',color:'var(--text)',letterSpacing:'-0.03em',margin:'8px 0 12px'}}>{r.price}</div>
+                    <div style={{fontSize:44,fontWeight:800,fontFamily:'Outfit,sans-serif',color:'var(--text)',letterSpacing:'-0.03em',margin:'8px 0 12px'}}>{r.price}</div>
                     <p style={{fontSize:13,color:'var(--text-2)',lineHeight:1.6,marginBottom:22}}>{r.desc}</p>
                     {r.action==='book'
                       ?<button className="btn btn-primary" style={{width:'100%',padding:12}} onClick={()=>setBookOpen(true)}>{r.cta}</button>
@@ -340,7 +342,7 @@ export default function Home() {
 
         {/* FOOTER */}
         <footer style={{borderTop:'0.5px solid var(--border)',padding:'32px 40px',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:14}}>
-          <div style={{fontFamily:'Syne,sans-serif',fontSize:16,fontWeight:700}}>wovo<span style={{color:'var(--accent)'}}>media</span></div>
+          <div style={{fontFamily:'Outfit,sans-serif',fontSize:16,fontWeight:700}}>wovo<span style={{color:'var(--accent)'}}>media</span></div>
           <div style={{display:'flex',gap:20}}>
             {['Privacy','Terms'].map(l=><a key={l} href="#" style={{fontSize:12,color:'var(--text-3)',textDecoration:'none'}}>{l}</a>)}
             <a href="mailto:Payton@wovomedia.com" style={{fontSize:12,color:'var(--text-3)',textDecoration:'none'}}>Contact</a>
@@ -354,7 +356,7 @@ export default function Home() {
         {chatOpen&&(
           <div className="slide-up" style={{width:300,background:'var(--bg-2)',border:'0.5px solid var(--border-2)',borderRadius:16,overflow:'hidden'}}>
             <div style={{background:'var(--bg-3)',padding:'12px 14px',display:'flex',alignItems:'center',gap:9,borderBottom:'0.5px solid var(--border)'}}>
-              <div style={{width:32,height:32,borderRadius:'50%',background:'var(--accent-dim)',border:'1.5px solid var(--accent-border)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:700,color:'var(--accent)',fontFamily:'Syne,sans-serif',flexShrink:0}}>N</div>
+              <div style={{width:32,height:32,borderRadius:'50%',background:'var(--accent-dim)',border:'1.5px solid var(--accent-border)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:700,color:'var(--accent)',fontFamily:'Outfit,sans-serif',flexShrink:0}}>N</div>
               <div>
                 <div style={{fontSize:13,fontWeight:500,color:'var(--text)'}}>Nova</div>
                 <div style={{fontSize:11,color:'var(--accent)',display:'flex',alignItems:'center',gap:4}}><div style={{width:5,height:5,borderRadius:'50%',background:'var(--accent)'}}/>Online</div>
