@@ -124,7 +124,7 @@ function videoEmailHtml(name: string, headline: string, subtext: string, videoUr
     <div style="text-align:center;margin:28px 0">
       <a href="${ctaUrl}" style="display:inline-block;background:#00E5C8;color:#080808;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;letter-spacing:-0.01em">${ctaText}</a>
     </div>
-    <p style="color:#444;font-size:12px;margin:20px 0 0;text-align:center">Questions? Reply to this email or text (931) 458-3255</p>
+    <p style="color:#444;font-size:12px;margin:20px 0 0;text-align:center">Questions? Reply to this email or text support@wovomedia.com</p>
   </div>
   <div style="padding:16px 32px;border-top:1px solid rgba(255,255,255,0.06);text-align:center">
     <p style="color:#333;font-size:11px;margin:0">wovomedia.com · Payton@wovomedia.com</p>
@@ -198,7 +198,7 @@ export async function POST(req: NextRequest) {
 
       // Send email with video
       await resend.emails.send({
-        from: 'Wovo Media <Payton@wovomedia.com>',
+        from: 'Wovo Media <support@wovomedia.com>',
         to: email,
         subject: cfg.headline,
         html: videoEmailHtml(name, cfg.headline, cfg.subtext, videoUrl, cfg.cta, cfg.url),

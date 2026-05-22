@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
 
   // Send welcome email
   resend.emails.send({
-    from: 'Wovo Media <Payton@wovomedia.com>',
+    from: 'Wovo Media <support@wovomedia.com>',
     to: email,
     subject: `Welcome to Wovo Media, ${fullName.split(' ')[0]}!`,
     html: `<div style="font-family:'Helvetica Neue',sans-serif;max-width:540px;margin:40px auto;background:#111;color:#f0f0f0;padding:36px;border-radius:16px;border:1px solid rgba(255,255,255,0.08)">
@@ -72,15 +72,16 @@ export async function POST(req: NextRequest) {
       <div style="text-align:center;margin:28px 0">
         <a href="https://wovomedia.com/login" style="display:inline-block;background:#00E5C8;color:#080808;padding:13px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">Log In to Your Account →</a>
       </div>
-      <p style="color:#555;font-size:13px">Questions? Reply to this email or text (931) 458-3255.</p>
+      <p style="color:#555;font-size:13px">Questions? Reply to this email or text support@wovomedia.com.</p>
       <p style="color:#444;font-size:13px;margin-top:14px">— Payton Cody<br>Founder, Wovo Media</p>
     </div>`
   })
 
   // Notify Payton of new signup
   resend.emails.send({
-    from: 'Wovo Media <Payton@wovomedia.com>',
+    from: 'Wovo Media <support@wovomedia.com>',
     to: 'Payton@wovomedia.com',
+    replyTo: 'support@wovomedia.com',
     subject: `New signup — ${fullName}${businessName ? ` (${businessName})` : ''}`,
     html: `<div style="font-family:sans-serif;max-width:400px;background:#111;color:#f0f0f0;padding:24px;border-radius:12px"><h3 style="color:#00E5C8;margin:0 0 16px">New Free Account</h3><div style="font-size:14px"><div style="padding:8px 0;border-bottom:1px solid #222"><span style="color:#666">Name</span> · ${fullName}</div><div style="padding:8px 0;border-bottom:1px solid #222"><span style="color:#666">Email</span> · ${email}</div><div style="padding:8px 0"><span style="color:#666">Business</span> · ${businessName || '—'}</div></div></div>`
   })

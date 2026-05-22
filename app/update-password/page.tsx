@@ -11,20 +11,55 @@ export default function UpdatePassword() {
   const [done, setDone] = useState(false)
   const [error, setError] = useState('')
   const [ready, setReady] = useState(false)
+  const [checking, setChecking] = useState(true)
 
   useEffect(() => {
-    // Supabase puts the token in the URL hash — we need to let it process
-    // The auth callback fires automatically when the page loads with a hash token
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        setReady(true)
+    // Supabase sends recovery token in URL hash: #access_token=...&type=recovery
+    // OR as query params: ?token=...&type=recovery (older flow)
+    const handleRecovery = async () => {
+      const hash = window.location.hash
+      const query = window.location.search
+
+      // Parse hash fragment
+      if (hash) {
+        const params = new URLSearchParams(hash.replace('#', ''))
+        const accessToken = params.get('access_token')
+        const refreshToken = params.get('refresh_token')
+        const type = params.get('type')
+
+        if (type === 'recovery' && accessToken && refreshToken) {
+          const { error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          })
+          if (!error) { setReady(true); setChecking(false); return }
+        }
       }
-    })
-    // Also check if already in a recovery session
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) setReady(true)
-    })
-    return () => subscription.unsubscribe()
+
+      // Check if Supabase already handled it via detectSessionInUrl
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        setReady(true)
+        setChecking(false)
+        return
+      }
+
+      // Listen for PASSWORD_RECOVERY event
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
+          setReady(true)
+          setChecking(false)
+          subscription.unsubscribe()
+        }
+      })
+
+      // Give it 5 seconds then show error
+      setTimeout(() => {
+        setChecking(false)
+      }, 5000)
+    }
+
+    handleRecovery()
   }, [])
 
   const handleUpdate = async (e: React.FormEvent) => {
@@ -35,6 +70,7 @@ export default function UpdatePassword() {
     setLoading(true)
     const { error } = await supabase.auth.updateUser({ password })
     if (error) { setError(error.message); setLoading(false); return }
+    await supabase.auth.signOut()
     setDone(true)
     setLoading(false)
   }
@@ -45,7 +81,7 @@ export default function UpdatePassword() {
       <div className="card slide-up" style={{width:420,zIndex:2,textAlign:'center',padding:44,position:'relative'}}>
         <div style={{fontSize:48,marginBottom:14}}>✅</div>
         <h2 style={{fontSize:24,fontWeight:700,marginBottom:10}}>Password updated!</h2>
-        <p style={{color:'var(--text-2)',marginBottom:28,lineHeight:1.6}}>Your new password is set. You can now log in.</p>
+        <p style={{color:'var(--text-2)',marginBottom:28,lineHeight:1.6,fontSize:15}}>Your new password is set. You can now log in.</p>
         <Link href="/login"><button className="btn btn-primary" style={{width:'100%',padding:13,fontSize:15}}>Go to Login →</button></Link>
       </div>
     </div>
@@ -60,15 +96,26 @@ export default function UpdatePassword() {
           wovo<span style={{color:'var(--accent)'}}>media</span>
         </Link>
         <h2 style={{fontSize:22,fontWeight:700,marginBottom:6}}>Set new password</h2>
-        <p style={{color:'var(--text-2)',fontSize:14,marginBottom:24,lineHeight:1.6}}>Choose a strong password for your account.</p>
+        <p style={{color:'var(--text-2)',fontSize:14,marginBottom:24,lineHeight:1.6}}>Choose a strong new password for your account.</p>
+
         {error && <div className="alert alert-error" style={{marginBottom:16}}>{error}</div>}
-        {!ready && (
-          <div style={{textAlign:'center',padding:'20px 0',color:'var(--text-3)',fontSize:14}}>
-            <div style={{width:28,height:28,border:'3px solid var(--accent)',borderTopColor:'transparent',borderRadius:'50%',margin:'0 auto 12px',animation:'spin 0.8s linear infinite'}}/>
-            Verifying reset link...
+
+        {checking && (
+          <div style={{textAlign:'center',padding:'24px 0'}}>
+            <div style={{width:32,height:32,border:'3px solid var(--accent)',borderTopColor:'transparent',borderRadius:'50%',margin:'0 auto 14px',animation:'spin 0.8s linear infinite'}}/>
+            <p style={{color:'var(--text-3)',fontSize:14,margin:0}}>Verifying your reset link...</p>
           </div>
         )}
-        {ready && (
+
+        {!checking && !ready && (
+          <div style={{textAlign:'center',padding:'24px 0'}}>
+            <div style={{fontSize:40,marginBottom:14}}>⚠️</div>
+            <p style={{color:'var(--text-2)',fontSize:14,marginBottom:20,lineHeight:1.6}}>This reset link has expired or already been used. Request a new one.</p>
+            <Link href="/reset-password"><button className="btn btn-primary" style={{width:'100%',padding:13}}>Request New Reset Link</button></Link>
+          </div>
+        )}
+
+        {!checking && ready && (
           <form onSubmit={handleUpdate} style={{display:'flex',flexDirection:'column',gap:16}}>
             <div>
               <label style={{fontSize:13,color:'var(--text-2)',display:'block',marginBottom:6,fontWeight:600}}>New password</label>
@@ -79,7 +126,7 @@ export default function UpdatePassword() {
               <input className="input" type="password" value={confirm} onChange={e=>setConfirm(e.target.value)} placeholder="Same as above" required/>
             </div>
             <button className="btn btn-primary" type="submit" style={{width:'100%',padding:13,fontSize:15,marginTop:4}} disabled={loading||!password||!confirm}>
-              {loading ? 'Updating...' : 'Set New Password →'}
+              {loading?'Updating...':'Set New Password →'}
             </button>
           </form>
         )}

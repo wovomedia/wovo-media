@@ -373,7 +373,7 @@ export default function Home() {
           <div style={{fontFamily:'Outfit,sans-serif',fontSize:16,fontWeight:700}}>wovo<span style={{color:'var(--accent)'}}>media</span></div>
           <div style={{display:'flex',gap:20}}>
             {['Privacy','Terms'].map(l=><a key={l} href="#" style={{fontSize:12,color:'var(--text-3)',textDecoration:'none'}}>{l}</a>)}
-            <a href="mailto:Payton@wovomedia.com" style={{fontSize:12,color:'var(--text-3)',textDecoration:'none'}}>Contact</a>
+            <a href="mailto:support@wovomedia.com" style={{fontSize:12,color:'var(--text-3)',textDecoration:'none'}}>Contact</a>
           </div>
           <div style={{fontSize:12,color:'var(--text-3)'}}>© 2025 Wovo Media · Middle Tennessee</div>
         </footer>

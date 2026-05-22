@@ -11,7 +11,7 @@ export default function Terms() {
         ['4. Your Content','You retain ownership of content you provide to us. By submitting content, you grant Wovo Media a license to use it to provide our services. We will not sell your content to third parties.'],
         ['5. Acceptable Use','You agree not to use our services for illegal purposes, to spam others, or to violate any applicable laws or regulations.'],
         ['6. Limitation of Liability','Wovo Media is not liable for indirect, incidental, or consequential damages arising from use of our services. Our total liability is limited to the amount you paid us in the last 3 months.'],
-        ['7. Contact','Questions? Email Payton@wovomedia.com or call (931) 458-3255.'],
+        ['7. Contact','Questions? Email support@wovomedia.com or call .'],
       ].map(([h,b])=>(
         <div key={h} style={{marginBottom:28}}>
           <h2 style={{fontFamily:'Syne,sans-serif',fontSize:18,fontWeight:600,color:'var(--text)',marginBottom:8}}>{h}</h2>

@@ -31,11 +31,11 @@ export async function sendPremiumInvite({ to, name, businessName, price, payment
     <div style="text-align:center;margin:32px 0">
       <a href="${paymentLink}" style="display:inline-block;background:#00E5C8;color:#080808;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px">Complete Payment →</a>
     </div>
-    <p style="color:#444;font-size:13px;line-height:1.6;margin:0">Questions? Reply directly to this email or text/call me at (931) 458-3255.</p>
+    <p style="color:#444;font-size:13px;line-height:1.6;margin:0">Questions? Reply directly to this email or text/call me at support@wovomedia.com.</p>
     <p style="color:#444;font-size:13px;margin:16px 0 0">— Payton Cody<br><span style="color:#333">Founder, Wovo Media</span></p>
   </div>
   <div style="padding:20px 32px;border-top:0.5px solid rgba(255,255,255,0.06);text-align:center">
-    <p style="color:#333;font-size:12px;margin:0">wovomedia.com · Payton@wovomedia.com · (931) 458-3255</p>
+    <p style="color:#333;font-size:12px;margin:0">wovomedia.com · Payton@wovomedia.com · support@wovomedia.com</p>
   </div>
 </div>
 </body></html>`
