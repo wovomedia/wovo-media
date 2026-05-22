@@ -150,9 +150,7 @@ export default function Home() {
             
             {/* Nova avatar */}
             <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:20}}>
-              <div style={{width:52,height:52,borderRadius:'50%',border:'2px solid rgba(0,229,200,0.4)',overflow:'hidden',flexShrink:0,boxShadow:'0 0 20px rgba(0,229,200,0.15)'}}>
-              <img src="https://files2.heygen.ai/avatar/v3/Tyler-insuit-20220721/full/2.1/preview_target.webp" alt="Nova" style={{width:'100%',height:'100%',objectFit:'cover',objectPosition:'top'}}/>
-            </div>
+              <div style={{width:52,height:52,borderRadius:'50%',border:'2px solid rgba(0,229,200,0.4)',flexShrink:0,boxShadow:'0 0 20px rgba(0,229,200,0.15)',background:'linear-gradient(135deg,#071a17,#0d3d34)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,fontWeight:700,color:'#00E5C8',fontFamily:'Outfit,sans-serif'}}>N</div>
               <div>
                 <div style={{fontSize:15,fontWeight:700,color:'#fff'}}>Meet Nova</div>
                 <div style={{fontSize:12,color:'rgba(0,229,200,0.8)',display:'flex',alignItems:'center',gap:5}}>
@@ -244,7 +242,7 @@ export default function Home() {
           <div id="plans" className="fade-up d5" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
             {[
               {tag:'Wovo AI',title:'AI-powered content',price:'$29',sub:'/mo',desc:'Ready-to-post content, AI characters for you & your whole team.',features:['AI character — you (Starter) or your whole team (Growth+)','3–5 posts per week, ready-to-copy captions','Edit or swap any post mid-week','Website Builder plan available ($99/mo)'],cta:'Start Wovo AI',link:'/wovo-ai',accent:true},
-              {tag:'Wovo Media Premium',title:'Full-service',price:'Custom',sub:'',desc:'Real filming, drone, websites built — fully managed by Payton.',features:['On-site filming, drone & photography','Website design & development','We post for you — full admin access','Google Business Profile management','Wovo AI included at a discount'],cta:'Book a call',link:'#',accent:false,book:true},
+              {tag:'Wovo Media Premium',title:'Full-service',price:'Custom',sub:'',desc:'Real filming, drone, websites built — fully managed by our team.',features:['On-site filming, drone & photography','Website design & development','We post for you — full admin access','Google Business Profile management','Wovo AI included at a discount'],cta:'Book a call',link:'#',accent:false,book:true},
             ].map(p=>(
               <div key={p.tag} className={`card${p.accent?' card-accent':''}`}>
                 <span className="tag" style={!p.accent?{background:'rgba(255,255,255,0.04)',color:'var(--text-3)',borderColor:'var(--border-2)'}:{}}>{p.tag}</span>
