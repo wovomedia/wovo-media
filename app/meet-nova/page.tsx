@@ -25,7 +25,7 @@ export default function MeetNova() {
   const loadNode = async (id: string) => {
     setShowOptions(false)
     setVideoUrl('')
-    setVideoState('generating')
+    setVideoState('generating') // will be overridden immediately if cached
 
     // Request video generation
     const res = await fetch('/api/heygen/nova-flow', {
@@ -35,14 +35,15 @@ export default function MeetNova() {
     })
     const data = await res.json()
     if (!res.ok || !data.videoId) { setVideoState('error'); return }
-    // If already cached with URL, skip polling
+    // If already cached with URL, play immediately - no loading screen at all
     if (data.videoUrl) {
       setVideoUrl(data.videoUrl)
-      setVideoState('ready')
+      setVideoState('playing')
       setTimeout(() => {
-        videoRef.current?.play().catch(() => {})
-        setVideoState('playing')
-      }, 300)
+        videoRef.current?.play().catch(() => {
+          setVideoState('ready') // fallback if autoplay blocked
+        })
+      }, 100)
       return
     }
 

@@ -108,7 +108,7 @@ export const NOVA_FLOW: Record<string, NovaNode> = {
 
   wants_premium: {
     id: 'wants_premium',
-    script: `Premium is our full-service offering — our team comes on-site to film, capture drone footage, photography, manage your social media accounts, build your website, and handle your Google Business Profile. Payton personally manages every account. It's custom-priced for each business, usually between three hundred and two thousand dollars a month depending on scope. The best next step is a free strategy call where we build a plan around your goals. No commitment.`,
+    script: `Wovo Media Premium is our full-service option. Our team comes on-site to film, capture drone footage, do photography, manage your social accounts, and build your website. Everything handled for you. Pricing is custom — usually three hundred to two thousand a month. The best next step is a free strategy call. No commitment, just a real conversation about what's possible.`,
     options: [
       { label: '📅 Book a free strategy call', next: 'close_premium' },
       { label: '🤔 Still considering — what\'s Wovo AI?', next: 'explain_ai' },
