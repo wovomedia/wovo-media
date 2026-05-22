@@ -369,11 +369,14 @@ export default function Home() {
         </div>
 
         {/* FOOTER */}
-        <footer style={{borderTop:'0.5px solid var(--border)',padding:'32px 40px',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:14}}>
-          <div style={{fontFamily:'Outfit,sans-serif',fontSize:16,fontWeight:700}}>wovo<span style={{color:'var(--accent)'}}>media</span></div>
-          <div style={{display:'flex',gap:20}}>
-            {['Privacy','Terms'].map(l=><a key={l} href="#" style={{fontSize:12,color:'var(--text-3)',textDecoration:'none'}}>{l}</a>)}
-            <a href="mailto:support@wovomedia.com" style={{fontSize:12,color:'var(--text-3)',textDecoration:'none'}}>Contact</a>
+        <footer style={{borderTop:'1px solid var(--border)',padding:'32px 40px',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:14}}>
+          <Link href="/" style={{fontFamily:'Outfit,sans-serif',fontSize:16,fontWeight:800,color:'var(--text)',textDecoration:'none',letterSpacing:'-0.04em'}}>wovo<span style={{color:'var(--accent)'}}>media</span></Link>
+          <div style={{display:'flex',gap:24,flexWrap:'wrap'}}>
+            {[['About','/about'],['Privacy','/privacy'],['Terms','/terms'],['Contact','mailto:support@wovomedia.com']].map(([l,h])=>(
+              <a key={l} href={h} style={{fontSize:13,color:'var(--text-3)',textDecoration:'none',fontWeight:500,transition:'color 0.15s'}}
+                onMouseEnter={e=>(e.currentTarget as HTMLAnchorElement).style.color='var(--text)'}
+                onMouseLeave={e=>(e.currentTarget as HTMLAnchorElement).style.color='var(--text-3)'}>{l}</a>
+            ))}
           </div>
           <div style={{fontSize:12,color:'var(--text-3)'}}>© 2025 Wovo Media · Middle Tennessee</div>
         </footer>
