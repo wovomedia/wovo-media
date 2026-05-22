@@ -142,17 +142,45 @@ export default function Home() {
     <div style={{background:'var(--bg)',minHeight:'100vh',position:'relative'}}>
       <div className="grid-bg"/><div className="grid-fade"/>
 
-      {/* WELCOME MODAL */}
+      {/* WELCOME MODAL — Nova AI Onboarding */}
       {modal&&(
-        <div onClick={()=>setModal(false)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.78)',zIndex:600,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
-          <div onClick={e=>e.stopPropagation()} className="slide-up" style={{background:'var(--bg-2)',border:'0.5px solid var(--border-2)',borderRadius:20,padding:32,width:420,maxWidth:'94vw',position:'relative'}}>
-            <button onClick={()=>setModal(false)} style={{position:'absolute',top:14,right:14,background:'var(--bg-3)',border:'0.5px solid var(--border-2)',borderRadius:'50%',width:28,height:28,cursor:'pointer',color:'var(--text-2)',fontSize:18,display:'flex',alignItems:'center',justifyContent:'center'}}>×</button>
-            <div style={{fontSize:11,color:'var(--accent)',fontWeight:500,letterSpacing:'0.08em',textTransform:'uppercase',marginBottom:8}}>Welcome to Wovo Media</div>
-            <h3 style={{fontSize:22,fontWeight:700,color:'var(--text)',marginBottom:10}}>Real content or AI-powered?</h3>
-            <p style={{fontSize:14,color:'var(--text-2)',lineHeight:1.6,marginBottom:24}}>Hey — I'm Payton, founder of Wovo Media. 11+ clients, 100M+ combined views. Whether you need a full production team or AI posts on a budget, you're in the right place.</p>
-            <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
-              <button className="btn btn-primary" style={{flex:1}} onClick={()=>{setModal(false);document.getElementById('plans')?.scrollIntoView({behavior:'smooth'})}}>Show me plans</button>
-              <button className="btn btn-outline" style={{flex:1}} onClick={()=>{setModal(false);setBookOpen(true)}}>Book a call</button>
+        <div onClick={()=>setModal(false)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.82)',zIndex:600,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
+          <div onClick={e=>e.stopPropagation()} className="slide-up" style={{background:'#111',border:'1px solid rgba(255,255,255,0.1)',borderRadius:22,padding:32,width:420,maxWidth:'94vw',position:'relative',boxShadow:'0 32px 80px rgba(0,0,0,0.6)'}}>
+            <button onClick={()=>setModal(false)} style={{position:'absolute',top:14,right:14,background:'rgba(255,255,255,0.07)',border:'none',borderRadius:'50%',width:28,height:28,cursor:'pointer',color:'rgba(255,255,255,0.5)',fontSize:18,display:'flex',alignItems:'center',justifyContent:'center'}}>×</button>
+            
+            {/* Nova avatar */}
+            <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:20}}>
+              <div style={{width:52,height:52,borderRadius:'50%',background:'linear-gradient(135deg,#0d1f1c,#0a3330)',border:'2px solid rgba(0,229,200,0.4)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,fontWeight:700,color:'#00E5C8',fontFamily:'Outfit,sans-serif',flexShrink:0,boxShadow:'0 0 20px rgba(0,229,200,0.15)'}}>N</div>
+              <div>
+                <div style={{fontSize:15,fontWeight:700,color:'#fff'}}>Meet Nova</div>
+                <div style={{fontSize:12,color:'rgba(0,229,200,0.8)',display:'flex',alignItems:'center',gap:5}}>
+                  <div style={{width:6,height:6,borderRadius:'50%',background:'#00E5C8',boxShadow:'0 0 6px #00E5C8'}}/>
+                  Wovo Media AI Guide
+                </div>
+              </div>
+            </div>
+
+            <h3 style={{fontSize:20,fontWeight:700,color:'#fff',marginBottom:10,letterSpacing:'-0.02em'}}>Not sure which plan is right for you?</h3>
+            <p style={{fontSize:14,color:'rgba(255,255,255,0.55)',lineHeight:1.65,marginBottom:24}}>Nova is our AI guide. He'll ask you a few quick questions about your business and recommend the exact plan that fits — then walk you through it with a personalized video.</p>
+            
+            {/* Video preview hint */}
+            <div style={{background:'rgba(0,229,200,0.06)',border:'1px solid rgba(0,229,200,0.15)',borderRadius:12,padding:'12px 16px',marginBottom:22,display:'flex',alignItems:'center',gap:10}}>
+              <div style={{width:32,height:32,borderRadius:'50%',background:'#00E5C8',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="#0a0a0a"><polygon points="5,3 19,12 5,21"/></svg>
+              </div>
+              <p style={{fontSize:13,color:'rgba(255,255,255,0.5)',margin:0,lineHeight:1.5}}>Interactive AI video · Nova speaks, you pick, Nova responds · ~2 min</p>
+            </div>
+
+            <div style={{display:'flex',flexDirection:'column',gap:9}}>
+              <Link href="/meet-nova" style={{textDecoration:'none'}}>
+                <button className="btn btn-primary" style={{width:'100%',padding:13,fontSize:15,borderRadius:12}}>
+                  Talk to Nova →
+                </button>
+              </Link>
+              <div style={{display:'flex',gap:8}}>
+                <button className="btn btn-ghost" style={{flex:1,padding:'10px 0',fontSize:13}} onClick={()=>{setModal(false);document.getElementById('plans')?.scrollIntoView({behavior:'smooth'})}}>See plans</button>
+                <button className="btn btn-ghost" style={{flex:1,padding:'10px 0',fontSize:13}} onClick={()=>{setModal(false);setBookOpen(true)}}>Book a call</button>
+              </div>
             </div>
           </div>
         </div>
