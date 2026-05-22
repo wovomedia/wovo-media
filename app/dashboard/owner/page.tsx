@@ -143,6 +143,8 @@ export default function OwnerDashboard() {
           ))}
         </div>
         <div style={{display:'flex',gap:8}}>
+          <Link href="/dashboard/owner/videos"><button className="btn btn-ghost btn-sm">🎬 AI Videos</button></Link>
+          <Link href="/dashboard/owner/team"><button className="btn btn-ghost btn-sm">👥 Team</button></Link>
           <button className="btn btn-primary btn-sm" onClick={()=>setShowOnboard(true)}>+ Onboard Premium Client</button>
           <ThemeToggle/>
           <button className="btn btn-ghost btn-sm" onClick={()=>sb.auth.signOut().then(()=>window.location.href='/')}>Sign out</button>
@@ -201,7 +203,9 @@ export default function OwnerDashboard() {
           <>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24}}>
               <h2 style={{fontSize:22,fontWeight:700}}>All Clients</h2>
-              <button className="btn btn-primary btn-sm" onClick={()=>setShowOnboard(true)}>+ Onboard Premium Client</button>
+              <Link href="/dashboard/owner/videos"><button className="btn btn-ghost btn-sm">🎬 AI Videos</button></Link>
+          <Link href="/dashboard/owner/team"><button className="btn btn-ghost btn-sm">👥 Team</button></Link>
+          <button className="btn btn-primary btn-sm" onClick={()=>setShowOnboard(true)}>+ Onboard Premium Client</button>
             </div>
             <div className="card">
               {clients.length===0 ? <p style={{textAlign:'center',padding:'40px 0',color:'var(--text-3)'}}>No clients yet</p> : (

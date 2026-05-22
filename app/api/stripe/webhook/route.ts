@@ -59,6 +59,13 @@ export async function POST(req: NextRequest) {
 
           // Send welcome email
           await sendWelcomeEmail({ to: email, name: invite.owner_name, businessName, loginEmail: email, tempPassword })
+
+          // Trigger premium welcome conversion video (background)
+          fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://wovomedia.com'}/api/heygen/conversion`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'premium_welcome', name: invite.owner_name, email, business: businessName, clientId: client?.id })
+          }).catch(() => {})
         }
       }
     }
