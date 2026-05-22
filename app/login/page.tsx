@@ -37,7 +37,11 @@ export default function Login() {
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Incorrect email or password.'); setLoading(false); return }
-      // Session is set as a cookie by the server — just redirect
+      // Set session so all Supabase clients on this device can find it
+      await supabase.auth.setSession({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+      })
       window.location.href = data.redirect || '/dashboard/client'
     } catch {
       setError('Network error. Please try again.')

@@ -1,10 +1,8 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { createClient } from '@supabase/supabase-js'
+import { supabase as sb } from '@/lib/supabase'
 import Link from 'next/link'
 import ThemeToggle from '@/components/ThemeToggle'
-
-const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
 
 const VIDEO_TYPES = [
   { key: 'post_booking', label: 'Post-Booking', desc: 'Sent after someone books a strategy call. Builds hype, explains Wovo AI vs Premium, warms them up before the call.', badge: '🗓', color: '#3b82f6' },

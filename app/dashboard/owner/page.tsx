@@ -1,10 +1,8 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { createClient } from '@supabase/supabase-js'
+import { supabase as sb } from '@/lib/supabase'
 import Link from 'next/link'
 import ThemeToggle from '@/components/ThemeToggle'
-
-const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
 
 const PRICE_OPTIONS = [
   { label: '$350/mo', cents: 35000 },

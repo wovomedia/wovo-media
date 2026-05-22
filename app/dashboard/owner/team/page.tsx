@@ -1,9 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { createClient } from '@supabase/supabase-js'
+import { supabase as sb } from '@/lib/supabase'
 import Link from 'next/link'
-
-const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
 
 const ROLES = ['content_manager','customer_service','employee']
 const ROLE_LABELS: Record<string,string> = { content_manager:'Content Manager', customer_service:'Customer Service', employee:'Team Member', admin:'Admin', owner:'Owner' }
