@@ -93,17 +93,26 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ videos: data, total: data?.length, done: data?.filter(v => v.status === 'completed').length })
   }
 
-  // Generate ALL nodes
-  const nodeIds = Object.keys(NOVA_FLOW)
-  const results = []
-  for (const nodeId of nodeIds) {
-    const node = NOVA_FLOW[nodeId]
-    const result = await generateVideo(nodeId, node.script)
-    results.push(result)
-    // Small delay to avoid rate limiting
-    await new Promise(r => setTimeout(r, 300))
+  // Generate a specific node or the next pending one
+  const nodeParam = req.nextUrl.searchParams.get('node')
+
+  if (nodeParam) {
+    const node = NOVA_FLOW[nodeParam]
+    if (!node) return NextResponse.json({ error: 'Node not found' }, { status: 404 })
+    const result = await generateVideo(nodeParam, node.script)
+    return NextResponse.json(result)
   }
 
-  return NextResponse.json({ triggered: results.length, results })
+  // Generate next pending node (one at a time to avoid timeout)
+  const { data: existing } = await sb.from('nova_videos').select('node_id')
+  const doneIds = new Set(existing?.map((v: any) => v.node_id) || [])
+  const pending = Object.keys(NOVA_FLOW).filter(id => !doneIds.has(id))
+
+  if (pending.length === 0) return NextResponse.json({ message: 'All videos done!', total: Object.keys(NOVA_FLOW).length })
+
+  const nextNode = pending[0]
+  const node = NOVA_FLOW[nextNode]
+  const result = await generateVideo(nextNode, node.script)
+  return NextResponse.json({ ...result, remaining: pending.length - 1 })
 }
 // Fri May 22 12:51:00 UTC 2026
