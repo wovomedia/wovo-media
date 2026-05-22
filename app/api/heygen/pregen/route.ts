@@ -58,8 +58,10 @@ export async function GET(req: NextRequest) {
   const action = req.nextUrl.searchParams.get('action')
 
   if (action === 'reset-failed') {
-    // Delete all failed entries so they get regenerated
+    // Delete failed AND stuck generating entries (stuck = generating for >1hr)
+    const cutoff = new Date(Date.now() - 60 * 60 * 1000).toISOString()
     await sb.from('nova_videos').delete().eq('status', 'failed')
+    await sb.from('nova_videos').delete().eq('status', 'generating').lt('created_at', cutoff)
     return NextResponse.json({ reset: true })
   }
 
