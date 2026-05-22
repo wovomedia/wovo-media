@@ -233,3 +233,63 @@ tr:hover td { background:var(--bg-3); }
 [data-theme="light"] .glow-line {
   background: linear-gradient(90deg, transparent, rgba(0,157,138,0.3), transparent);
 }
+
+/* ── MOBILE RESPONSIVE ─────────────────────────────────── */
+@media (max-width: 768px) {
+  body { font-size: 14px; }
+
+  /* Nav */
+  nav { padding: 12px 16px !important; }
+  nav .desktop-nav { display: none !important; }
+
+  /* Hero */
+  h1 { font-size: 36px !important; }
+  h2 { font-size: 24px !important; }
+
+  /* Grids → single column */
+  .grid-2 { grid-template-columns: 1fr !important; }
+  .grid-3 { grid-template-columns: 1fr !important; }
+  .grid-4 { grid-template-columns: 1fr 1fr !important; }
+
+  /* Cards */
+  .card { padding: 20px 18px !important; border-radius: 12px !important; }
+
+  /* Buttons */
+  .btn { font-size: 14px !important; padding: 10px 18px !important; }
+  .btn-primary { padding: 12px 20px !important; }
+
+  /* Inputs */
+  .input { font-size: 16px !important; } /* prevents zoom on iOS */
+
+  /* Stat cards */
+  .stat-num { font-size: 26px !important; }
+
+  /* Tables → hide on mobile, show as cards */
+  table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  th, td { min-width: 100px; }
+
+  /* Main content - no sidebar on mobile */
+  .main-content { margin-left: 0 !important; padding: 16px !important; }
+  .sidebar { display: none !important; }
+
+  /* Proof bar */
+  .proof-bar { flex-wrap: wrap !important; gap: 10px !important; padding: 10px 14px !important; }
+
+  /* Page padding */
+  div[style*="padding: 90px 40px"],
+  div[style*="padding:'90px 40px'"] { padding: 48px 16px 40px !important; }
+}
+
+@media (max-width: 480px) {
+  h1 { font-size: 30px !important; line-height: 1.1 !important; }
+  .btn-primary { width: 100% !important; }
+  .card { padding: 16px 14px !important; }
+}
+
+/* Mobile nav show/hide */
+.mobile-nav-buttons { display: none !important; }
+@media (max-width: 768px) {
+  .mobile-nav-buttons { display: flex !important; }
+  .desktop-nav { display: none !important; }
+  .proof-bar span { font-size: 10px !important; }
+}

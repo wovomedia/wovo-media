@@ -206,13 +206,19 @@ export default function Home() {
       {/* NAV */}
       <nav style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'16px 40px',borderBottom:'0.5px solid var(--border)',position:'sticky',top:0,background:'rgba(8,8,8,0.94)',backdropFilter:'blur(14px)',zIndex:100}}>
         <div style={{fontFamily:'Outfit,sans-serif',fontSize:19,fontWeight:700}}>wovo<span style={{color:'var(--accent)'}}>media</span></div>
-        <div style={{display:'flex',gap:24,alignItems:'center'}}>
+        <div className="desktop-nav" style={{display:'flex',gap:24,alignItems:'center'}}>
           {[['Wovo AI','#plans'],['Premium','#premium'],['Pricing','#pricing'],['Results','#results']].map(([l,h])=>(
             <a key={l} href={h} style={{color:'var(--text-2)',fontSize:13,textDecoration:'none',fontWeight:500}}>{l}</a>
           ))}
           <Link href="/login" style={{color:'var(--text-2)',fontSize:13,textDecoration:'none',fontWeight:600}}>Login</Link>
           <ThemeToggle/>
           <button className="btn btn-primary btn-sm" onClick={()=>setBookOpen(true)}>Book a call</button>
+        </div>
+        {/* Mobile nav */}
+        <div style={{display:'flex',gap:8,alignItems:'center'}} className="mobile-nav-buttons">
+          <ThemeToggle/>
+          <button className="btn btn-primary btn-sm" onClick={()=>setBookOpen(true)} style={{fontSize:12,padding:'7px 12px'}}>Book a call</button>
+          <Link href="/login"><button className="btn btn-ghost btn-sm" style={{fontSize:12,padding:'7px 12px'}}>Login</button></Link>
         </div>
       </nav>
 
@@ -241,7 +247,7 @@ export default function Home() {
           <div className="glow-line fade-up d4" style={{marginBottom:44}}/>
 
           {/* TWO LANE */}
-          <div id="plans" className="fade-up d5" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+          <div id="plans" className="fade-up d5 grid-2" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
             {[
               {tag:'Wovo AI',title:'AI-powered content',price:'$29',sub:'/mo',desc:'Ready-to-post content, AI characters for you & your whole team.',features:['AI character — you (Starter) or your whole team (Growth+)','3–5 posts per week, ready-to-copy captions','Edit or swap any post mid-week','Website Builder plan available ($99/mo)'],cta:'Start Wovo AI',link:'/wovo-ai',accent:true},
               {tag:'Wovo Media Premium',title:'Full-service',price:'Custom',sub:'',desc:'Real filming, drone, websites built — fully managed by our team.',features:['On-site filming, drone & photography','Website design & development','We post for you — full admin access','Google Business Profile management','Wovo AI included at a discount'],cta:'Book a call',link:'#',accent:false,book:true},
@@ -266,7 +272,7 @@ export default function Home() {
           <div style={{maxWidth:860,margin:'0 auto',padding:'60px 40px',textAlign:'center'}}>
             <div style={{fontSize:11,color:'var(--text-3)',fontWeight:500,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:12}}>Proven results</div>
             <h2 style={{fontSize:30,fontWeight:700,marginBottom:36}}>Real businesses. Real numbers.</h2>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12}}>
+            <div className="grid-4" style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12}}>
               {[['11+','Active clients'],['100M+','Combined views & engagements'],['4M+','Monthly views, one client'],['24hr','Response time']].map(([n,l])=>(
                 <div key={n} className="stat-card" style={{textAlign:'center'}}>
                   <div className="stat-num">{n}</div>
@@ -283,7 +289,7 @@ export default function Home() {
             <div style={{fontSize:11,color:'var(--text-3)',fontWeight:500,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:12}}>Pricing</div>
             <h2 style={{fontSize:30,fontWeight:700,marginBottom:6}}>Wovo AI plans.</h2>
             <p style={{color:'var(--text-2)',marginBottom:36,fontSize:14}}>Start free from $29/mo. Cancel anytime. Premium clients get Wovo AI at a discount.</p>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:12,marginBottom:12}}>
+            <div className="grid-2" style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:12,marginBottom:12}}>
               {[
                 {name:'Starter',price:'$29',popular:false,features:['AI character — you','3 posts per week','Captions & editing','Posting tutorials']},
                 {name:'Growth',price:'$49',popular:true,features:['AI characters — entire team','5 posts per week','Unlimited edits','Week description input']},
@@ -391,7 +397,9 @@ export default function Home() {
         {chatOpen&&(
           <div className="slide-up" style={{width:300,background:'var(--bg-2)',border:'0.5px solid var(--border-2)',borderRadius:16,overflow:'hidden'}}>
             <div style={{background:'var(--bg-3)',padding:'12px 14px',display:'flex',alignItems:'center',gap:9,borderBottom:'0.5px solid var(--border)'}}>
-              <div style={{width:32,height:32,borderRadius:'50%',background:'var(--accent-dim)',border:'1.5px solid var(--accent-border)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:700,color:'var(--accent)',fontFamily:'Outfit,sans-serif',flexShrink:0}}>N</div>
+              <div style={{width:32,height:32,borderRadius:'50%',overflow:'hidden',border:'1.5px solid var(--accent-border)',flexShrink:0}}>
+                <img src="https://files2.heygen.ai/avatar/v3/79b245561ad448e796b7e77cd2773d0b_14263/preview_talk_11.webp" alt="Nova" style={{width:'100%',height:'140%',objectFit:'cover',objectPosition:'top center',marginTop:'-10%'}} onError={(e)=>{(e.currentTarget as HTMLImageElement).style.display='none'}}/>
+              </div>
               <div>
                 <div style={{fontSize:13,fontWeight:500,color:'var(--text)'}}>Nova</div>
                 <div style={{fontSize:11,color:'var(--accent)',display:'flex',alignItems:'center',gap:4}}><div style={{width:5,height:5,borderRadius:'50%',background:'var(--accent)'}}/>Online</div>

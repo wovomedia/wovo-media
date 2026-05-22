@@ -143,6 +143,7 @@ export default function OwnerDashboard() {
         <div style={{display:'flex',gap:8}}>
           <Link href="/dashboard/owner/videos"><button className="btn btn-ghost btn-sm">🎬 AI Videos</button></Link>
           <Link href="/dashboard/owner/team"><button className="btn btn-ghost btn-sm">👥 Team</button></Link>
+          <Link href="/dashboard/owner/users"><button className="btn btn-ghost btn-sm">🔑 Users</button></Link>
           <button className="btn btn-primary btn-sm" onClick={()=>setShowOnboard(true)}>+ Onboard Premium Client</button>
           <ThemeToggle/>
           <a href="/"><button className="btn btn-ghost btn-sm">← Home</button></a>
@@ -204,6 +205,7 @@ export default function OwnerDashboard() {
               <h2 style={{fontSize:22,fontWeight:700}}>All Clients</h2>
               <Link href="/dashboard/owner/videos"><button className="btn btn-ghost btn-sm">🎬 AI Videos</button></Link>
           <Link href="/dashboard/owner/team"><button className="btn btn-ghost btn-sm">👥 Team</button></Link>
+          <Link href="/dashboard/owner/users"><button className="btn btn-ghost btn-sm">🔑 Users</button></Link>
           <button className="btn btn-primary btn-sm" onClick={()=>setShowOnboard(true)}>+ Onboard Premium Client</button>
             </div>
             <div className="card">
