@@ -48,6 +48,7 @@ export default function ClientDashboard() {
           ))}
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
+          <Link href="/dashboard/client/business"><button className="btn btn-ghost btn-sm">🏢 My Business</button></Link>
           <Link href="/dashboard/client/videos"><button className="btn btn-ghost btn-sm">🎬 AI Videos</button></Link>
           <Link href="/account"><button className="btn btn-ghost btn-sm">Account</button></Link>
           <a href="/"><button className="btn btn-ghost btn-sm">← Home</button></a>

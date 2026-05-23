@@ -6,11 +6,23 @@ const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPAB
 export async function POST(req: NextRequest) {
   const { videoDbId, script, clientId } = await req.json()
 
-  // Get client info for context
   const { data: client } = await sb.from('clients').select('business_name').eq('id', clientId).single()
-  const businessName = client?.business_name || 'this business'
+  const businessName = (client as any)?.business_name || 'this business'
 
-  // Generate caption via Claude
+  let profileCtx = ''
+  try {
+    const { data: bp } = await sb.from('client_business_profiles').select('*').eq('client_id', clientId).single()
+    if (bp) {
+      const parts = []
+      if (bp.industry) parts.push('Industry: ' + bp.industry)
+      if (bp.target_audience) parts.push('Audience: ' + bp.target_audience)
+      if (bp.brand_voice) parts.push('Voice: ' + bp.brand_voice)
+      if (bp.social_handles) parts.push('Handles: ' + bp.social_handles)
+      if (bp.avoid_topics) parts.push('Avoid: ' + bp.avoid_topics)
+      profileCtx = parts.join(' | ')
+    }
+  } catch {}
+
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -23,19 +35,7 @@ export async function POST(req: NextRequest) {
       max_tokens: 300,
       messages: [{
         role: 'user',
-        content: `Write a social media caption for this video for ${businessName}.
-
-Video script: "${script}"
-
-Requirements:
-- 2-3 sentences max, punchy and engaging
-- Include 3-5 relevant hashtags at the end
-- Match the energy/tone of the script
-- Don't start with "I" or "We"
-- Make it feel authentic, not corporate
-- No quotes, just the caption text
-
-Reply with ONLY the caption, nothing else.`
+        content: 'Write a social media caption for this video for ' + businessName + '. ' + (profileCtx ? 'Context: ' + profileCtx + '. ' : '') + '\n\nVideo script: "' + script + '"\n\nRequirements:\n- 2-3 sentences max, punchy and engaging\n- Include 3-5 relevant hashtags at the end\n- Match the tone of the script\n- Do not start with I or We\n- No quotes, just the caption text\n\nReply with ONLY the caption, nothing else.'
       }]
     })
   })

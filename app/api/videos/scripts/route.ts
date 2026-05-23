@@ -1,13 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(req: NextRequest) {
-  const { businessName, seriesName, theme, tone, businessDesc, episodes, characters } = await req.json()
+  const { businessName, seriesName, theme, tone, businessDesc, episodes, characters, businessProfile } = await req.json()
+  
+  // Build rich context from business profile if available
+  const profileContext = businessProfile ? `
+Business Profile:
+- Industry: ${businessProfile.industry || 'unknown'}
+- Location: ${businessProfile.location || 'unknown'}  
+- Description: ${businessProfile.description || ''}
+- Target audience: ${businessProfile.target_audience || ''}
+- Top products/services: ${businessProfile.top_products || ''}
+- What makes them different: ${businessProfile.differentiators || ''}
+- Brand voice: ${businessProfile.brand_voice || tone}
+- Topics to avoid: ${businessProfile.avoid_topics || 'none'}
+- Goals: ${businessProfile.goals || ''}
+` : ''
 
   const charStr = characters?.length > 0
     ? `The scripts will feature these characters: ${characters.join(', ')}.`
     : ''
 
   const prompt = `Write ${episodes} short social media video scripts for ${businessName || 'a local business'}.
+${profileContext}
 
 Series name: "${seriesName}"
 Theme: ${theme}

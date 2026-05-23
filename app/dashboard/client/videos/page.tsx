@@ -21,6 +21,7 @@ export default function ClientVideos() {
   const [tab, setTab] = useState<'characters'|'series'|'library'>('characters')
   const [msg, setMsg] = useState('')
   const [loading, setLoading] = useState(true)
+  const [businessProfile, setBusinessProfile] = useState<any>(null)
 
   // Character creation
   const [showCreateChar, setShowCreateChar] = useState(false)
@@ -52,7 +53,8 @@ export default function ClientVideos() {
         const [ch, s, v] = await Promise.all([
           sb.from('client_ai_characters').select('*').eq('client_id', c.id).order('created_at', { ascending: false }),
           sb.from('client_video_series').select('*').eq('client_id', c.id).order('created_at', { ascending: false }),
-          sb.from('client_videos').select('*').eq('client_id', c.id).order('created_at', { ascending: false }).limit(30)
+          sb.from('client_videos').select('*').eq('client_id', c.id).order('created_at', { ascending: false }).limit(30),
+          sb.from('client_business_profiles').select('*').eq('client_id', c.id).maybeSingle()
         ])
         if (ch.data) setCharacters(ch.data)
         if (s.data) setSeries(s.data)
@@ -142,6 +144,7 @@ export default function ClientVideos() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         businessName: client?.business_name,
+        businessProfile,
         seriesName: seriesForm.name,
         theme: SERIES_THEMES.find(t => t.key === seriesForm.theme)?.desc,
         tone: seriesForm.tone,
