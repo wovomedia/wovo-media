@@ -121,10 +121,22 @@ function WovoAIContent() {
     setWbGenerating(false)
   }
 
+  const STRIPE_LINKS: Record<string,string> = {
+    starter: 'https://pay.wovomedia.com/b/7sY6oH3DRdI71zu0gocIE0Y',
+    growth:  'https://pay.wovomedia.com/b/fZu6oH6Q3fQf3HC0gocIE0Z',
+    pro_ai:  'https://pay.wovomedia.com/b/aFafZhfmzfQf1zu2owcIE10',
+    website: 'https://pay.wovomedia.com/b/4gMcN57U7avV0vqbZ6cIE11',
+  }
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    setTimeout(() => { setDone(true); setLoading(false) }, 1000)
+    const url = STRIPE_LINKS[selectedPlan]
+    if (url) {
+      // Add prefilled email to Stripe link if provided
+      const stripeUrl = email ? `${url}?prefilled_email=${encodeURIComponent(email)}` : url
+      window.location.href = stripeUrl
+    }
+    setLoading(false)
   }
 
   if(done) return (
