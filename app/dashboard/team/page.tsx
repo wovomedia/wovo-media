@@ -85,7 +85,7 @@ export default function TeamDashboard() {
             </div>
             <div className="card" style={{marginTop:14,padding:24}}>
               <h3 style={{fontSize:16,fontWeight:600,marginBottom:4}}>Need help?</h3>
-              <p style={{fontSize:14,color:'var(--text-2)'}}>Reach Payton directly at <a href="mailto:Payton@wovomedia.com" style={{color:'var(--accent)'}}>Payton@wovomedia.com</a> or (931) 458-3255.</p>
+              <p style={{fontSize:14,color:'var(--text-2)'}}>Reach Payton directly at <a href="mailto:Payton@wovomedia.com" style={{color:'var(--accent)'}}>Payton@wovomedia.com</a> or (support@wovomedia.com.</p>
             </div>
           </>
         )}

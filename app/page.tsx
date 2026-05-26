@@ -51,7 +51,7 @@ function BookingFlow({ onClose }: { onClose: () => void }) {
         </div>
         <div>
           <label style={{fontSize:13,color:'var(--text-2)',display:'block',marginBottom:6,fontWeight:500}}>Phone number *</label>
-          <input className="input" value={data.phone} onChange={e=>setData(d=>({...d,phone:e.target.value}))} placeholder="(000) 000-0000" required/>
+          <input className="input" value={data.phone} onChange={e=>setData(d=>({...d,phone:e.target.value}))} placeholder="(000) 000-0000 (optional)"/>
         </div>
       </div>
       <div>
@@ -73,7 +73,7 @@ function BookingFlow({ onClose }: { onClose: () => void }) {
       <div style={{background:'var(--bg-3)',borderRadius:9,padding:'12px 16px',fontSize:13,color:'var(--text-3)'}}>
         📅 Mon–Fri · 9am–5pm CT · Google Meet link sent after confirmation
       </div>
-      <button className="btn btn-primary" type="submit" style={{padding:14,fontSize:16,width:'100%'}} disabled={submitting||!data.name||!data.business||!data.email||!data.phone}>
+      <button className="btn btn-primary" type="submit" style={{padding:14,fontSize:16,width:'100%'}} disabled={submitting||!data.name||!data.business||!data.email}>
         {submitting?'Submitting...':'Request Strategy Call →'}
       </button>
     </form>
@@ -89,9 +89,9 @@ const novaReply = (msg: string) => {
   if (l.includes('retail')||l.includes('boutique')||l.includes('shop')) return "Boutiques crush it with consistent AI content. We can build characters for you and your whole team. What does your team look like?"
   if (l.includes('team')||l.includes('employee')||l.includes('staff')) return "Yes — Wovo AI Growth and above lets you create AI characters for your entire team. Every employee gets their own character. It's $49/mo."
   if (l.includes('website')) return "Two options: our Website Builder plan ($99/mo) where Wovo AI generates your full site, or Premium where we build it custom. Which fits better?"
-  if (l.includes('premium')||l.includes('filming')||l.includes('drone')) return "Wovo Media Premium is fully custom — on-site filming, drone, photography, full account management, website build. Payton personally manages every account. Want to book a call?"
+  if (l.includes('premium')||l.includes('filming')||l.includes('drone')) return "Wovo Media Premium is fully custom — on-site filming, drone, photography, full account management, website builds. Our team manages every account personally. Want to book a free strategy call?"
   if (l.includes('price')||l.includes('cost')||l.includes('how much')||l.includes('$')) return "Wovo AI starts at $29/mo. Team characters at $49. Website Builder at $99. Full-service Premium is custom — usually $350–$2,000/mo depending on scope. What's your situation?"
-  if (l.includes('book')||l.includes('call')||l.includes('yes')||l.includes('interested')) return "Let's do it! Click 'Book a strategy call' anywhere on the page and pick a time that works. Payton will call you — no pressure, just a conversation."
+  if (l.includes('book')||l.includes('call')||l.includes('yes')||l.includes('interested')) return "Let's do it! Click 'Book a strategy call' anywhere on this page and pick a time that works. Our team will reach out — no pressure, just a real conversation."
   return "Good question! What kind of business do you run? That'll help me point you to the right plan."
 }
 
@@ -134,8 +134,8 @@ export default function Home() {
   const getResult = () => {
     const budget=qAnswers[4]||''; const hasTeam=qAnswers[3]?.includes('team')
     if(budget==='$500+') return {plan:'Wovo Media Premium',price:'Custom',desc:'Your business is ready for the full package — filming, drone, website build, and full account management.',cta:'Book a strategy call',action:'book'}
-    if(hasTeam||budget==='$150–$500') return {plan:'Wovo AI Growth',price:'$49/mo',desc:'5 posts a week, unlimited edits, and AI characters for your entire team.',cta:'Get Growth Plan',action:'/wovo-ai?plan=growth'}
-    return {plan:'Wovo AI Starter',price:'$29/mo',desc:'AI character, 3 posts/week, ready-to-copy captions. Less than a tank of gas.',cta:'Get Starter Plan',action:'/wovo-ai?plan=starter'}
+    if(hasTeam||budget==='$150–$500') return {plan:'Wovo AI Growth',price:'$49/mo',desc:'5 posts a week, unlimited edits, and AI characters for your entire team.',cta:'Get Growth Plan',action:"https://pay.wovomedia.com/b/fZu6oH6Q3fQf3HC0gocIE0Z"}
+    return {plan:'Wovo AI Starter',price:'$29/mo',desc:'AI character, 3 posts/week, ready-to-copy captions. Less than a tank of gas.',cta:'Get Starter Plan',action:"https://pay.wovomedia.com/b/7sY6oH3DRdI71zu0gocIE0Y"}
   }
 
   return (
@@ -301,7 +301,7 @@ export default function Home() {
                   <div style={{marginTop:14}}>
                     {p.features.map(f=><div key={f} style={{fontSize:13,color:'var(--text-2)',padding:'6px 0',borderTop:'0.5px solid var(--border)',display:'flex',gap:7}}><span style={{color:'var(--accent)',flexShrink:0}}>✓</span>{f}</div>)}
                   </div>
-                  <Link href={`/wovo-ai?plan=${p.name.toLowerCase()}`}><button className={`btn ${p.popular?'btn-primary':'btn-outline'}`} style={{width:'100%',marginTop:16,padding:11}}>Get {p.name}</button></Link>
+                  <a href={p.name.toLowerCase()==="starter"?"https://pay.wovomedia.com/b/7sY6oH3DRdI71zu0gocIE0Y":p.name.toLowerCase()==="growth"?"https://pay.wovomedia.com/b/fZu6oH6Q3fQf3HC0gocIE0Z":"https://pay.wovomedia.com/b/aFafZhfmzfQf1zu2owcIE10"} target="_blank" rel="noreferrer"><button className={`btn ${p.popular?"btn-primary":"btn-outline"}`} style={{width:"100%",marginTop:16,padding:11}}>Get {p.name}</button></a>
                 </div>
               ))}
             </div>
@@ -317,7 +317,7 @@ export default function Home() {
                   <div style={{marginTop:14}}>
                     {p.features.map(f=><div key={f} style={{fontSize:13,color:'var(--text-2)',padding:'6px 0',borderTop:'0.5px solid var(--border)',display:'flex',gap:7}}><span style={{color:'var(--accent)',flexShrink:0}}>✓</span>{f}</div>)}
                   </div>
-                  <Link href={`/wovo-ai?plan=${p.name.toLowerCase().replace(' ','_')}`}><button className="btn btn-outline" style={{width:'100%',marginTop:16,padding:11}}>Get {p.name}</button></Link>
+                  <a href={p.name.toLowerCase().includes("website")?"https://pay.wovomedia.com/b/4gMcN57U7avV0vqbZ6cIE11":"https://pay.wovomedia.com/b/aFafZhfmzfQf1zu2owcIE10"} target="_blank" rel="noreferrer"><button className="btn btn-outline" style={{width:"100%",marginTop:16,padding:11}}>Get {p.name}</button></a>
                 </div>
               ))}
             </div>
@@ -447,7 +447,7 @@ export default function Home() {
           <div style={{maxWidth:860,margin:'0 auto',padding:'70px 40px',textAlign:'center'}}>
             <div style={{fontSize:11,color:'var(--text-3)',fontWeight:500,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:12}}>Wovo Media Premium</div>
             <h2 style={{fontSize:30,fontWeight:700,marginBottom:10}}>Ready for the full package?</h2>
-            <p style={{color:'var(--text-2)',maxWidth:480,margin:'0 auto 36px',lineHeight:1.7,fontSize:14}}>On-site filming, drone, website builds, full account management, and Wovo AI included at a discount. Payton personally manages every account.</p>
+            <p style={{color:'var(--text-2)',maxWidth:480,margin:'0 auto 36px',lineHeight:1.7,fontSize:14}}>On-site filming, drone, website builds, and full account management by our team. Wovo AI included at a discount.</p>
             <button className="btn btn-primary" style={{fontSize:15,padding:'14px 32px'}} onClick={()=>setBookOpen(true)}>Book a free strategy call →</button>
             <p style={{fontSize:12,color:'var(--text-3)',marginTop:12}}>No commitment. Mon–Fri, 9am–5pm CT.</p>
           </div>

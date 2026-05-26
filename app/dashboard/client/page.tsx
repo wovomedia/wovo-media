@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { supabase as sb } from '@/lib/supabase'
 import Link from 'next/link'
+import ThemeToggle from '@/components/ThemeToggle'
 
 export default function ClientDashboard() {
   const [client, setClient] = useState<any>(null)
@@ -40,8 +41,8 @@ export default function ClientDashboard() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', position: 'relative' }}>
       <div className="grid-bg" /><div className="grid-fade" />
-      <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 32px', borderBottom: '0.5px solid var(--border)', background: 'rgba(8,8,8,0.92)', backdropFilter: 'blur(12px)', position: 'sticky', top: 0, zIndex: 100 }}>
-        <div style={{ fontFamily: 'Syne,sans-serif', fontSize: 18, fontWeight: 700 }}>wovo<span style={{ color: 'var(--accent)' }}>media</span><span style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 400, marginLeft: 8 }}>{client?.business_name}</span></div>
+      <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderBottom: '1px solid var(--border)', background: 'var(--nav-bg)', backdropFilter: 'blur(12px)', position: 'sticky', top: 0, zIndex: 100 }}>
+        <div style={{ fontFamily: 'Outfit,sans-serif', fontSize: 18, fontWeight: 700 }}>wovo<span style={{ color: 'var(--accent)' }}>media</span><span style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 400, marginLeft: 8 }}>{client?.business_name}</span></div>
         <div style={{ display: 'flex', gap: 4 }}>
           {(['overview', 'reports'] as const).map(t => (
             <button key={t} onClick={() => setTab(t)} style={{ background: tab === t ? 'var(--accent-dim)' : 'transparent', border: '0.5px solid', borderColor: tab === t ? 'var(--accent-border)' : 'transparent', color: tab === t ? 'var(--accent)' : 'var(--text-2)', padding: '7px 14px', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', textTransform: 'capitalize' }}>{t}</button>
@@ -52,6 +53,7 @@ export default function ClientDashboard() {
           <Link href="/dashboard/client/videos"><button className="btn btn-ghost btn-sm">🎬 AI Videos</button></Link>
           <Link href="/dashboard/client/studio"><button className="btn btn-ghost btn-sm">🎨 Studio</button></Link>
           <Link href="/account"><button className="btn btn-ghost btn-sm">Account</button></Link>
+          <ThemeToggle/>
           <a href="/"><button className="btn btn-ghost btn-sm">← Home</button></a>
           <button className="btn btn-ghost btn-sm" onClick={() => sb.auth.signOut().then(() => window.location.href = '/')}>Sign out</button>
         </div>
@@ -92,7 +94,7 @@ export default function ClientDashboard() {
                   {[['Views', latest.views?.toLocaleString()], ['Engagements', latest.engagements?.toLocaleString()], ['Posts', latest.posts_published]].map(([l, v]) => (
                     <div key={l} style={{ background: 'var(--bg-3)', borderRadius: 10, padding: '14px 16px' }}>
                       <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 4 }}>{l}</div>
-                      <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--accent)', fontFamily: 'Syne,sans-serif' }}>{v || '—'}</div>
+                      <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--accent)', fontFamily: 'Outfit,sans-serif' }}>{v || '—'}</div>
                     </div>
                   ))}
                 </div>
@@ -134,7 +136,7 @@ export default function ClientDashboard() {
                     {[['Views', r.views], ['Engagements', r.engagements], ['Posts', r.posts_published], ['New Followers', r.new_followers]].map(([l, v]) => (
                       <div key={l} style={{ background: 'var(--bg-3)', borderRadius: 8, padding: '12px' }}>
                         <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 4 }}>{l}</div>
-                        <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--accent)', fontFamily: 'Syne,sans-serif' }}>{(v as number)?.toLocaleString() || '—'}</div>
+                        <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--accent)', fontFamily: 'Outfit,sans-serif' }}>{(v as number)?.toLocaleString() || '—'}</div>
                       </div>
                     ))}
                   </div>
