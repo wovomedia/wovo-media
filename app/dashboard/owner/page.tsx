@@ -144,6 +144,7 @@ export default function OwnerDashboard() {
           <Link href="/dashboard/owner/videos"><button className="btn btn-ghost btn-sm">🎬 AI Videos</button></Link>
           <Link href="/dashboard/owner/team"><button className="btn btn-ghost btn-sm">👥 Team</button></Link>
           <Link href="/dashboard/owner/users"><button className="btn btn-ghost btn-sm">🔑 Users</button></Link>
+          <Link href="/dashboard/owner/ads"><button className="btn btn-primary btn-sm">📢 Ad Studio</button></Link>
           <button className="btn btn-primary btn-sm" onClick={()=>setShowOnboard(true)}>+ Onboard Premium Client</button>
           <ThemeToggle/>
           <a href="/"><button className="btn btn-ghost btn-sm">← Home</button></a>
@@ -206,6 +207,7 @@ export default function OwnerDashboard() {
               <Link href="/dashboard/owner/videos"><button className="btn btn-ghost btn-sm">🎬 AI Videos</button></Link>
           <Link href="/dashboard/owner/team"><button className="btn btn-ghost btn-sm">👥 Team</button></Link>
           <Link href="/dashboard/owner/users"><button className="btn btn-ghost btn-sm">🔑 Users</button></Link>
+          <Link href="/dashboard/owner/ads"><button className="btn btn-primary btn-sm">📢 Ad Studio</button></Link>
           <button className="btn btn-primary btn-sm" onClick={()=>setShowOnboard(true)}>+ Onboard Premium Client</button>
             </div>
             <div className="card">
