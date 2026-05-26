@@ -37,7 +37,7 @@ Keep responses short (2-3 sentences max) and conversational. Ask ONE follow-up q
       'anthropic-version': '2023-06-01'
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5',
       max_tokens: 500,
       system,
       messages

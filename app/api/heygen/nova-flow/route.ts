@@ -18,6 +18,25 @@ export async function POST(req: NextRequest) {
   const { data: cached } = await sb.from('nova_videos').select('*').eq('node_id', nodeId).single()
 
   if (cached?.status === 'completed' && cached?.video_url) {
+    // Check if URL is stale (HeyGen URLs expire in 7 days)
+    const age = cached.completed_at ? Date.now() - new Date(cached.completed_at).getTime() : 0
+    const sixDays = 6 * 24 * 60 * 60 * 1000
+    if (age < sixDays) {
+      return NextResponse.json({ videoId: cached.heygen_video_id, videoUrl: cached.video_url, cached: true })
+    }
+    // Refresh URL from HeyGen
+    try {
+      const refresh = await fetch(`https://api.heygen.com/v1/video_status.get?video_id=${cached.heygen_video_id}`, {
+        headers: { 'X-Api-Key': process.env.HEYGEN_API_KEY! }
+      })
+      const rData = await refresh.json()
+      const newUrl = rData.data?.video_url
+      if (newUrl) {
+        await sb.from('nova_videos').update({ video_url: newUrl, completed_at: new Date().toISOString() }).eq('node_id', nodeId)
+        return NextResponse.json({ videoId: cached.heygen_video_id, videoUrl: newUrl, cached: true })
+      }
+    } catch {}
+    // If refresh fails, still serve old URL
     return NextResponse.json({ videoId: cached.heygen_video_id, videoUrl: cached.video_url, cached: true })
   }
 
