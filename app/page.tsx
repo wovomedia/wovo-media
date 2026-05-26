@@ -81,19 +81,7 @@ function BookingFlow({ onClose }: { onClose: () => void }) {
 }
 
 // ─── NOVA CHAT ───────────────────────────────────────────────────────────────
-const QUICK = ['Restaurant 🍽️','Retail / Boutique','Team characters?','How much does it cost?']
-
-const novaReply = (msg: string) => {
-  const l = msg.toLowerCase()
-  if (l.includes('restaurant')||l.includes('food')||l.includes('taco')||l.includes('bar')||l.includes('drink')) return "Restaurants are our best fit — daily specials, behind-the-scenes, promos. Your AI character posts for you every day. Want to book a free strategy call?"
-  if (l.includes('retail')||l.includes('boutique')||l.includes('shop')) return "Boutiques crush it with consistent AI content. We can build characters for you and your whole team. What does your team look like?"
-  if (l.includes('team')||l.includes('employee')||l.includes('staff')) return "Yes — Wovo AI Growth and above lets you create AI characters for your entire team. Every employee gets their own character. It's $49/mo."
-  if (l.includes('website')) return "Two options: our Website Builder plan ($99/mo) where Wovo AI generates your full site, or Premium where we build it custom. Which fits better?"
-  if (l.includes('premium')||l.includes('filming')||l.includes('drone')) return "Wovo Media Premium is fully custom — on-site filming, drone, photography, full account management, website builds. Our team manages every account personally. Want to book a free strategy call?"
-  if (l.includes('price')||l.includes('cost')||l.includes('how much')||l.includes('$')) return "Wovo AI starts at $29/mo. Team characters at $49. Website Builder at $99. Full-service Premium is custom — usually $350–$2,000/mo depending on scope. What's your situation?"
-  if (l.includes('book')||l.includes('call')||l.includes('yes')||l.includes('interested')) return "Let's do it! Click 'Book a strategy call' anywhere on this page and pick a time that works. Our team will reach out — no pressure, just a real conversation."
-  return "Good question! What kind of business do you run? That'll help me point you to the right plan."
-}
+const QUICK = ['I run a restaurant 🍽️','I have a retail store','I have a team of staff','What does it cost?']
 
 // ─── QUIZ ────────────────────────────────────────────────────────────────────
 const QUIZ = [
@@ -108,7 +96,7 @@ export default function Home() {
   const [modal, setModal] = useState(false)
   const [bookOpen, setBookOpen] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
-  const [msgs, setMsgs] = useState([{r:'nova',t:"Hey! 👋 I'm Nova, part of the Wovo team. What kind of business do you run?"}])
+  const [msgs, setMsgs] = useState([{r:'nova',t:"Hey! 👋 What kind of business do you run?"}])
   const [input, setInput] = useState('')
   const [quicks, setQuicks] = useState(true)
   const [qStep, setQStep] = useState(0)
@@ -119,11 +107,25 @@ export default function Home() {
   useEffect(()=>{setTimeout(()=>setModal(true),1800)},[])
   useEffect(()=>{if(msgsRef.current)msgsRef.current.scrollTop=msgsRef.current.scrollHeight},[msgs])
 
-  const sendMsg = (t?: string) => {
-    const msg = t||input.trim(); if(!msg) return
+  const [chatLoading, setChatLoading] = useState(false)
+  const sendMsg = async (t?: string) => {
+    const msg = t||input.trim(); if(!msg||chatLoading) return
     setInput(''); setQuicks(false)
-    setMsgs(m=>[...m,{r:'user',t:msg}])
-    setTimeout(()=>setMsgs(m=>[...m,{r:'nova',t:novaReply(msg)}]),700)
+    const newMsgs = [...msgs,{r:'user',t:msg}]
+    setMsgs(newMsgs)
+    setChatLoading(true)
+    try {
+      const res = await fetch('/api/nova',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({messages:newMsgs.map(m=>({role:m.r==='user'?'user':'assistant',content:m.t}))})
+      })
+      const data = await res.json()
+      setMsgs(m=>[...m,{r:'nova',t:data.text||"What kind of business are you running?"}])
+    } catch {
+      setMsgs(m=>[...m,{r:'nova',t:"Sorry, having trouble connecting. Try again in a sec!"}])
+    }
+    setChatLoading(false)
   }
 
   const qPick = (opt: string) => {
@@ -470,43 +472,76 @@ export default function Home() {
       {/* NOVA CHAT */}
       <div style={{position:'fixed',bottom:22,right:22,zIndex:500,display:'flex',flexDirection:'column',alignItems:'flex-end',gap:10}}>
         {chatOpen&&(
-          <div className="slide-up" style={{width:300,background:'var(--bg-2)',border:'0.5px solid var(--border-2)',borderRadius:16,overflow:'hidden'}}>
-            <div style={{background:'var(--bg-3)',padding:'12px 14px',display:'flex',alignItems:'center',gap:9,borderBottom:'0.5px solid var(--border)'}}>
-              <div style={{width:32,height:32,borderRadius:'50%',overflow:'hidden',border:'1.5px solid var(--accent-border)',flexShrink:0}}>
+          <div className="slide-up" style={{width:320,background:'var(--bg-2)',border:'1px solid var(--border)',borderRadius:18,overflow:'hidden',boxShadow:'0 24px 60px rgba(0,0,0,0.3)'}}>
+            {/* Header */}
+            <div style={{background:'var(--bg-3)',padding:'12px 16px',display:'flex',alignItems:'center',gap:10,borderBottom:'1px solid var(--border)'}}>
+              <div style={{width:36,height:36,borderRadius:'50%',overflow:'hidden',border:'2px solid var(--accent-border)',flexShrink:0,background:'#0a0a0a'}}>
                 <img src="https://files2.heygen.ai/avatar/v3/79b245561ad448e796b7e77cd2773d0b_14263/preview_talk_11.webp" alt="Nova" style={{width:'100%',height:'140%',objectFit:'cover',objectPosition:'top center',marginTop:'-10%'}} onError={(e)=>{(e.currentTarget as HTMLImageElement).style.display='none'}}/>
               </div>
               <div>
-                <div style={{fontSize:13,fontWeight:500,color:'var(--text)'}}>Nova</div>
-                <div style={{fontSize:11,color:'var(--accent)',display:'flex',alignItems:'center',gap:4}}><div style={{width:5,height:5,borderRadius:'50%',background:'var(--accent)'}}/>Online</div>
+                <div style={{fontSize:14,fontWeight:700,color:'var(--text)',fontFamily:'Outfit,sans-serif'}}>Nova</div>
+                <div style={{fontSize:11,color:'var(--accent)',display:'flex',alignItems:'center',gap:4}}>
+                  <div style={{width:5,height:5,borderRadius:'50%',background:'var(--accent)',boxShadow:'0 0 5px var(--accent)'}}/>
+                  Wovo Media AI Guide
+                </div>
               </div>
-              <button onClick={()=>setChatOpen(false)} style={{marginLeft:'auto',background:'none',border:'none',color:'var(--text-3)',cursor:'pointer',fontSize:18}}>×</button>
+              <button onClick={()=>setChatOpen(false)} style={{marginLeft:'auto',background:'none',border:'none',color:'var(--text-3)',cursor:'pointer',fontSize:20,lineHeight:1,padding:4}}>×</button>
             </div>
-            <div ref={msgsRef} style={{padding:12,display:'flex',flexDirection:'column',gap:8,maxHeight:220,overflowY:'auto'}}>
+
+            {/* Messages */}
+            <div ref={msgsRef} style={{padding:'12px 12px 8px',display:'flex',flexDirection:'column',gap:8,maxHeight:260,overflowY:'auto'}}>
               {msgs.map((m,i)=>(
-                <div key={i} style={{maxWidth:'85%',fontSize:13,lineHeight:1.5,padding:'8px 12px',borderRadius:m.r==='nova'?'10px 10px 10px 2px':'10px 10px 2px 10px',background:m.r==='nova'?'var(--bg-3)':'var(--accent-dim)',border:m.r==='user'?'0.5px solid var(--accent-border)':'none',color:'var(--text-2)',alignSelf:m.r==='user'?'flex-end':'flex-start'}}>{m.t}</div>
+                <div key={i} style={{
+                  maxWidth:'86%',fontSize:13,lineHeight:1.6,padding:'9px 13px',
+                  borderRadius:m.r==='nova'?'12px 12px 12px 3px':'12px 12px 3px 12px',
+                  background:m.r==='nova'?'var(--bg-3)':'var(--accent)',
+                  color:m.r==='nova'?'var(--text-2)':'#080808',
+                  alignSelf:m.r==='user'?'flex-end':'flex-start',
+                  fontWeight:m.r==='user'?500:400,
+                }}>{m.t}</div>
               ))}
+              {chatLoading&&(
+                <div style={{alignSelf:'flex-start',background:'var(--bg-3)',borderRadius:'12px 12px 12px 3px',padding:'9px 16px',display:'flex',gap:4}}>
+                  {[0,1,2].map(i=>(
+                    <div key={i} style={{width:6,height:6,borderRadius:'50%',background:'var(--text-3)',animation:'pulse 1s infinite',animationDelay:`${i*0.2}s`}}/>
+                  ))}
+                </div>
+              )}
             </div>
-            {quicks&&(
-              <div style={{display:'flex',flexWrap:'wrap',gap:5,padding:'0 12px 8px'}}>
+
+            {/* Quick replies */}
+            {quicks&&!chatLoading&&(
+              <div style={{display:'flex',flexWrap:'wrap',gap:5,padding:'0 12px 10px'}}>
                 {QUICK.map(q=>(
-                  <button key={q} onClick={()=>sendMsg(q)} style={{background:'var(--bg-3)',border:'0.5px solid var(--border-2)',borderRadius:16,padding:'4px 10px',fontSize:11,color:'var(--text-2)',cursor:'pointer'}}>{q}</button>
+                  <button key={q} onClick={()=>sendMsg(q)} style={{background:'var(--bg-3)',border:'1px solid var(--border)',borderRadius:20,padding:'5px 12px',fontSize:12,color:'var(--text-2)',cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s'}}
+                    onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor='var(--accent)';(e.currentTarget as HTMLElement).style.color='var(--accent)'}}
+                    onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor='var(--border)';(e.currentTarget as HTMLElement).style.color='var(--text-2)'}}>
+                    {q}
+                  </button>
                 ))}
               </div>
             )}
-            <div style={{display:'flex',gap:7,padding:'8px 12px',borderTop:'0.5px solid var(--border)'}}>
-              <input className="input" value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&sendMsg()} placeholder="Ask anything..." style={{fontSize:12,padding:'7px 10px'}}/>
-              <button onClick={()=>sendMsg()} style={{background:'var(--accent)',border:'none',borderRadius:7,width:30,height:30,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#080808" strokeWidth="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+
+            {/* Input */}
+            <div style={{display:'flex',gap:8,padding:'8px 12px 12px',borderTop:'1px solid var(--border)'}}>
+              <input className="input" value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&sendMsg()} placeholder="Type a message..." style={{fontSize:13,padding:'8px 12px',flex:1}} disabled={chatLoading}/>
+              <button onClick={()=>sendMsg()} disabled={chatLoading||!input.trim()} style={{background:chatLoading||!input.trim()?'var(--bg-3)':'var(--accent)',border:'none',borderRadius:9,width:36,height:36,cursor:chatLoading?'default':'pointer',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,transition:'background 0.15s'}}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={chatLoading||!input.trim()?'var(--text-3)':'#080808'} strokeWidth="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
               </button>
             </div>
-            <div style={{fontSize:10,color:'var(--text-3)',textAlign:'center',paddingBottom:8}}>Powered by Wovo AI</div>
           </div>
         )}
-        <button onClick={()=>setChatOpen(o=>!o)} className="pulse-ring" style={{width:50,height:50,borderRadius:'50%',background:'var(--accent)',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',position:'relative'}}>
+
+        {/* Toggle button */}
+        <button onClick={()=>setChatOpen(o=>!o)} className="pulse-ring" style={{width:52,height:52,borderRadius:'50%',overflow:'hidden',border:'2px solid var(--accent)',cursor:'pointer',position:'relative',padding:0,background:'transparent',boxShadow:'0 0 20px rgba(0,229,200,0.3)'}}>
           {chatOpen
-            ?<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#080808" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            :<><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#080808" strokeWidth="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            <div style={{position:'absolute',top:-2,right:-2,width:13,height:13,borderRadius:'50%',background:'#ff4444',border:'2px solid var(--bg)',fontSize:8,color:'#fff',fontWeight:600,display:'flex',alignItems:'center',justifyContent:'center'}}>1</div></>
+            ?<div style={{width:'100%',height:'100%',background:'var(--accent)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#080808" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </div>
+            :<>
+              <img src="https://files2.heygen.ai/avatar/v3/79b245561ad448e796b7e77cd2773d0b_14263/preview_talk_11.webp" alt="Nova" style={{width:'100%',height:'140%',objectFit:'cover',objectPosition:'top center',marginTop:'-10%'}}/>
+              <div style={{position:'absolute',top:0,right:0,width:14,height:14,borderRadius:'50%',background:'#22c55e',border:'2px solid var(--bg)'}}/>
+            </>
           }
         </button>
       </div>
