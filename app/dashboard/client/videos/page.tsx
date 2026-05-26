@@ -48,6 +48,13 @@ export default function ClientVideos() {
     sb.auth.getUser().then(async ({ data }) => {
       if (!data.user) { window.location.href = '/login'; return }
       const { data: c } = await sb.from('clients').select('*').eq('profile_id', data.user.id).single()
+      if (!c) { window.location.href = '/login'; return }
+      // Gate: check active subscription
+      const isClientActive = c.is_active
+      if (!isClientActive) {
+        const { data: activeSub } = await sb.from('wovo_subscriptions').select('status').eq('client_id', c.id).eq('status','active').maybeSingle()
+        if (!activeSub) { window.location.href = '/dashboard/client'; return }
+      }
       if (c) {
         setClient(c)
         const [ch, s, v] = await Promise.all([

@@ -8,6 +8,13 @@ const BG_URL = 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1
 export async function POST(req: NextRequest) {
   const { url, clientId, avatarId, customInstructions } = await req.json()
 
+  // Verify active subscription
+  const { data: clientRec } = await sb.from('clients').select('is_active').eq('id', clientId).single()
+  if (!clientRec?.is_active) {
+    const { data: activeSub } = await sb.from('wovo_subscriptions').select('status').eq('client_id', clientId).eq('status','active').maybeSingle()
+    if (!activeSub) return NextResponse.json({ error: 'Active subscription required', upgrade: true }, { status: 403 })
+  }
+
   // Get business profile for context
   let profile: any = null
   let businessName = 'this business'

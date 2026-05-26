@@ -23,6 +23,15 @@ async function generateWithFal(prompt: string): Promise<string | null> {
 export async function POST(req: NextRequest) {
   const { clientId, description, type, style } = await req.json()
 
+  // Verify active subscription
+  if (clientId) {
+    const { data: clientRec } = await sb.from('clients').select('is_active').eq('id', clientId).single()
+    if (!clientRec?.is_active) {
+      const { data: activeSub } = await sb.from('wovo_subscriptions').select('status').eq('client_id', clientId).eq('status','active').maybeSingle()
+      if (!activeSub) return NextResponse.json({ error: 'Active subscription required', upgrade: true }, { status: 403 })
+    }
+  }
+
   // Get business context
   let businessName = 'business'
   let profileCtx = ''

@@ -9,6 +9,13 @@ export async function POST(req: NextRequest) {
   const { clientId, characterId, seriesId, script, episodeNumber, avatarId } = await req.json()
   if (!script || !clientId) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
 
+  // Verify client has active subscription
+  const { data: clientRecord } = await sb.from('clients').select('is_active').eq('id', clientId).single()
+  if (!clientRecord?.is_active) {
+    const { data: activeSub } = await sb.from('wovo_subscriptions').select('status').eq('client_id', clientId).eq('status','active').maybeSingle()
+    if (!activeSub) return NextResponse.json({ error: 'Active subscription required', upgrade: true }, { status: 403 })
+  }
+
   // Generate video via HeyGen
   const res = await fetch('https://api.heygen.com/v2/video/generate', {
     method: 'POST',
