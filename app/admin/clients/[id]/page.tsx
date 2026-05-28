@@ -121,11 +121,23 @@ export default function ClientDetail() {
       {tab==='overview' && (
         <>
           <div className="card" style={{marginBottom:12}}>
-            <div style={{fontSize:11,fontWeight:700,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:12}}>Client Info</div>
-            {[['Email',client.email],['Phone',client.phone||'—'],['Plan',client.plan?.replace('_',' ')||'—'],['Monthly Rate',client.monthly_rate?`$${client.monthly_rate}/mo`:'—'],['Manager',manager?.full_name||'Unassigned']].map(([k,v])=>(
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+              <div style={{fontSize:11,fontWeight:700,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:'0.07em'}}>Client Info</div>
+              <button onClick={async()=>{
+                const action = client.is_active?'deactivate':'activate'
+                if(!confirm(`${action.charAt(0).toUpperCase()+action.slice(1)} this account? ${client.is_active?'They will lose access immediately.':'They will regain full access.'}`)) return
+                const {createClient} = await import('@supabase/supabase-js')
+                const sb2 = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+                await sb2.from('clients').update({is_active:!client.is_active}).eq('id',id)
+                window.location.reload()
+              }} style={{fontSize:11,padding:'5px 12px',borderRadius:8,border:'1px solid',borderColor:client.is_active?'rgba(239,68,68,0.3)':'rgba(34,197,94,0.3)',background:client.is_active?'rgba(239,68,68,0.06)':'rgba(34,197,94,0.06)',color:client.is_active?'#ef4444':'#22c55e',cursor:'pointer',fontFamily:'inherit',fontWeight:700}}>
+                {client.is_active?'⛔ Deactivate':'✅ Activate'}
+              </button>
+            </div>
+            {[['Email',client.email],['Phone',client.phone||'—'],['Plan',client.plan?.replace('_',' ')||'—'],['Monthly Rate',client.monthly_rate?`$${client.monthly_rate}/mo`:'—'],['Manager',manager?.full_name||'Unassigned'],['Status',client.is_active?'Active':'Inactive']].map(([k,v])=>(
               <div key={k} style={{display:'flex',justifyContent:'space-between',padding:'7px 0',borderBottom:'1px solid var(--border)',fontSize:13}}>
                 <span style={{color:'var(--text-3)'}}>{k}</span>
-                <span style={{color:'var(--text)',fontWeight:500,textAlign:'right',maxWidth:'55%',textTransform:'capitalize'}}>{v}</span>
+                <span style={{color:k==='Status'?(client.is_active?'#22c55e':'#ef4444'):'var(--text)',fontWeight:500,textAlign:'right',maxWidth:'55%',textTransform:'capitalize'}}>{v}</span>
               </div>
             ))}
           </div>

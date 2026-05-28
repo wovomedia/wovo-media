@@ -26,6 +26,14 @@ export default function AdminClients() {
     if (window.location.search.includes('onboard')) setShowOnboard(true)
   }, [])
 
+  const toggleActive = async (clientId: string, currentStatus: boolean) => {
+    const action = currentStatus ? 'deactivate' : 'activate'
+    if (!confirm(`${action.charAt(0).toUpperCase()+action.slice(1)} this account? ${currentStatus ? 'They will lose access immediately.' : 'They will regain full access.'}`)) return
+    await supabase.from('clients').update({ is_active: !currentStatus }).eq('id', clientId)
+    await loadData()
+    setMsg(`✓ Account ${currentStatus ? 'deactivated' : 'activated'}`)
+  }
+
   const loadData = async () => {
     const [c, e, mgrs] = await Promise.all([
       supabase.from('clients').select('*, client_managers(employee_id, employees(full_name, role))').order('created_at', { ascending: false }),
@@ -153,6 +161,9 @@ export default function AdminClients() {
                   <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:5,flexShrink:0,marginLeft:10}}>
                     <span className={`badge ${c.is_active?'badge-green':'badge-gray'}`} style={{fontSize:10}}>{c.is_active?'Active':'Inactive'}</span>
                     {c.monthly_rate && <span style={{fontSize:11,color:'var(--text-3)',fontWeight:600}}>${c.monthly_rate}/mo</span>}
+                    <button onClick={e=>{e.preventDefault();e.stopPropagation();toggleActive(c.id,c.is_active)}} style={{fontSize:10,padding:'3px 8px',borderRadius:6,border:'1px solid',borderColor:c.is_active?'rgba(239,68,68,0.3)':'rgba(34,197,94,0.3)',background:'transparent',color:c.is_active?'#ef4444':'#22c55e',cursor:'pointer',fontFamily:'inherit',fontWeight:600}}>
+                      {c.is_active?'Deactivate':'Activate'}
+                    </button>
                   </div>
                 </div>
               </div>
