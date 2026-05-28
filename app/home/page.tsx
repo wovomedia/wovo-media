@@ -12,6 +12,10 @@ export default function Home() {
   const [stats, setStats] = useState<any[]>([])
   const [videos, setVideos] = useState<any[]>([])
   const [isActive, setIsActive] = useState(false)
+  const [isPremium, setIsPremium] = useState(false)
+  const [hasWovoAI, setHasWovoAI] = useState(false)
+  const [userId, setUserId] = useState('')
+  const [discountLoading, setDiscountLoading] = useState('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -20,8 +24,13 @@ export default function Home() {
       const { data: c } = await supabase.from('clients').select('*').eq('profile_id', data.user.id).single()
       if (c) {
         setClient(c)
+        setUserId(data.user.id)
         const active = c.is_active
         setIsActive(active)
+        setIsPremium(c.plan === 'premium')
+        // Check if they already have a Wovo AI sub
+        const { data: sub } = await supabase.from('wovo_subscriptions').select('plan,status').eq('client_id', c.id).eq('status','active').maybeSingle()
+        setHasWovoAI(sub !== null && sub.plan !== 'premium')
         if (active) {
           const [s, v] = await Promise.all([
             supabase.from('client_stats_history').select('*').eq('client_id', c.id).order('recorded_at', { ascending: false }).limit(6),
@@ -34,6 +43,19 @@ export default function Home() {
       setLoading(false)
     })
   }, [])
+
+  const getDiscountLink = async (plan: string) => {
+    setDiscountLoading(plan)
+    const res = await fetch('/api/stripe/premium-discount', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan, userId })
+    })
+    const data = await res.json()
+    if (data.url) window.location.href = data.url
+    else alert(data.error || 'Something went wrong')
+    setDiscountLoading('')
+  }
 
   const totalViews = stats.reduce((a, s) => a + (s.views || 0), 0)
   const totalEng = stats.reduce((a, s) => a + (s.engagements || 0), 0)
@@ -104,6 +126,42 @@ export default function Home() {
               <div className="stat-card"><div className="stat-num">{totalEng > 999 ? Math.round(totalEng/1000)+'K' : totalEng}</div><div className="stat-label">Engagements</div></div>
               <div className="stat-card"><div className="stat-num">{stats.length}</div><div className="stat-label">Reports</div></div>
             </div>
+
+            {/* Premium client Wovo AI discount */}
+            {isPremium && !hasWovoAI && (
+              <div style={{background:'linear-gradient(135deg,rgba(0,229,200,0.08),rgba(0,229,200,0.04))',border:'1px solid var(--accent-border)',borderRadius:14,padding:'18px 16px',marginBottom:14}}>
+                <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8}}>
+                  <span style={{background:'var(--accent)',color:'#080808',fontSize:10,fontWeight:800,padding:'3px 9px',borderRadius:20,textTransform:'uppercase',letterSpacing:'0.06em'}}>Premium Perk</span>
+                  <span style={{fontSize:13,fontWeight:700,color:'var(--text)'}}>50% off Wovo AI</span>
+                </div>
+                <p style={{fontSize:13,color:'var(--text-2)',lineHeight:1.6,marginBottom:14}}>As a Premium client, add Wovo AI to your plan at half price. AI characters, video series, image ads, and the remixer — all at 50% off forever.</p>
+                <div style={{display:'flex',flexDirection:'column',gap:8}}>
+                  {[
+                    ['starter','Starter','$14.50/mo','AI character + 3 posts/week'],
+                    ['growth','Growth','$24.50/mo','Entire team AI characters'],
+                    ['pro_ai','Pro AI','$39.50/mo','Daily posts + Stories'],
+                  ].map(([plan,name,price,desc])=>(
+                    <button key={plan} onClick={()=>getDiscountLink(plan)} disabled={discountLoading===plan} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'11px 14px',borderRadius:10,border:'1px solid var(--accent-border)',background:'rgba(0,229,200,0.05)',cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s',opacity:discountLoading&&discountLoading!==plan?0.5:1}}
+                      onMouseEnter={e=>(e.currentTarget as HTMLElement).style.background='rgba(0,229,200,0.1)'}
+                      onMouseLeave={e=>(e.currentTarget as HTMLElement).style.background='rgba(0,229,200,0.05)'}>
+                      <div style={{textAlign:'left'}}>
+                        <div style={{fontSize:13,fontWeight:700,color:'var(--accent)'}}>{name} — {price}</div>
+                        <div style={{fontSize:11,color:'var(--text-3)',marginTop:1}}>{desc}</div>
+                      </div>
+                      <span style={{fontSize:13,color:'var(--accent)',fontWeight:600}}>{discountLoading===plan?'..':'→'}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Already has Wovo AI */}
+            {isPremium && hasWovoAI && (
+              <div className="card" style={{marginBottom:14,padding:'12px 16px',display:'flex',alignItems:'center',gap:10}}>
+                <span style={{background:'var(--accent)',color:'#080808',fontSize:10,fontWeight:800,padding:'3px 9px',borderRadius:20,textTransform:'uppercase',letterSpacing:'0.06em',flexShrink:0}}>Active</span>
+                <span style={{fontSize:13,color:'var(--text-2)'}}>Wovo AI is active on your account at 50% off</span>
+              </div>
+            )}
 
             {/* Quick actions */}
             <div className="section-label">Quick actions</div>
