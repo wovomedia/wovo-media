@@ -1,0 +1,20 @@
+{
+  "name": "Wovo Media",
+  "short_name": "Wovo",
+  "description": "AI-powered content for your business",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#080808",
+  "theme_color": "#00E5C8",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "screenshots": [],
+  "categories": ["business", "productivity"],
+  "shortcuts": [
+    { "name": "New Video", "url": "/videos", "description": "Create a new AI video" },
+    { "name": "Studio", "url": "/studio", "description": "Open creative studio" }
+  ]
+}
