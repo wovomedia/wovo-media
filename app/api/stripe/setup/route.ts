@@ -12,7 +12,7 @@ export async function GET() {
       id: 'PREMIUM50',
       percent_off: '50',
       duration: 'forever',
-      name: 'Wovo Media Premium Client — 50% Off Wovo AI',
+      name: 'Premium Client 50% Off',
     }).toString()
   })
   const data = await res.json()
