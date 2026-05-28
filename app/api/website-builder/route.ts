@@ -28,9 +28,10 @@ Requirements:
 - Mobile responsive
 - Modern, polished design matching the style guide
 - Use placeholder phone: (555) 000-0000 and placeholder email: info@${businessName.toLowerCase().replace(/\s+/g,'')}.com
-- DO NOT mention Claude, Wovo AI, or any AI tools
+- DO NOT mention Claude, AI, or AI tools anywhere visible
 - Make it look like a real, professionally designed website
-- Include a call to action button`
+- Include a call to action button
+- At the very bottom of the page, add a footer with this exact text: 'Built by <a href="https://wovomedia.com" target="_blank" style="color:inherit;text-decoration:none;font-weight:600;">Wovo Media</a>' — style it subtly, small text, muted color, centered`
 
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -50,6 +51,11 @@ Requirements:
     let html = data.content?.[0]?.text || ''
     // Strip any markdown code fences
     html = html.replace(/^```html?\n?/i,'').replace(/\n?```$/,'').trim()
+    // Inject Wovo Media watermark before </body> if not already present
+    const watermark = `<div style="text-align:center;padding:12px;font-size:11px;color:#999;border-top:1px solid rgba(0,0,0,0.06);margin-top:0;">Built by <a href="https://wovomedia.com" target="_blank" style="color:#00E5C8;text-decoration:none;font-weight:600;">Wovo Media</a></div>`
+    if (!html.includes('wovomedia.com')) {
+      html = html.replace('</body>', watermark + '</body>')
+    }
     return NextResponse.json({ html })
   } catch(e) {
     return NextResponse.json({ error: 'Generation failed' }, { status: 500 })
