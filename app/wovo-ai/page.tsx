@@ -86,7 +86,7 @@ function VideoGenerator() {
   )
 }
 
-function WebsiteBuilderFull({ isLoggedIn, hasActiveSubscription }: { isLoggedIn: boolean, hasActiveSubscription: boolean }) {
+function WebsiteBuilderFull({ isLoggedIn, hasActiveSubscription, authChecked }: { isLoggedIn: boolean, hasActiveSubscription: boolean, authChecked: boolean }) {
   const [step, setStep] = useState(0)
   const [researching, setResearching] = useState(false)
   const [researchData, setResearchData] = useState('')
@@ -164,6 +164,8 @@ function WebsiteBuilderFull({ isLoggedIn, hasActiveSubscription }: { isLoggedIn:
     </div>
   )
 
+  if (!authChecked) return <div style={{textAlign:'center',padding:48}}><div className='spinner' style={{margin:'0 auto'}}/></div>
+
   if (!isLoggedIn) return (
     <div className="card card-accent" style={{textAlign:'center',padding:'48px 32px',maxWidth:500}}>
       <div style={{fontSize:40,marginBottom:14}}>🔒</div>
@@ -232,7 +234,7 @@ function WebsiteBuilderFull({ isLoggedIn, hasActiveSubscription }: { isLoggedIn:
             </div>
           </div>
           <button className="btn btn-primary" style={{padding:12,marginTop:4}} onClick={async ()=>{setStep(1);await doResearch()}} disabled={!d.businessName||!d.businessType||!d.location}>
-            Next → {d.businessName && '(we&apos;ll research your business online)'}
+            Next → {d.businessName ? "(we'll look you up online)" : ''}
           </button>
         </div>
       )}
@@ -358,13 +360,16 @@ function WovoAIContent() {
   const [activeTab, setActiveTab] = useState<'content'|'team'|'website'|'video'>('content')
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false)
+  const [authChecked, setAuthChecked] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session?.user) return
-      setIsLoggedIn(true)
-      const { data: client } = await supabase.from('clients').select('is_active, plan').eq('profile_id', session.user.id).single()
-      setHasActiveSubscription(client?.is_active === true)
+      if (session?.user) {
+        setIsLoggedIn(true)
+        const { data: client } = await supabase.from('clients').select('is_active, plan').eq('profile_id', session.user.id).single()
+        setHasActiveSubscription(client?.is_active === true)
+      }
+      setAuthChecked(true)
     })
   }, [])
   const [email, setEmail] = useState('')
@@ -504,13 +509,15 @@ function WovoAIContent() {
         )}
 
         {activeTab==='website' && (
-          <WebsiteBuilderFull isLoggedIn={isLoggedIn} hasActiveSubscription={hasActiveSubscription}/>
+          <WebsiteBuilderFull isLoggedIn={isLoggedIn} hasActiveSubscription={hasActiveSubscription} authChecked={authChecked}/>
         )}
       {activeTab==='video' && (
         <>
           <h1 style={{fontSize:30,fontWeight:700,marginBottom:8}}>AI <span style={{color:'var(--accent)'}}>Video Generator</span></h1>
           <p style={{color:'var(--text-2)',marginBottom:32,fontSize:15}}>Generate short AI avatar videos for social media.</p>
-          {!isLoggedIn ? (
+          {!authChecked ? (
+            <div style={{textAlign:'center',padding:48}}><div className='spinner' style={{margin:'0 auto'}}/></div>
+          ) : !isLoggedIn ? (
             <div className="card card-accent" style={{textAlign:'center',padding:'48px 32px',maxWidth:500}}>
               <div style={{fontSize:40,marginBottom:14}}>🔒</div>
               <h3 style={{fontSize:20,fontWeight:700,marginBottom:10}}>Active subscription required</h3>
