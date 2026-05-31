@@ -33,24 +33,30 @@ export default function Login() {
   const [success, setSuccess] = useState('')
 
   useEffect(() => {
-    // Check session on mount
+    // Hard timeout — show the form after 2s no matter what
+    const timeout = setTimeout(() => setChecking(false), 2000)
+
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      clearTimeout(timeout)
       if (session?.user) {
         const route = await getRedirect(session.user.id)
         window.location.replace(route)
       } else {
         setChecking(false)
       }
+    }).catch(() => {
+      clearTimeout(timeout)
+      setChecking(false)
     })
 
-    // Also listen for auth changes (handles edge cases)
+    // Listen for sign in events
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
         const route = await getRedirect(session.user.id)
         window.location.replace(route)
       }
     })
-    return () => subscription.unsubscribe()
+    return () => { subscription.unsubscribe(); clearTimeout(timeout) }
   }, [])
 
   const handleLogin = async (e: React.FormEvent) => {
