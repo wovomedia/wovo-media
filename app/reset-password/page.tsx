@@ -1,7 +1,6 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
-import ThemeToggle from '@/components/ThemeToggle'
 
 export default function ResetPassword() {
   const [email, setEmail] = useState('')
@@ -23,7 +22,7 @@ export default function ResetPassword() {
   return (
     <div style={{minHeight:'100vh',background:'var(--bg)',display:'flex',alignItems:'center',justifyContent:'center',position:'relative',padding:20}}>
       <div className="grid-bg"/><div className="grid-fade"/>
-      <div style={{position:'fixed',top:20,right:24,zIndex:200}}><ThemeToggle/></div>
+      <div style={{position:'fixed',top:20,right:24,zIndex:200}}></div>
       <div className="card slide-up" style={{width:420,position:'relative',zIndex:2,textAlign:'center',padding:40}}>
         <Link href="/" style={{display:'block',fontFamily:'Outfit,sans-serif',fontSize:22,fontWeight:800,color:'var(--text)',textDecoration:'none',marginBottom:28,letterSpacing:'-0.04em'}}>
           wovo<span style={{color:'var(--accent)'}}>media</span>

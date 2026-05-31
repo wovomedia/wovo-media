@@ -2,7 +2,6 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import ThemeToggle from '@/components/ThemeToggle'
 
 function UpdatePasswordForm() {
   const params = useSearchParams()
@@ -84,7 +83,7 @@ export default function UpdatePassword() {
   return (
     <div style={{minHeight:'100vh',background:'var(--bg)',display:'flex',alignItems:'center',justifyContent:'center',padding:20,position:'relative'}}>
       <div className="grid-bg"/><div className="grid-fade"/>
-      <div style={{position:'fixed',top:20,right:24,zIndex:200}}><ThemeToggle/></div>
+      <div style={{position:'fixed',top:20,right:24,zIndex:200}}></div>
       <div className="card slide-up" style={{width:440,zIndex:2,padding:36,position:'relative'}}>
         <Link href="/" style={{display:'block',fontFamily:'Outfit,sans-serif',fontSize:22,fontWeight:800,color:'var(--text)',textDecoration:'none',marginBottom:28,textAlign:'center',letterSpacing:'-0.04em'}}>
           wovo<span style={{color:'var(--accent)'}}>media</span>

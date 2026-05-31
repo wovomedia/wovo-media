@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react'
 import { supabase as sb } from '@/lib/supabase'
 import Link from 'next/link'
-import ThemeToggle from '@/components/ThemeToggle'
 
 export default function ClientDashboard() {
   const [client, setClient] = useState<any>(null)
@@ -60,7 +59,7 @@ export default function ClientDashboard() {
             <Link href="/dashboard/client/studio"><button className="btn btn-ghost btn-sm">🎨 Studio</button></Link>
           </>}
           <Link href="/account"><button className="btn btn-ghost btn-sm">Account</button></Link>
-          <ThemeToggle/>
+          
           <a href="/"><button className="btn btn-ghost btn-sm">← Home</button></a>
           <button className="btn btn-ghost btn-sm" onClick={() => sb.auth.signOut().then(() => window.location.href = '/')}>Sign out</button>
         </div>

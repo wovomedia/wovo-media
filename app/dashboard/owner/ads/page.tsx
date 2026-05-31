@@ -1,7 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import ThemeToggle from '@/components/ThemeToggle'
 import { supabase as sb } from '@/lib/supabase'
 
 const ADS = [
@@ -129,7 +128,7 @@ export default function AdStudio() {
         </div>
         <div style={{display:'flex',gap:8,alignItems:'center'}}>
           <Link href="/dashboard/owner"><button className="btn btn-ghost btn-sm">← Dashboard</button></Link>
-          <ThemeToggle/>
+          
         </div>
       </nav>
 

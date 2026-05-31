@@ -2,7 +2,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase as sb } from '@/lib/supabase'
 import Link from 'next/link'
-import ThemeToggle from '@/components/ThemeToggle'
 
 const SERIES_THEMES = [
   { key: 'tips', label: '💡 Tips & Advice', desc: 'Share expertise and tips about your industry' },
@@ -438,7 +437,7 @@ export default function ClientVideos() {
         </div>
         <div style={{display:'flex',gap:8}}>
           <Link href="/dashboard/client"><button className="btn btn-ghost btn-sm">← Dashboard</button></Link>
-          <ThemeToggle/>
+          
         </div>
       </nav>
 

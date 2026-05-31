@@ -1,7 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import ThemeToggle from '@/components/ThemeToggle'
 
 // ─── BOOKING FLOW ────────────────────────────────────────────────────────────
 function BookingFlow({ onClose }: { onClose: () => void }) {
@@ -213,12 +212,10 @@ export default function Home() {
             <a key={l} href={h} style={{color:'var(--text-2)',fontSize:13,textDecoration:'none',fontWeight:500}}>{l}</a>
           ))}
           <Link href="/login" style={{color:'var(--text-2)',fontSize:13,textDecoration:'none',fontWeight:600}}>Login</Link>
-          <ThemeToggle/>
           <button className="btn btn-primary btn-sm" onClick={()=>setBookOpen(true)}>Book a call</button>
         </div>
         {/* Mobile nav */}
         <div style={{display:'flex',gap:8,alignItems:'center'}} className="mobile-nav-buttons">
-          <ThemeToggle/>
           <button className="btn btn-primary btn-sm" onClick={()=>setBookOpen(true)} style={{fontSize:12,padding:'7px 12px'}}>Book a call</button>
           <Link href="/login"><button className="btn btn-ghost btn-sm" style={{fontSize:12,padding:'7px 12px'}}>Login</button></Link>
         </div>

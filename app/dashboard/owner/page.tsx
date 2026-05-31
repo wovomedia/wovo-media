@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react'
 import { supabase as sb } from '@/lib/supabase'
 import Link from 'next/link'
-import ThemeToggle from '@/components/ThemeToggle'
 
 const PRICE_OPTIONS = [
   { label: '$350/mo', cents: 35000 },
@@ -146,7 +145,7 @@ export default function OwnerDashboard() {
           <Link href="/dashboard/owner/users"><button className="btn btn-ghost btn-sm">🔑 Users</button></Link>
           <Link href="/dashboard/owner/ads"><button className="btn btn-primary btn-sm">📢 Ad Studio</button></Link>
           <button className="btn btn-primary btn-sm" onClick={()=>setShowOnboard(true)}>+ Onboard Premium Client</button>
-          <ThemeToggle/>
+          
           <a href="/"><button className="btn btn-ghost btn-sm">← Home</button></a>
           <button className="btn btn-ghost btn-sm" onClick={()=>sb.auth.signOut().then(()=>{document.cookie='wovo-auth=;expires=Thu,01 Jan 1970 00:00:00 GMT;path=/';window.location.href='/'})}>Sign out</button>
         </div>

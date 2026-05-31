@@ -377,39 +377,33 @@ function WovoAIContent() {
 
         {activeTab==='content' && (
           <>
-            <h1 style={{fontSize:32,fontWeight:700,marginBottom:8}}>Wovo AI <span style={{color:'var(--accent)'}}>Content</span></h1>
-            <p style={{color:'var(--text-2)',marginBottom:40}}>Choose your plan and get started. All plans include AI character creation.</p>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:14,marginBottom:40}}>
-              {PLANS.filter(p=>p.key!=='website').map(p=>(
-                <div key={p.key} className={`card ${selectedPlan===p.key?'card-accent':''}`} style={{cursor:'pointer',transition:'border-color 0.2s'}} onClick={()=>setSelectedPlan(p.key)}>
-                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:12}}>
-                    <div>
-                      <div style={{fontSize:11,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:'0.1em',fontWeight:500,marginBottom:6}}>{p.name}</div>
-                      <div style={{fontSize:28,fontWeight:700,fontFamily:'Outfit,sans-serif',color:'var(--text)'}}>{p.price}</div>
-                    </div>
-                    <div style={{width:20,height:20,borderRadius:'50%',border:`2px solid ${selectedPlan===p.key?'var(--accent)':'var(--border-2)'}`,background:selectedPlan===p.key?'var(--accent)':'transparent',transition:'all 0.2s',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                      {selectedPlan===p.key&&<div style={{width:8,height:8,borderRadius:'50%',background:'#080808'}}/>}
-                    </div>
-                  </div>
+            <h1 style={{fontSize:32,fontWeight:700,marginBottom:8}}>Wovo AI <span style={{color:'var(--accent)'}}>Plans</span></h1>
+            <p style={{color:'var(--text-2)',marginBottom:32,fontSize:15}}>Pick a plan. Pay on Stripe. Your account is created automatically and you get instant access.</p>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:14,marginBottom:20}}>
+              {[
+                {name:'Starter',price:'$29/mo',desc:'AI character for yourself.',features:['Your own AI character','3 posts per week','Ready-to-copy captions','Posting tutorials'],link:'https://pay.wovomedia.com/b/7sY6oH3DRdI71zu0gocIE0Y'},
+                {name:'Growth',price:'$49/mo',desc:'AI characters for your whole team.',features:['Characters for entire team','5 posts per week','Unlimited edits','Week description input'],link:'https://pay.wovomedia.com/b/fZu6oH6Q3fQf3HC0gocIE0Z',popular:true},
+                {name:'Pro AI',price:'$79/mo',desc:'Daily posts, Stories, multiple brands.',features:['Everything in Growth','Daily posts + Stories','Multiple brand characters','Monthly strategy report'],link:'https://pay.wovomedia.com/b/aFafZhfmzfQf1zu2owcIE10'},
+                {name:'Website Builder',price:'$99/mo',desc:'AI builds your full website.',features:['Full AI website generation','6 style options','Uses your real business info','Hosted & deployed'],link:'https://pay.wovomedia.com/b/4gMcN57U7avV0vqbZ6cIE11'},
+              ].map(p=>(
+                <div key={p.name} className={`card ${(p as any).popular?'card-accent':''}`} style={{position:'relative'}}>
+                  {(p as any).popular&&<div style={{position:'absolute',top:-10,left:'50%',transform:'translateX(-50%)',background:'var(--accent)',color:'#080808',fontSize:10,fontWeight:700,padding:'3px 12px',borderRadius:20,whiteSpace:'nowrap'}}>Most popular</div>}
+                  <div style={{fontSize:11,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:'0.1em',fontWeight:600,marginBottom:6}}>{p.name}</div>
+                  <div style={{fontSize:26,fontWeight:800,fontFamily:'Outfit,sans-serif',color:'var(--text)',marginBottom:4}}>{p.price}</div>
                   <p style={{fontSize:13,color:'var(--text-3)',marginBottom:14}}>{p.desc}</p>
-                  {p.features.map(f=><div key={f} style={{fontSize:12,color:'var(--text-2)',padding:'6px 0',borderTop:'0.5px solid var(--border)',display:'flex',gap:7}}><span style={{color:'var(--accent)',flexShrink:0}}>✓</span>{f}</div>)}
+                  {p.features.map(f=><div key={f} style={{fontSize:12,color:'var(--text-2)',padding:'5px 0',borderTop:'0.5px solid var(--border)',display:'flex',gap:7}}><span style={{color:'var(--accent)',flexShrink:0}}>✓</span>{f}</div>)}
+                  <a href={p.link} target="_blank" rel="noreferrer" style={{display:'block',marginTop:16,textDecoration:'none'}}>
+                    <button className={`btn ${(p as any).popular?'btn-primary':'btn-outline'}`} style={{width:'100%',padding:11,fontSize:13}}>Get {p.name} →</button>
+                  </a>
                 </div>
               ))}
             </div>
-            {selectedPlan && (
-              <div className="card card-accent" style={{maxWidth:480}}>
-                <h3 style={{fontSize:18,fontWeight:600,marginBottom:20}}>Create your account</h3>
-                <form onSubmit={handleSignup} style={{display:'flex',flexDirection:'column',gap:14}}>
-                  <div><label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:6}}>Your name</label><input className="input" value={name} onChange={e=>setName(e.target.value)} placeholder="Your full name" required/></div>
-                  <div><label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:6}}>Business name</label><input className="input" value={business} onChange={e=>setBusiness(e.target.value)} placeholder="Your business name" required/></div>
-                  <div><label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:6}}>Email</label><input className="input" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@business.com" required/></div>
-                  <div><label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:6}}>Password</label><input className="input" type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Min 8 characters" minLength={8} required/></div>
-                  <button className="btn btn-primary" type="submit" style={{width:'100%',padding:13,marginTop:4}} disabled={loading}>{loading?'Creating account...':'Create account & continue'}</button>
-                </form>
-                <p style={{fontSize:12,color:'var(--text-3)',textAlign:'center',marginTop:16}}>Secure billing powered by Stripe. Cancel anytime.</p>
-              </div>
-            )}
-            {!selectedPlan&&<p style={{color:'var(--text-3)',fontSize:14}}>👆 Select a plan above to get started</p>}
+            <div className="card" style={{textAlign:'center',padding:'16px 20px'}}>
+              <p style={{fontSize:13,color:'var(--text-2)',marginBottom:0}}>
+                Already have an account? <a href="/login" style={{color:'var(--accent)',fontWeight:600}}>Log in →</a>
+                &nbsp;·&nbsp; Questions? <a href="mailto:support@wovomedia.com" style={{color:'var(--accent)'}}>support@wovomedia.com</a>
+              </p>
+            </div>
           </>
         )}
 

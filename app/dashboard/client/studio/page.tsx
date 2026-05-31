@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react'
 import { supabase as sb } from '@/lib/supabase'
 import Link from 'next/link'
-import ThemeToggle from '@/components/ThemeToggle'
 
 const CREDIT_PACKS = [
   { credits: 5, price: '$5', label: 'Starter Pack', link: 'https://pay.wovomedia.com/b/5kQeVdderfQfguo7IQcIE12', bonus: '' },
@@ -121,7 +120,7 @@ export default function Studio() {
         <div style={{display:'flex',gap:8,alignItems:'center'}}>
           <div style={{background:'var(--bg-3)',border:'1px solid var(--accent-border)',borderRadius:20,padding:'5px 14px',fontSize:13,fontWeight:600,color:'var(--accent)'}}>⚡ {credits} credits</div>
           <Link href="/dashboard/client"><button className="btn btn-ghost btn-sm">← Dashboard</button></Link>
-          <ThemeToggle/>
+          
         </div>
       </nav>
 

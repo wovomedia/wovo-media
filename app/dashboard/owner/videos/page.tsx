@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react'
 import { supabase as sb } from '@/lib/supabase'
 import Link from 'next/link'
-import ThemeToggle from '@/components/ThemeToggle'
 
 const VIDEO_TYPES = [
   { key: 'post_booking', label: 'Post-Booking', desc: 'Sent after someone books a strategy call. Builds hype, explains Wovo AI vs Premium, warms them up before the call.', badge: '🗓', color: '#3b82f6' },
@@ -59,7 +58,7 @@ export default function VideosPage() {
         <div style={{ fontFamily: 'Outfit,sans-serif', fontSize: 18, fontWeight: 800, letterSpacing: '-0.04em' }}>wovo<span style={{ color: 'var(--accent)' }}>media</span><span style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 400, marginLeft: 8 }}>AI Videos</span></div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           <Link href="/dashboard/owner"><button className="btn btn-ghost btn-sm">← Dashboard</button></Link>
-          <ThemeToggle />
+          
         </div>
       </nav>
 

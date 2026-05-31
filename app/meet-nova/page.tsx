@@ -2,7 +2,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { NOVA_FLOW, NovaNode } from '@/lib/nova-flow'
 import Link from 'next/link'
-import ThemeToggle from '@/components/ThemeToggle'
 
 type VideoState = 'loading' | 'generating' | 'ready' | 'playing' | 'done' | 'error'
 
@@ -106,7 +105,7 @@ export default function MeetNova() {
         <Link href="/" style={{fontFamily:'Outfit,sans-serif',fontSize:18,fontWeight:800,color:'#fff',textDecoration:'none',letterSpacing:'-0.04em'}}>wovo<span style={{color:'#00E5C8'}}>media</span></Link>
         <div style={{display:'flex',alignItems:'center',gap:12}}>
           {history.length > 0 && <button className="btn btn-ghost btn-sm" onClick={handleBack} style={{fontSize:12}}>← Back</button>}
-          <ThemeToggle/>
+          
           <Link href="/login"><button className="btn btn-ghost btn-sm">Log In</button></Link>
         </div>
       </div>
