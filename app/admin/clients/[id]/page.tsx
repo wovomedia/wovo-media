@@ -18,6 +18,7 @@ export default function ClientDetail() {
   const [tab, setTab] = useState<'overview'|'jobs'|'content'|'messages'>('overview')
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
+  const msgsEnd = useRef<HTMLDivElement>(null)
   const [showJobForm, setShowJobForm] = useState(false)
   const msgsRef = useRef<HTMLDivElement>(null)
   const MAIN = ''
@@ -55,6 +56,23 @@ export default function ClientDetail() {
     setMessages(data || [])
   }
 
+  useEffect(() => { msgsEnd.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
+
+  // Real-time subscription — update messages instantly without reload
+  useEffect(() => {
+    if (!activeConvo) return
+    const sub = supabase.channel(`admin-chat-${activeConvo}`)
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public',
+        table: 'conversation_messages',
+        filter: `conversation_id=eq.${activeConvo}`
+      }, payload => {
+        setMessages(m => [...m, payload.new])
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(sub) }
+  }, [activeConvo])
+
   const sendMessage = async () => {
     if (!msgText.trim() || !activeConvo) return
     setSending(true)
@@ -66,7 +84,6 @@ export default function ClientDetail() {
     })
     await supabase.from('conversations').update({ last_message_at: new Date().toISOString() }).eq('id', activeConvo)
     setMsgText('')
-    await loadMessages(activeConvo)
     setSending(false)
   }
 
