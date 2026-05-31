@@ -86,7 +86,7 @@ function VideoGenerator() {
   )
 }
 
-function WebsiteBuilderFull() {
+function WebsiteBuilderFull({ isLoggedIn, hasActiveSubscription }: { isLoggedIn: boolean, hasActiveSubscription: boolean }) {
   const [step, setStep] = useState(0)
   const [researching, setResearching] = useState(false)
   const [researchData, setResearchData] = useState('')
@@ -161,6 +161,31 @@ function WebsiteBuilderFull() {
       <h3 style={{fontSize:20,fontWeight:600,color:'var(--text)',marginBottom:8}}>Building your website...</h3>
       <p style={{color:'var(--text-2)',fontSize:14}}>Wovo AI is crafting a complete website for {d.businessName}. This takes about 30 seconds.</p>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
+  )
+
+  if (!isLoggedIn) return (
+    <div className="card card-accent" style={{textAlign:'center',padding:'48px 32px',maxWidth:500}}>
+      <div style={{fontSize:40,marginBottom:14}}>🔒</div>
+      <h3 style={{fontSize:20,fontWeight:700,marginBottom:10,color:'var(--text)'}}>Subscription required</h3>
+      <p style={{color:'var(--text-2)',marginBottom:24,lineHeight:1.65}}>The Website Builder is available on the Website Builder plan ($99/mo). Subscribe to unlock.</p>
+      <a href="https://pay.wovomedia.com/b/4gMcN57U7avV0vqbZ6cIE11" target="_blank" rel="noreferrer">
+        <button className="btn btn-primary" style={{padding:'12px 28px',fontSize:14}}>Get Website Builder — $99/mo</button>
+      </a>
+    </div>
+  )
+
+  if (!hasActiveSubscription) return (
+    <div className="card card-accent" style={{textAlign:'center',padding:'48px 32px',maxWidth:500}}>
+      <div style={{fontSize:40,marginBottom:14}}>🔒</div>
+      <h3 style={{fontSize:20,fontWeight:700,marginBottom:10,color:'var(--text)'}}>Website Builder plan required</h3>
+      <p style={{color:'var(--text-2)',marginBottom:24,lineHeight:1.65}}>You need the Website Builder plan ($99/mo) to access this feature.</p>
+      <div style={{display:'flex',gap:10,justifyContent:'center',flexWrap:'wrap'}}>
+        <a href="https://pay.wovomedia.com/b/4gMcN57U7avV0vqbZ6cIE11" target="_blank" rel="noreferrer">
+          <button className="btn btn-primary">Get Website Builder — $99/mo</button>
+        </a>
+        <a href="/login"><button className="btn btn-outline">Log In</button></a>
+      </div>
     </div>
   )
 
@@ -479,7 +504,7 @@ function WovoAIContent() {
         )}
 
         {activeTab==='website' && (
-          <WebsiteBuilderFull/>
+          <WebsiteBuilderFull isLoggedIn={isLoggedIn} hasActiveSubscription={hasActiveSubscription}/>
         )}
       {activeTab==='video' && (
         <>

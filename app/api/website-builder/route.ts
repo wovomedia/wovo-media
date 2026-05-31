@@ -5,6 +5,15 @@ const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPAB
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
+  const { clientId } = body
+
+  // Verify subscription if clientId provided
+  if (clientId) {
+    const { data: client } = await sb.from('clients').select('is_active, plan').eq('id', clientId).single()
+    if (!client?.is_active) {
+      return NextResponse.json({ error: 'Active subscription required', upgrade: true }, { status: 403 })
+    }
+  }
   const {
     // Step 1 - basics
     businessName, businessType, location, tagline, style,
