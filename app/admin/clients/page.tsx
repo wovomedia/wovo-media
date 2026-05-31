@@ -50,7 +50,7 @@ export default function AdminClients() {
     setSubmitting(true); setMsg('')
     const res = await fetch(`/api/admin/onboard-client`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, monthlyRate: form.monthlyRate ? parseInt(form.monthlyRate) : null })
+      body: JSON.stringify({ ...form, monthlyRate: form.monthlyRate ? Number(form.monthlyRate) : null })
     })
     const data = await res.json()
     if (!res.ok) { setMsg(data.error || 'Failed'); setSubmitting(false); return }
@@ -107,7 +107,7 @@ export default function AdminClients() {
                 </div>
                 <div>
                   <label style={{fontSize:12,color:'var(--text-2)',display:'block',marginBottom:5,fontWeight:600}}>Monthly rate ($)</label>
-                  <input className="input" type="number" value={form.monthlyRate} onChange={e=>setForm(f=>({...f,monthlyRate:e.target.value}))} placeholder="750"/>
+                  <input className="input" type="text" inputMode="numeric" value={form.monthlyRate} onChange={e=>setForm(f=>({...f,monthlyRate:e.target.value.replace(/[^0-9.]/g,"")}))} placeholder="e.g. 750" style={{fontSize:16}}/>
                 </div>
               </div>
               <div className="grid-2">
