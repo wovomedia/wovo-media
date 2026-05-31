@@ -1,7 +1,13 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+
+const ROLE_ROUTES: Record<string, string> = {
+  owner: '/admin', admin: '/admin',
+  content_manager: '/employee', customer_service: '/employee',
+  employee: '/employee', client: '/home'
+}
 
 export default function Login() {
   const [tab, setTab] = useState<'login'|'signup'>('login')
@@ -11,33 +17,59 @@ export default function Login() {
   const [businessName, setBusinessName] = useState('')
   const [terms, setTerms] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [checking, setChecking] = useState(true)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+
+  // Check if already logged in - redirect immediately
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        getRole(session.user.id).then(route => {
+          window.location.replace(route)
+        })
+      } else {
+        setChecking(false)
+      }
+    })
+  }, [])
+
+  const getRole = async (userId: string): Promise<string> => {
+    // Check metadata first (fastest - no DB call)
+    const { data: { user } } = await supabase.auth.getUser()
+    const role = user?.user_metadata?.wovo_role
+    if (role) return ROLE_ROUTES[role] || '/home'
+    
+    // Fall back to DB
+    const { data: profile } = await supabase
+      .from('profiles').select('wovo_role').eq('user_id', userId).single()
+    return ROLE_ROUTES[profile?.wovo_role || 'client'] || '/home'
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true); setError('')
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      })
-      const data = await res.json()
-      if (!res.ok) { setError(data.error || 'Incorrect email or password.'); setLoading(false); return }
-      // Set session client-side then redirect immediately
-      await supabase.auth.setSession({ access_token: data.access_token, refresh_token: data.refresh_token })
-      window.location.replace(data.redirect || '/home')
-    } catch {
-      setError('Connection error. Check your internet and try again.')
+
+    // Sign in directly with Supabase - this properly persists to localStorage
+    const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password })
+    
+    if (authError) {
+      setError(authError.message.includes('Invalid') ? 'Incorrect email or password.' : authError.message)
       setLoading(false)
+      return
     }
+
+    // Session is now persisted - get role and redirect
+    const route = await getRole(data.user.id)
+    window.location.replace(route)
   }
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!terms) { setError('Please accept the Terms of Service to continue.'); return }
     setLoading(true); setError('')
+
+    // Use API for signup (need to create profile etc)
     const res = await fetch('/api/auth/signup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -48,6 +80,12 @@ export default function Login() {
     setSuccess(email)
     setLoading(false)
   }
+
+  if (checking) return (
+    <div style={{minHeight:'100dvh',background:'var(--bg)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+      <div className="spinner"/>
+    </div>
+  )
 
   if (success) return (
     <div style={{minHeight:'100dvh',background:'var(--bg)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:24}}>
@@ -62,38 +100,24 @@ export default function Login() {
 
   return (
     <div style={{minHeight:'100dvh',background:'var(--bg)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:24}}>
-      {/* Logo */}
       <Link href="/" style={{fontFamily:'Outfit,sans-serif',fontSize:26,fontWeight:800,color:'var(--text)',textDecoration:'none',letterSpacing:'-0.04em',marginBottom:36}}>
         wovo<span style={{color:'var(--accent)'}}>media</span>
       </Link>
 
       <div style={{width:'100%',maxWidth:380}}>
-        {/* Tabs */}
         <div className="tab-row" style={{marginBottom:24}}>
           <button className={`tab-item ${tab==='login'?'active':''}`} onClick={()=>{setTab('login');setError('')}}>Log In</button>
           <button className={`tab-item ${tab==='signup'?'active':''}`} onClick={()=>{setTab('signup');setError('')}}>Sign Up</button>
         </div>
 
-        {error && (
-          <div className="alert alert-error" style={{marginBottom:16}}>
-            {error}
-          </div>
-        )}
+        {error && <div className="alert alert-error" style={{marginBottom:16}}>{error}</div>}
 
         {tab==='login' ? (
           <form onSubmit={handleLogin} style={{display:'flex',flexDirection:'column',gap:14}}>
-            <input
-              className="input" type="email" value={email}
-              onChange={e=>setEmail(e.target.value)}
-              placeholder="Email address" required autoComplete="email"
-              style={{fontSize:16}} // 16px prevents iOS zoom
-            />
-            <input
-              className="input" type="password" value={password}
-              onChange={e=>setPassword(e.target.value)}
-              placeholder="Password" required autoComplete="current-password"
-              style={{fontSize:16}}
-            />
+            <input className="input" type="email" value={email} onChange={e=>setEmail(e.target.value)}
+              placeholder="Email address" required autoComplete="email" style={{fontSize:16}}/>
+            <input className="input" type="password" value={password} onChange={e=>setPassword(e.target.value)}
+              placeholder="Password" required autoComplete="current-password" style={{fontSize:16}}/>
             <button className="btn btn-primary btn-block" type="submit" disabled={loading} style={{padding:15,fontSize:16,marginTop:4}}>
               {loading ? (
                 <span style={{display:'flex',alignItems:'center',gap:8,justifyContent:'center'}}>
@@ -113,30 +137,14 @@ export default function Login() {
           </form>
         ) : (
           <form onSubmit={handleSignup} style={{display:'flex',flexDirection:'column',gap:14}}>
-            <input
-              className="input" value={fullName}
-              onChange={e=>setFullName(e.target.value)}
-              placeholder="Your full name" required autoComplete="name"
-              style={{fontSize:16}}
-            />
-            <input
-              className="input" value={businessName}
-              onChange={e=>setBusinessName(e.target.value)}
-              placeholder="Business name (optional)"
-              style={{fontSize:16}}
-            />
-            <input
-              className="input" type="email" value={email}
-              onChange={e=>setEmail(e.target.value)}
-              placeholder="Email address" required autoComplete="email"
-              style={{fontSize:16}}
-            />
-            <input
-              className="input" type="password" value={password}
-              onChange={e=>setPassword(e.target.value)}
-              placeholder="Password (min 8 characters)" minLength={8} required
-              autoComplete="new-password" style={{fontSize:16}}
-            />
+            <input className="input" value={fullName} onChange={e=>setFullName(e.target.value)}
+              placeholder="Your full name" required autoComplete="name" style={{fontSize:16}}/>
+            <input className="input" value={businessName} onChange={e=>setBusinessName(e.target.value)}
+              placeholder="Business name (optional)" style={{fontSize:16}}/>
+            <input className="input" type="email" value={email} onChange={e=>setEmail(e.target.value)}
+              placeholder="Email address" required autoComplete="email" style={{fontSize:16}}/>
+            <input className="input" type="password" value={password} onChange={e=>setPassword(e.target.value)}
+              placeholder="Password (min 8 characters)" minLength={8} required autoComplete="new-password" style={{fontSize:16}}/>
             <div className="policy-check">
               <input type="checkbox" id="terms" checked={terms} onChange={e=>setTerms(e.target.checked)}/>
               <label htmlFor="terms" style={{fontSize:13,lineHeight:1.5}}>
@@ -158,7 +166,6 @@ export default function Login() {
       <p style={{fontSize:12,color:'var(--text-3)',marginTop:32,textAlign:'center'}}>
         Need help? <a href="mailto:support@wovomedia.com" style={{color:'var(--accent)'}}>support@wovomedia.com</a>
       </p>
-
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   )

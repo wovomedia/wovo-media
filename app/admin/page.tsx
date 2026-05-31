@@ -10,8 +10,9 @@ export default function AdminHome() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    supabase.auth.getUser().then(async ({ data }) => {
-      if (!data.user) { window.location.href = '/login'; return }
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      const data = { user: session?.user }
+      if (!data.user) { window.location.replace('/login'); return }
       const { data: profile } = await supabase.from('profiles').select('wovo_role').eq('user_id', data.user.id).single()
       if (!profile || !['owner','admin'].includes(profile.wovo_role)) { window.location.href = '/home'; return }
 

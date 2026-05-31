@@ -19,8 +19,9 @@ export default function Studio() {
   const [msg, setMsg] = useState('')
 
   useEffect(() => {
-    supabase.auth.getUser().then(async ({ data }) => {
-      if (!data.user) { window.location.href = '/login'; return }
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      const data = { user: session?.user }
+      if (!data.user) { window.location.replace('/login'); return }
       const { data: c } = await supabase.from('clients').select('*').eq('profile_id', data.user.id).single()
       if (c) {
         setClient(c); setIsActive(c.is_active)
