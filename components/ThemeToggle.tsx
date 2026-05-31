@@ -2,11 +2,12 @@
 import { useEffect, useState } from 'react'
 
 export default function ThemeToggle() {
-  const [dark, setDark] = useState(false)
+  const [dark, setDark] = useState(true) // dark by default
 
   useEffect(() => {
     const saved = localStorage.getItem('wovo-theme')
-    const isDark = saved === 'dark'
+    // Default is dark - only switch if user explicitly saved 'light'
+    const isDark = saved !== 'light'
     setDark(isDark)
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light')
   }, [])
@@ -20,7 +21,8 @@ export default function ThemeToggle() {
   }
 
   return (
-    <button onClick={toggle} className="theme-toggle" title={dark ? 'Switch to light' : 'Switch to dark'} style={{display:'flex',alignItems:'center',position:'relative',width:44,height:24}}>
+    <button onClick={toggle} className="theme-toggle" title={dark ? 'Switch to light' : 'Switch to dark'}
+      style={{display:'flex',alignItems:'center',position:'relative',width:44,height:24}}>
       <span style={{position:'absolute',left:dark?'unset':'4px',right:dark?'4px':'unset',fontSize:11,zIndex:1,userSelect:'none'}}>
         {dark ? '🌙' : '☀️'}
       </span>
