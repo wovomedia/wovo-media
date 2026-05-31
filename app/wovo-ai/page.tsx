@@ -362,12 +362,19 @@ function WovoAIContent() {
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false)
   const [authChecked, setAuthChecked] = useState(false)
 
+  const [clientPlan, setClientPlan] = useState('')
+
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
         setIsLoggedIn(true)
         const { data: client } = await supabase.from('clients').select('is_active, plan').eq('profile_id', session.user.id).single()
-        setHasActiveSubscription(client?.is_active === true)
+        if (client?.is_active) {
+          setClientPlan(client.plan || '')
+          // Only Wovo AI plans get access - not premium (they pay separately)
+          const wovoAiPlans = ['starter', 'growth', 'pro_ai', 'website']
+          setHasActiveSubscription(wovoAiPlans.includes(client.plan))
+        }
       }
       setAuthChecked(true)
     })
@@ -509,7 +516,7 @@ function WovoAIContent() {
         )}
 
         {activeTab==='website' && (
-          <WebsiteBuilderFull isLoggedIn={isLoggedIn} hasActiveSubscription={hasActiveSubscription} authChecked={authChecked}/>
+          <WebsiteBuilderFull isLoggedIn={isLoggedIn} hasActiveSubscription={hasActiveSubscription && clientPlan==='website'} authChecked={authChecked}/>
         )}
       {activeTab==='video' && (
         <>
@@ -517,7 +524,7 @@ function WovoAIContent() {
           <p style={{color:'var(--text-2)',marginBottom:32,fontSize:15}}>Generate short AI avatar videos for social media.</p>
           {!authChecked ? (
             <div style={{textAlign:'center',padding:48}}><div className='spinner' style={{margin:'0 auto'}}/></div>
-          ) : !isLoggedIn ? (
+          ) : !isLoggedIn || !['growth','pro_ai','website'].includes(clientPlan) ? (
             <div className="card card-accent" style={{textAlign:'center',padding:'48px 32px',maxWidth:500}}>
               <div style={{fontSize:40,marginBottom:14}}>🔒</div>
               <h3 style={{fontSize:20,fontWeight:700,marginBottom:10}}>Active subscription required</h3>
@@ -526,13 +533,6 @@ function WovoAIContent() {
                 <a href="https://pay.wovomedia.com/b/fZu6oH6Q3fQf3HC0gocIE0Z" target="_blank" rel="noreferrer"><button className="btn btn-primary">Get Growth — $49/mo</button></a>
                 <a href="https://pay.wovomedia.com/b/aFafZhfmzfQf1zu2owcIE10" target="_blank" rel="noreferrer"><button className="btn btn-outline">Get Pro — $79/mo</button></a>
               </div>
-            </div>
-          ) : !hasActiveSubscription ? (
-            <div className="card card-accent" style={{textAlign:'center',padding:'48px 32px',maxWidth:500}}>
-              <div style={{fontSize:40,marginBottom:14}}>🔒</div>
-              <h3 style={{fontSize:20,fontWeight:700,marginBottom:10}}>Upgrade to use AI Videos</h3>
-              <p style={{color:'var(--text-2)',marginBottom:24,lineHeight:1.65}}>You need a Growth plan or higher to generate AI videos.</p>
-              <a href="https://pay.wovomedia.com/b/fZu6oH6Q3fQf3HC0gocIE0Z" target="_blank" rel="noreferrer"><button className="btn btn-primary">Upgrade to Growth — $49/mo</button></a>
             </div>
           ) : (
             <VideoGenerator/>

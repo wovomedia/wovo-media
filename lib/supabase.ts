@@ -8,8 +8,6 @@ export const supabase = createClient(
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
-      storageKey: 'wovo-auth-token',
-      storage: typeof window !== 'undefined' ? window.localStorage : undefined,
     }
   }
 )
