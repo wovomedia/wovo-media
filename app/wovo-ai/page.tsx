@@ -179,7 +179,10 @@ function WebsiteBuilderFull() {
 
       {step===0 && (
         <div className="card" style={{display:'flex',flexDirection:'column',gap:14}}>
-          <F label="Business name" k="businessName" placeholder="Your business name" req/>
+          <div>
+              <label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:5,fontWeight:500}}>Business name<span style={{color:'var(--accent)'}}>*</span></label>
+              <input className="input" value={d.businessName} onChange={e=>{const v=e.target.value;setD(p=>({...p,businessName:v}))}} placeholder="Your business name"/>
+            </div>
           <div>
             <label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:5,fontWeight:500}}>Business type<span style={{color:'var(--accent)'}}>*</span></label>
             <select className="input" value={d.businessType} onChange={e=>set('businessType',e.target.value)}>
@@ -187,8 +190,14 @@ function WebsiteBuilderFull() {
               {['Restaurant / Food & Drink','Bar / Nightlife','Coffee Shop / Cafe','Retail / Boutique','Hair / Beauty Salon','Spa / Wellness','Healthcare / Medical','Auto / Car Services','HVAC / Plumbing / Electrical','Landscaping / Lawn Care','Cleaning Services','Photography / Videography','Real Estate','Gym / Fitness','Law / Legal Services','Accounting / Finance','Other Service Business','Other'].map(o=><option key={o}>{o}</option>)}
             </select>
           </div>
-          <F label="City, State" k="location" placeholder="City, State" req/>
-          <F label="Your tagline / what makes you special" k="tagline" placeholder="What makes your business special"/>
+          <div>
+              <label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:5,fontWeight:500}}>City, State<span style={{color:'var(--accent)'}}>*</span></label>
+              <input className="input" value={d.location} onChange={e=>{const v=e.target.value;setD(p=>({...p,location:v}))}} placeholder="City, State"/>
+            </div>
+          <div>
+              <label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:5,fontWeight:500}}>Your tagline / what makes you special</label>
+              <input className="input" value={d.tagline} onChange={e=>{const v=e.target.value;setD(p=>({...p,tagline:v}))}} placeholder="What makes your business special"/>
+            </div>
           <div>
             <label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:6,fontWeight:500}}>Website style</label>
             <div style={{display:'flex',gap:7,flexWrap:'wrap'}}>
@@ -217,11 +226,26 @@ function WebsiteBuilderFull() {
               ✓ Found info online — we'll use this to fill in your site. Review and correct anything below.
             </div>
           )}
-          <F label="Phone number" k="phone" placeholder="(931) 555-0000"/>
-          <F label="Email address" k="email" placeholder="hello@yourbusiness.com"/>
-          <F label="Full street address" k="address" placeholder="123 Main St, Your City, State 00000"/>
-          <F label="Business hours" k="hours" placeholder="Mon–Fri 11am–9pm, Sat–Sun 10am–10pm"/>
-          <F label="Current website (if you have one)" k="currentWebsite" placeholder="https://yourbusiness.com"/>
+          <div>
+              <label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:5,fontWeight:500}}>Phone number</label>
+              <input className="input" value={d.phone} onChange={e=>{const v=e.target.value;setD(p=>({...p,phone:v}))}} placeholder="(555) 000-0000"/>
+            </div>
+          <div>
+              <label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:5,fontWeight:500}}>Email address</label>
+              <input className="input" value={d.email} onChange={e=>{const v=e.target.value;setD(p=>({...p,email:v}))}} placeholder="hello@yourbusiness.com"/>
+            </div>
+          <div>
+              <label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:5,fontWeight:500}}>Full street address</label>
+              <input className="input" value={d.address} onChange={e=>{const v=e.target.value;setD(p=>({...p,address:v}))}} placeholder="123 Main St, Your City, State 00000"/>
+            </div>
+          <div>
+              <label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:5,fontWeight:500}}>Business hours</label>
+              <input className="input" value={d.hours} onChange={e=>{const v=e.target.value;setD(p=>({...p,hours:v}))}} placeholder="Mon–Fri 11am–9pm, Sat–Sun 10am–10pm"/>
+            </div>
+          <div>
+              <label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:5,fontWeight:500}}>Current website (if you have one)</label>
+              <input className="input" value={d.currentWebsite} onChange={e=>{const v=e.target.value;setD(p=>({...p,currentWebsite:v}))}} placeholder="https://yourbusiness.com"/>
+            </div>
           <div style={{borderTop:'1px solid var(--border)',paddingTop:14}}>
             <div style={{fontSize:12,color:'var(--text-3)',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:10}}>Social Media Handles</div>
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
@@ -242,15 +266,26 @@ function WebsiteBuilderFull() {
 
       {step===2 && (
         <div className="card" style={{display:'flex',flexDirection:'column',gap:14}}>
-          <F label="About your business — what do you do, your story, what makes you special" k="description" placeholder="Tell us your story — how long you've been open, what makes you different..." multi/>
-          <F label="Staff / team members (name + role, one per line)" k="staffMembers" placeholder="Owner Name — Role
-Employee Name — Role" multi/>
-          <F label="Menu items or products (name + description, one per line)" k="menuItems" placeholder="Item Name — $Price · Description
-Another Item — $Price · Description" multi/>
-          <F label="Services you offer (one per line)" k="services" placeholder="Service Name — starting at $Price
-Another Service — $Price" multi/>
-          <F label="Customer reviews / testimonials (paste a few of your best)" k="testimonials" placeholder="'Great service!' — Customer Name
-'Highly recommend!' — Another Customer" multi/>
+          <div>
+              <label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:5,fontWeight:500}}>About your business — what do you do, your story, what makes you special</label>
+              <textarea className="input" value={d.description} onChange={e=>{const v=e.target.value;setD(p=>({...p,description:v}))}} placeholder="Tell us your story — how long you've been open, what makes you different..." rows={3}/>
+            </div>
+          <div>
+              <label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:5,fontWeight:500}}>Staff / team members (name + role, one per line)</label>
+              <textarea className="input" value={d.staffMembers} onChange={e=>{const v=e.target.value;setD(p=>({...p,staffMembers:v}))}} placeholder={"Owner Name — Role\nEmployee Name — Role"} rows={3}/>
+            </div>
+          <div>
+              <label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:5,fontWeight:500}}>Menu items or products (name + description, one per line)</label>
+              <textarea className="input" value={d.menuItems} onChange={e=>{const v=e.target.value;setD(p=>({...p,menuItems:v}))}} placeholder={"Item Name — $Price · Description\nAnother Item — $Price · Description"} rows={3}/>
+            </div>
+          <div>
+              <label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:5,fontWeight:500}}>Services you offer (one per line)</label>
+              <textarea className="input" value={d.services} onChange={e=>{const v=e.target.value;setD(p=>({...p,services:v}))}} placeholder={"Service Name — starting at $Price\nAnother Service — $Price"} rows={3}/>
+            </div>
+          <div>
+              <label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:5,fontWeight:500}}>Customer reviews / testimonials (paste a few of your best)</label>
+              <textarea className="input" value={d.testimonials} onChange={e=>{const v=e.target.value;setD(p=>({...p,testimonials:v}))}} placeholder={"'Great service!' — Customer Name\n'Highly recommend!' — Another Customer"} rows={3}/>
+            </div>
           <div style={{display:'flex',gap:8,marginTop:4}}>
             <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setStep(1)}>← Back</button>
             <button className="btn btn-primary" style={{flex:2,padding:12}} onClick={()=>setStep(3)}>Next →</button>
@@ -260,9 +295,18 @@ Another Service — $Price" multi/>
 
       {step===3 && (
         <div className="card" style={{display:'flex',flexDirection:'column',gap:14}}>
-          <F label="Pages / sections you want on your site" k="pages" placeholder="Home, About, Menu, Gallery, Contact, Reservations"/>
-          <F label="Your logo URL (optional — paste a direct image link)" k="logoUrl" placeholder="https://... or leave blank"/>
-          <F label="Brand story — anything else about your business history or mission" k="aboutStory" placeholder="Share your origin story and what drives your business..." multi/>
+          <div>
+              <label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:5,fontWeight:500}}>Pages / sections you want on your site</label>
+              <input className="input" value={d.pages} onChange={e=>{const v=e.target.value;setD(p=>({...p,pages:v}))}} placeholder="Home, About, Services, Contact"/>
+            </div>
+          <div>
+              <label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:5,fontWeight:500}}>Your logo URL (optional — paste a direct image link)</label>
+              <input className="input" value={d.logoUrl} onChange={e=>{const v=e.target.value;setD(p=>({...p,logoUrl:v}))}} placeholder="https://... or leave blank"/>
+            </div>
+          <div>
+              <label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:5,fontWeight:500}}>Brand story — anything else about your business history or mission</label>
+              <textarea className="input" value={d.aboutStory} onChange={e=>{const v=e.target.value;setD(p=>({...p,aboutStory:v}))}} placeholder="Share your origin story and what drives your business..." rows={3}/>
+            </div>
           {researchData && (
             <div style={{background:'var(--bg-3)',borderRadius:10,padding:12}}>
               <div style={{fontSize:11,color:'var(--text-3)',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:6}}>Found online about your business</div>
