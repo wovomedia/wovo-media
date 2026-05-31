@@ -219,7 +219,7 @@ function WebsiteBuilderFull() {
           )}
           <F label="Phone number" k="phone" placeholder="(931) 555-0000"/>
           <F label="Email address" k="email" placeholder="hello@yourbusiness.com"/>
-          <F label="Full street address" k="address" placeholder="123 Main St, Franklin, TN 37064"/>
+          <F label="Full street address" k="address" placeholder="123 Main St, Your City, State 00000"/>
           <F label="Business hours" k="hours" placeholder="Mon–Fri 11am–9pm, Sat–Sun 10am–10pm"/>
           <F label="Current website (if you have one)" k="currentWebsite" placeholder="https://yourbusiness.com"/>
           <div style={{borderTop:'1px solid var(--border)',paddingTop:14}}>
@@ -242,16 +242,15 @@ function WebsiteBuilderFull() {
 
       {step===2 && (
         <div className="card" style={{display:'flex',flexDirection:'column',gap:14}}>
-          <F label="About your business — what do you do, your story, what makes you special" k="description" placeholder="We've been serving Franklin since 2019. Family-owned, locally sourced ingredients..." multi/>
-          <F label="Staff / team members (name + role, one per line)" k="staffMembers" placeholder="Maria Garcia — Owner & Head Chef
-Jake Smith — Manager" multi/>
-          <F label="Menu items or products (name + description, one per line)" k="menuItems" placeholder="Street Tacos — $12 · Three authentic tacos with your choice of protein
-Nachos Supreme — $14 · ..." multi/>
-          <F label="Services you offer (one per line)" k="services" placeholder="Oil Changes — starting at $39
-Tire Rotation — $29
-..." multi/>
-          <F label="Customer reviews / testimonials (paste a few of your best)" k="testimonials" placeholder="'Best tacos in Franklin!' — Sarah M.
-'Amazing service, we come every week.' — John D." multi/>
+          <F label="About your business — what do you do, your story, what makes you special" k="description" placeholder="Tell us your story — how long you've been open, what makes you different..." multi/>
+          <F label="Staff / team members (name + role, one per line)" k="staffMembers" placeholder="Owner Name — Role
+Employee Name — Role" multi/>
+          <F label="Menu items or products (name + description, one per line)" k="menuItems" placeholder="Item Name — $Price · Description
+Another Item — $Price · Description" multi/>
+          <F label="Services you offer (one per line)" k="services" placeholder="Service Name — starting at $Price
+Another Service — $Price" multi/>
+          <F label="Customer reviews / testimonials (paste a few of your best)" k="testimonials" placeholder="'Great service!' — Customer Name
+'Highly recommend!' — Another Customer" multi/>
           <div style={{display:'flex',gap:8,marginTop:4}}>
             <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setStep(1)}>← Back</button>
             <button className="btn btn-primary" style={{flex:2,padding:12}} onClick={()=>setStep(3)}>Next →</button>
@@ -263,7 +262,7 @@ Tire Rotation — $29
         <div className="card" style={{display:'flex',flexDirection:'column',gap:14}}>
           <F label="Pages / sections you want on your site" k="pages" placeholder="Home, About, Menu, Gallery, Contact, Reservations"/>
           <F label="Your logo URL (optional — paste a direct image link)" k="logoUrl" placeholder="https://... or leave blank"/>
-          <F label="Brand story — anything else about your business history or mission" k="aboutStory" placeholder="Founded in 2019 after a trip to Mexico City..." multi/>
+          <F label="Brand story — anything else about your business history or mission" k="aboutStory" placeholder="Share your origin story and what drives your business..." multi/>
           {researchData && (
             <div style={{background:'var(--bg-3)',borderRadius:10,padding:12}}>
               <div style={{fontSize:11,color:'var(--text-3)',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:6}}>Found online about your business</div>

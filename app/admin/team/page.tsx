@@ -60,7 +60,7 @@ export default function Team() {
             <div className="grid-2">
               <div>
                 <label style={{fontSize:12,color:'var(--text-2)',display:'block',marginBottom:4,fontWeight:600}}>Full name *</label>
-                <input className="input" value={form.fullName} onChange={e=>setForm(f=>({...f,fullName:e.target.value}))} placeholder="Jake Smith"/>
+                <input className="input" value={form.fullName} onChange={e=>setForm(f=>({...f,fullName:e.target.value}))} placeholder="Full name"/>
               </div>
               <div>
                 <label style={{fontSize:12,color:'var(--text-2)',display:'block',marginBottom:4,fontWeight:600}}>Email *</label>

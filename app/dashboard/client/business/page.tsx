@@ -201,8 +201,8 @@ export default function BusinessProfile() {
                 <h3 style={{fontSize:17,fontWeight:700,marginBottom:4}}>The Basics</h3>
                 <Field label="Business name" value={profile.business_name||''} onChange={(v: string)=>set('business_name',v)} placeholder="Your business name"/>
                 <Field label="Industry / type" value={profile.industry||''} onChange={(v: string)=>set('industry',v)} placeholder="e.g. Restaurant, Boutique, Auto repair, Healthcare"/>
-                <Field label="Location" value={profile.location||''} onChange={(v: string)=>set('location',v)} placeholder="e.g. Franklin, TN · Middle Tennessee"/>
-                <Field label="Year founded" value={profile.founded_year||''} onChange={(v: string)=>set('founded_year',v)} placeholder="e.g. 2019"/>
+                <Field label="Location" value={profile.location||''} onChange={(v: string)=>set('location',v)} placeholder="e.g. Nashville, TN · Middle Tennessee"/>
+                <Field label="Year founded" value={profile.founded_year||''} onChange={(v: string)=>set('founded_year',v)} placeholder="e.g. 2020"/>
                 <Field label="Tagline" value={profile.tagline||''} onChange={(v: string)=>set('tagline',v)} placeholder="One-line description of your business"/>
                 <Field label="Website" value={profile.website||''} onChange={(v: string)=>set('website',v)} placeholder="yoursite.com"/>
               </div>
@@ -217,14 +217,14 @@ export default function BusinessProfile() {
             {section==='audience' && (
               <div style={{display:'flex',flexDirection:'column',gap:16}}>
                 <h3 style={{fontSize:17,fontWeight:700,marginBottom:4}}>Your Audience</h3>
-                <Field label="Who are your ideal customers?" value={profile.target_audience||''} onChange={(v: string)=>set('target_audience',v)} placeholder="e.g. Young professionals 25-40, families in Franklin, local business owners..." multiline/>
+                <Field label="Who are your ideal customers?" value={profile.target_audience||''} onChange={(v: string)=>set('target_audience',v)} placeholder="e.g. Young professionals 25-40, local families, business owners..." multiline/>
                 <Field label="What problems do you solve for them?" value={profile.goals||''} onChange={(v: string)=>set('goals',v)} placeholder="e.g. They want quick healthy lunch options, they need reliable auto service..." multiline/>
               </div>
             )}
             {section==='products' && (
               <div style={{display:'flex',flexDirection:'column',gap:16}}>
                 <h3 style={{fontSize:17,fontWeight:700,marginBottom:4}}>Products & Services</h3>
-                <Field label="Top products / services" value={profile.top_products||''} onChange={(v: string)=>set('top_products',v)} placeholder="List your main offerings. e.g. Signature tacos, catering, daily lunch specials, private events..." multiline/>
+                <Field label="Top products / services" value={profile.top_products||''} onChange={(v: string)=>set('top_products',v)} placeholder="List your main offerings, products, or services..." multiline/>
                 <Field label="Social media handles" value={profile.social_handles||''} onChange={(v: string)=>set('social_handles',v)} placeholder="e.g. @yourbusiness on Instagram, TikTok, Facebook"/>
               </div>
             )}

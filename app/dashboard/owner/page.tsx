@@ -124,7 +124,7 @@ export default function OwnerDashboard() {
                   <div key={k}><label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:6}}>{l}</label><input className="input" type="number" value={(reportForm as any)[k]} onChange={e=>setReportForm(f=>({...f,[k]:e.target.value}))}/></div>
                 ))}
               </div>
-              <div><label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:6}}>Client-facing summary</label><textarea className="input" value={reportForm.summary} onChange={e=>setReportForm(f=>({...f,summary:e.target.value}))} rows={3} placeholder="Great month for engagement! Your taco Tuesday post went viral..." style={{resize:'none'}}/></div>
+              <div><label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:6}}>Client-facing summary</label><textarea className="input" value={reportForm.summary} onChange={e=>setReportForm(f=>({...f,summary:e.target.value}))} rows={3} placeholder="Great month for engagement! Your recent post performed really well..." style={{resize:'none'}}/></div>
               <button className="btn btn-primary" type="submit" style={{width:'100%',padding:13}} disabled={reporting}>{reporting?'Sending...':'Send report email →'}</button>
             </form>
           </div>

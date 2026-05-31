@@ -125,7 +125,7 @@ export default function Studio() {
               <div style={{display:'flex',flexDirection:'column',gap:14}}>
                 <div>
                   <label style={{fontSize:12,color:'var(--text-2)',display:'block',marginBottom:6,fontWeight:600}}>Describe your image *</label>
-                  <textarea className="input" value={imgDesc} onChange={e=>setImgDesc(e.target.value)} placeholder="e.g. A plate of our signature tacos with fresh lime and cilantro, warm lighting, rustic wood table..." rows={3}/>
+                  <textarea className="input" value={imgDesc} onChange={e=>setImgDesc(e.target.value)} placeholder="e.g. Our signature dish beautifully plated, warm lighting, rustic table setting..." rows={3}/>
                 </div>
                 <button className="btn btn-primary btn-block" onClick={doImage} disabled={imgLoading||!imgDesc}>
                   {imgLoading?'Generating image...':'Generate Image →'}

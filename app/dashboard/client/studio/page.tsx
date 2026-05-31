@@ -231,7 +231,7 @@ export default function Studio() {
                 </div>
                 <div>
                   <label style={{fontSize:13,color:'var(--text-2)',display:'block',marginBottom:6,fontWeight:600}}>Describe what you want *</label>
-                  <textarea className="input" value={imgDesc} onChange={e=>setImgDesc(e.target.value)} rows={3} placeholder={imgType==='food'?'e.g. A plate of our signature tacos with fresh lime, cilantro, and colorful salsa. Rustic wood table, warm lighting.':imgType==='announcement'?'e.g. Grand opening celebration, balloons, excitement, our logo colors (teal and black)':'Describe exactly what you want in the image...'}/>
+                  <textarea className="input" value={imgDesc} onChange={e=>setImgDesc(e.target.value)} rows={3} placeholder={imgType==='food'?'e.g. Our signature dish beautifully plated, warm lighting, rustic table setting.':imgType==='announcement'?'e.g. Grand opening celebration, festive atmosphere, our brand colors':'Describe exactly what you want in the image...'}/>
                 </div>
                 <div>
                   <label style={{fontSize:13,color:'var(--text-2)',display:'block',marginBottom:8,fontWeight:600}}>Visual style</label>

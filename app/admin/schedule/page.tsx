@@ -122,11 +122,11 @@ export default function Schedule() {
               </div>
               <div>
                 <label style={{fontSize:12,color:'var(--text-2)',display:'block',marginBottom:4,fontWeight:600}}>Location name</label>
-                <input className="input" value={form.location} onChange={e=>setForm(f=>({...f,location:e.target.value}))} placeholder="e.g. Mojo Tacos Franklin"/>
+                <input className="input" value={form.location} onChange={e=>setForm(f=>({...f,location:e.target.value}))} placeholder="e.g. Client Business Name"/>
               </div>
               <div>
                 <label style={{fontSize:12,color:'var(--text-2)',display:'block',marginBottom:4,fontWeight:600}}>Address</label>
-                <input className="input" value={form.address} onChange={e=>setForm(f=>({...f,address:e.target.value}))} placeholder="123 Main St, Franklin TN"/>
+                <input className="input" value={form.address} onChange={e=>setForm(f=>({...f,address:e.target.value}))} placeholder="123 Main St, City, State"/>
               </div>
               <div>
                 <label style={{fontSize:12,color:'var(--text-2)',display:'block',marginBottom:4,fontWeight:600}}>Crew</label>

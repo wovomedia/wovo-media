@@ -89,11 +89,11 @@ export default function AdminClients() {
               <div className="grid-2">
                 <div>
                   <label style={{fontSize:12,color:'var(--text-2)',display:'block',marginBottom:5,fontWeight:600}}>Business name *</label>
-                  <input className="input" value={form.businessName} onChange={e=>setForm(f=>({...f,businessName:e.target.value}))} placeholder="Mojo Tacos"/>
+                  <input className="input" value={form.businessName} onChange={e=>setForm(f=>({...f,businessName:e.target.value}))} placeholder="Business name"/>
                 </div>
                 <div>
                   <label style={{fontSize:12,color:'var(--text-2)',display:'block',marginBottom:5,fontWeight:600}}>Owner name *</label>
-                  <input className="input" value={form.ownerName} onChange={e=>setForm(f=>({...f,ownerName:e.target.value}))} placeholder="Maria Garcia"/>
+                  <input className="input" value={form.ownerName} onChange={e=>setForm(f=>({...f,ownerName:e.target.value}))} placeholder="Owner full name"/>
                 </div>
               </div>
               <div>
