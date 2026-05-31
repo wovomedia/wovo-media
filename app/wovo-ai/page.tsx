@@ -1,6 +1,7 @@
 'use client'
-import { useState, Suspense } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
 const PLANS = [
@@ -85,11 +86,219 @@ function VideoGenerator() {
   )
 }
 
+function WebsiteBuilderFull() {
+  const [step, setStep] = useState(0)
+  const [researching, setResearching] = useState(false)
+  const [researchData, setResearchData] = useState('')
+  const [generating, setGenerating] = useState(false)
+  const [result, setResult] = useState('')
+  const [msg, setMsg] = useState('')
+  const [d, setD] = useState({
+    businessName:'', businessType:'', location:'', tagline:'', style:'Modern & Clean',
+    description:'', phone:'', email:'', address:'', hours:'',
+    currentWebsite:'', instagram:'', facebook:'', tiktok:'', youtube:'', google:'',
+    pages:'Home, About, Services, Contact', staffMembers:'', menuItems:'', services:'',
+    testimonials:'', logoUrl:'', aboutStory:''
+  })
+  const set = (k: string, v: string) => setD(p => ({...p, [k]: v}))
+
+  const doResearch = async () => {
+    if (!d.businessName) return
+    setResearching(true)
+    try {
+      const res = await fetch(`/api/website-builder?name=${encodeURIComponent(d.businessName)}&location=${encodeURIComponent(d.location)}`)
+      const data = await res.json()
+      setResearchData(data.research || '')
+    } catch {}
+    setResearching(false)
+  }
+
+  const generate = async () => {
+    setStep(4); setGenerating(true)
+    const res = await fetch('/api/website-builder', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({...d, researchData})
+    })
+    const data = await res.json()
+    setResult(data.html || '')
+    setGenerating(false); setStep(5)
+  }
+
+  const F = ({label, k, placeholder, multi=false, req=false}: any) => (
+    <div>
+      <label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:5,fontWeight:500}}>{label}{req&&<span style={{color:'var(--accent)'}}>*</span>}</label>
+      {multi ? <textarea className="input" value={d[k as keyof typeof d]} onChange={e=>set(k,e.target.value)} placeholder={placeholder} rows={3}/> :
+        <input className="input" value={d[k as keyof typeof d]} onChange={e=>set(k,e.target.value)} placeholder={placeholder}/>}
+    </div>
+  )
+
+  const progress = [
+    'Basics', 'Contact & Online', 'Your Content', 'Branding & Pages', 'Generate'
+  ]
+
+  if (step === 5 && result) return (
+    <div>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16,flexWrap:'wrap',gap:10}}>
+        <h3 style={{fontSize:20,fontWeight:700,color:'var(--text)'}}>🎉 Your website is ready!</h3>
+        <div style={{display:'flex',gap:8}}>
+          <button className="btn btn-ghost btn-sm" onClick={()=>{setStep(0);setResult('')}}>Start over</button>
+          <button className="btn btn-primary btn-sm" onClick={()=>{const b=new Blob([result],{type:'text/html'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=`${d.businessName.toLowerCase().replace(/\s+/g,'-')}-website.html`;a.click()}}>⬇ Download HTML</button>
+        </div>
+      </div>
+      <div style={{borderRadius:12,overflow:'hidden',border:'1px solid var(--border)',height:620,marginBottom:16}}>
+        <iframe srcDoc={result} style={{width:'100%',height:'100%',border:'none'}} title="Preview"/>
+      </div>
+      <div className="card" style={{textAlign:'center',padding:'20px 24px'}}>
+        <p style={{color:'var(--text-2)',marginBottom:14,fontSize:14}}>Want us to deploy this, connect a domain, and maintain it? That's included in Wovo Media Premium.</p>
+        <a href="https://calendly.com/wovomedia/wovo-media-strategy-call" target="_blank" rel="noreferrer"><button className="btn btn-primary">Book a call to deploy →</button></a>
+      </div>
+    </div>
+  )
+
+  if (step === 4) return (
+    <div style={{textAlign:'center',padding:'80px 0'}}>
+      <div style={{width:52,height:52,border:'3px solid var(--accent)',borderTopColor:'transparent',borderRadius:'50%',margin:'0 auto 20px',animation:'spin 1s linear infinite'}}/>
+      <h3 style={{fontSize:20,fontWeight:600,color:'var(--text)',marginBottom:8}}>Building your website...</h3>
+      <p style={{color:'var(--text-2)',fontSize:14}}>Wovo AI is crafting a complete website for {d.businessName}. This takes about 30 seconds.</p>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
+  )
+
+  return (
+    <div style={{maxWidth:600}}>
+      <h1 style={{fontSize:32,fontWeight:700,marginBottom:6,color:'var(--text)'}}>Website <span style={{color:'var(--accent)'}}>Builder</span></h1>
+      <p style={{color:'var(--text-2)',marginBottom:28,fontSize:14}}>Tell Wovo AI about your business. The more you share, the better your site. We'll also search online to fill in any gaps.</p>
+
+      {/* Progress */}
+      <div style={{display:'flex',gap:4,marginBottom:28}}>
+        {progress.map((p,i) => (
+          <div key={p} style={{flex:1,height:3,borderRadius:2,background:i<=step?'var(--accent)':'var(--bg-4)',transition:'background 0.3s',cursor:i<step?'pointer':'default'}} onClick={()=>i<step&&setStep(i)}/>
+        ))}
+      </div>
+      <div style={{fontSize:12,color:'var(--text-3)',marginBottom:20,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.07em'}}>Step {step+1} of 4 — {progress[step]}</div>
+
+      {step===0 && (
+        <div className="card" style={{display:'flex',flexDirection:'column',gap:14}}>
+          <F label="Business name" k="businessName" placeholder="Mojo Tacos" req/>
+          <div>
+            <label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:5,fontWeight:500}}>Business type<span style={{color:'var(--accent)'}}>*</span></label>
+            <select className="input" value={d.businessType} onChange={e=>set('businessType',e.target.value)}>
+              <option value="">Select type...</option>
+              {['Restaurant / Food & Drink','Bar / Nightlife','Coffee Shop / Cafe','Retail / Boutique','Hair / Beauty Salon','Spa / Wellness','Healthcare / Medical','Auto / Car Services','HVAC / Plumbing / Electrical','Landscaping / Lawn Care','Cleaning Services','Photography / Videography','Real Estate','Gym / Fitness','Law / Legal Services','Accounting / Finance','Other Service Business','Other'].map(o=><option key={o}>{o}</option>)}
+            </select>
+          </div>
+          <F label="City, State" k="location" placeholder="Franklin, TN" req/>
+          <F label="Your tagline / what makes you special" k="tagline" placeholder="Best tacos in Middle Tennessee"/>
+          <div>
+            <label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:6,fontWeight:500}}>Website style</label>
+            <div style={{display:'flex',gap:7,flexWrap:'wrap'}}>
+              {['Modern & Clean','Bold & Vibrant','Minimal','Warm & Friendly','Luxury','Fun & Playful'].map(s=>(
+                <button key={s} onClick={()=>set('style',s)} style={{padding:'7px 14px',borderRadius:20,fontSize:12,cursor:'pointer',border:'1px solid',fontFamily:'inherit',fontWeight:500,borderColor:d.style===s?'var(--accent)':'var(--border-2)',background:d.style===s?'var(--accent-dim)':'transparent',color:d.style===s?'var(--accent)':'var(--text-2)'}}>{s}</button>
+              ))}
+            </div>
+          </div>
+          <button className="btn btn-primary" style={{padding:12,marginTop:4}} onClick={async ()=>{setStep(1);await doResearch()}} disabled={!d.businessName||!d.businessType||!d.location}>
+            Next → {d.businessName && '(we&apos;ll research your business online)'}
+          </button>
+        </div>
+      )}
+
+      {step===1 && (
+        <div className="card" style={{display:'flex',flexDirection:'column',gap:14}}>
+          {researching && (
+            <div style={{background:'var(--accent-dim)',border:'1px solid var(--accent-border)',borderRadius:10,padding:'10px 14px',fontSize:13,color:'var(--accent)',display:'flex',alignItems:'center',gap:8}}>
+              <span style={{width:14,height:14,border:'2px solid var(--accent)',borderTopColor:'transparent',borderRadius:'50%',animation:'spin 0.7s linear infinite',display:'inline-block',flexShrink:0}}/>
+              Searching online for {d.businessName}...
+              <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+            </div>
+          )}
+          {researchData && !researching && (
+            <div style={{background:'rgba(34,197,94,0.08)',border:'1px solid rgba(34,197,94,0.2)',borderRadius:10,padding:'10px 14px',fontSize:12,color:'#22c55e'}}>
+              ✓ Found info online — we'll use this to fill in your site. Review and correct anything below.
+            </div>
+          )}
+          <F label="Phone number" k="phone" placeholder="(931) 555-0000"/>
+          <F label="Email address" k="email" placeholder="hello@yourbusiness.com"/>
+          <F label="Full street address" k="address" placeholder="123 Main St, Franklin, TN 37064"/>
+          <F label="Business hours" k="hours" placeholder="Mon–Fri 11am–9pm, Sat–Sun 10am–10pm"/>
+          <F label="Current website (if you have one)" k="currentWebsite" placeholder="https://yourbusiness.com"/>
+          <div style={{borderTop:'1px solid var(--border)',paddingTop:14}}>
+            <div style={{fontSize:12,color:'var(--text-3)',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:10}}>Social Media Handles</div>
+            <div style={{display:'flex',flexDirection:'column',gap:10}}>
+              {[['instagram','Instagram','@yourbusiness'],['facebook','Facebook','facebook.com/yourbusiness'],['tiktok','TikTok','@yourbusiness'],['youtube','YouTube','youtube.com/@channel'],['google','Google Business URL','g.co/...']].map(([k,l,p])=>(
+                <div key={k} style={{display:'flex',alignItems:'center',gap:8}}>
+                  <span style={{fontSize:12,color:'var(--text-3)',width:70,flexShrink:0,fontWeight:500}}>{l}</span>
+                  <input className="input" style={{fontSize:13}} value={d[k as keyof typeof d]} onChange={e=>set(k,e.target.value)} placeholder={p}/>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div style={{display:'flex',gap:8,marginTop:4}}>
+            <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setStep(0)}>← Back</button>
+            <button className="btn btn-primary" style={{flex:2,padding:12}} onClick={()=>setStep(2)}>Next →</button>
+          </div>
+        </div>
+      )}
+
+      {step===2 && (
+        <div className="card" style={{display:'flex',flexDirection:'column',gap:14}}>
+          <F label="About your business — what do you do, your story, what makes you special" k="description" placeholder="We've been serving Franklin since 2019. Family-owned, locally sourced ingredients..." multi/>
+          <F label="Staff / team members (name + role, one per line)" k="staffMembers" placeholder="Maria Garcia — Owner & Head Chef
+Jake Smith — Manager" multi/>
+          <F label="Menu items or products (name + description, one per line)" k="menuItems" placeholder="Street Tacos — $12 · Three authentic tacos with your choice of protein
+Nachos Supreme — $14 · ..." multi/>
+          <F label="Services you offer (one per line)" k="services" placeholder="Oil Changes — starting at $39
+Tire Rotation — $29
+..." multi/>
+          <F label="Customer reviews / testimonials (paste a few of your best)" k="testimonials" placeholder="'Best tacos in Franklin!' — Sarah M.
+'Amazing service, we come every week.' — John D." multi/>
+          <div style={{display:'flex',gap:8,marginTop:4}}>
+            <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setStep(1)}>← Back</button>
+            <button className="btn btn-primary" style={{flex:2,padding:12}} onClick={()=>setStep(3)}>Next →</button>
+          </div>
+        </div>
+      )}
+
+      {step===3 && (
+        <div className="card" style={{display:'flex',flexDirection:'column',gap:14}}>
+          <F label="Pages / sections you want on your site" k="pages" placeholder="Home, About, Menu, Gallery, Contact, Reservations"/>
+          <F label="Your logo URL (optional — paste a direct image link)" k="logoUrl" placeholder="https://... or leave blank"/>
+          <F label="Brand story — anything else about your business history or mission" k="aboutStory" placeholder="Founded in 2019 after a trip to Mexico City..." multi/>
+          {researchData && (
+            <div style={{background:'var(--bg-3)',borderRadius:10,padding:12}}>
+              <div style={{fontSize:11,color:'var(--text-3)',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:6}}>Found online about your business</div>
+              <p style={{fontSize:12,color:'var(--text-2)',lineHeight:1.6,margin:0}}>{researchData.slice(0,400)}{researchData.length>400?'...':''}</p>
+            </div>
+          )}
+          <div style={{display:'flex',gap:8,marginTop:4}}>
+            <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setStep(2)}>← Back</button>
+            <button className="btn btn-primary" style={{flex:2,padding:12,fontSize:15}} onClick={generate}>
+              Generate My Website ✨
+            </button>
+          </div>
+          <p style={{fontSize:11,color:'var(--text-3)',textAlign:'center'}}>Takes ~30 seconds · Uses your info + our online research</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function WovoAIContent() {
   const params = useSearchParams()
   const plan = params.get('plan') || ''
   const [selectedPlan, setSelectedPlan] = useState(plan)
   const [activeTab, setActiveTab] = useState<'content'|'team'|'website'|'video'>('content')
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [hasActiveSubscription, setHasActiveSubscription] = useState(false)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session?.user) return
+      setIsLoggedIn(true)
+      const { data: client } = await supabase.from('clients').select('is_active, plan').eq('profile_id', session.user.id).single()
+      setHasActiveSubscription(client?.is_active === true)
+    })
+  }, [])
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [business, setBusiness] = useState('')
@@ -233,85 +442,32 @@ function WovoAIContent() {
         )}
 
         {activeTab==='website' && (
-          <>
-            <h1 style={{fontSize:32,fontWeight:700,marginBottom:8}}>Website <span style={{color:'var(--accent)'}}>Builder</span></h1>
-            <p style={{color:'var(--text-2)',marginBottom:40}}>Tell Wovo AI about your business and it generates a complete, professional website — ready to launch.</p>
-
-            {wbStep===0 && (
-              <div className="card card-accent" style={{maxWidth:560}}>
-                <h3 style={{fontSize:16,fontWeight:600,marginBottom:20}}>Tell us about your business</h3>
-                <div style={{display:'flex',flexDirection:'column',gap:14}}>
-                  <div><label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:6}}>Business name</label><input className="input" value={wbData.businessName} onChange={e=>setWbData(d=>({...d,businessName:e.target.value}))} placeholder="Your business name"/></div>
-                  <div><label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:6}}>Business type</label>
-                    <select className="input" value={wbData.type} onChange={e=>setWbData(d=>({...d,type:e.target.value}))}>
-                      <option value="">Select type...</option>
-                      {['Restaurant / Food','Retail / Boutique','Service Business','Healthcare','Bar / Nightlife','Other'].map(o=><option key={o}>{o}</option>)}
-                    </select>
-                  </div>
-                  <div><label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:6}}>Location</label><input className="input" value={wbData.location} onChange={e=>setWbData(d=>({...d,location:e.target.value}))} placeholder="City, State"/></div>
-                  <div><label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:6}}>Tagline / what makes you special</label><input className="input" value={wbData.tagline} onChange={e=>setWbData(d=>({...d,tagline:e.target.value}))} placeholder="Best tacos in Middle Tennessee"/></div>
-                  <div><label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:6}}>Website style</label>
-                    <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-                      {[['modern','Modern & Clean'],['bold','Bold & Vibrant'],['minimal','Minimal'],['warm','Warm & Friendly']].map(([v,l])=>(
-                        <button key={v} onClick={()=>setWbData(d=>({...d,style:v}))} style={{padding:'8px 16px',borderRadius:8,fontSize:13,cursor:'pointer',border:'0.5px solid',borderColor:wbData.style===v?'var(--accent-border)':'var(--border-2)',background:wbData.style===v?'var(--accent-dim)':'transparent',color:wbData.style===v?'var(--accent)':'var(--text-2)',fontFamily:'inherit'}}>{l}</button>
-                      ))}
-                    </div>
-                  </div>
-                  <button className="btn btn-primary" style={{width:'100%',padding:13,marginTop:8}} onClick={()=>setWbStep(1)} disabled={!wbData.businessName||!wbData.type}>Next →</button>
-                </div>
-              </div>
-            )}
-
-            {wbStep===1 && (
-              <div className="card card-accent" style={{maxWidth:560,textAlign:'center',padding:48}}>
-                <div style={{fontSize:48,marginBottom:16}}>🎨</div>
-                <h3 style={{fontSize:20,fontWeight:600,marginBottom:8}}>Ready to build your site</h3>
-                <div style={{textAlign:'left',background:'var(--bg-3)',borderRadius:10,padding:16,marginBottom:24}}>
-                  {[['Business',wbData.businessName],['Type',wbData.type],['Location',wbData.location],['Style',wbData.style]].map(([k,v])=>v&&(
-                    <div key={k} style={{display:'flex',justifyContent:'space-between',padding:'6px 0',borderBottom:'0.5px solid var(--border)',fontSize:13}}>
-                      <span style={{color:'var(--text-3)'}}>{k}</span><span style={{color:'var(--text)'}}>{v}</span>
-                    </div>
-                  ))}
-                </div>
-                <button className="btn btn-primary" style={{width:'100%',padding:13}} onClick={()=>{setWbStep(2);generateWebsite()}} disabled={wbGenerating}>Generate My Website ✨</button>
-                <button className="btn btn-ghost" style={{width:'100%',marginTop:10}} onClick={()=>setWbStep(0)}>← Edit details</button>
-              </div>
-            )}
-
-            {wbStep===2 && (
-              <div style={{textAlign:'center',padding:'60px 0'}}>
-                <div style={{width:48,height:48,border:'3px solid var(--accent)',borderTopColor:'transparent',borderRadius:'50%',margin:'0 auto 20px',animation:'spin 1s linear infinite'}}/>
-                <h3 style={{fontSize:20,fontWeight:600,marginBottom:8}}>Building your website...</h3>
-                <p style={{color:'var(--text-2)'}}>Wovo AI is generating a complete website for {wbData.businessName}</p>
-                <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-              </div>
-            )}
-
-            {wbStep===3 && wbResult && (
-              <div>
-                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
-                  <h3 style={{fontSize:20,fontWeight:600}}>Your website is ready! 🎉</h3>
-                  <div style={{display:'flex',gap:10}}>
-                    <button className="btn btn-ghost btn-sm" onClick={()=>{setWbStep(0);setWbResult('')}}>Start over</button>
-                    <button className="btn btn-primary btn-sm" onClick={()=>{const b=new Blob([wbResult],{type:'text/html'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=`${wbData.businessName.toLowerCase().replace(/\s+/g,'-')}-website.html`;a.click()}}>Download HTML</button>
-                  </div>
-                </div>
-                <div style={{borderRadius:12,overflow:'hidden',border:'1px solid var(--border)',height:600}}>
-                  <iframe srcDoc={wbResult} style={{width:'100%',height:'100%',border:'none'}} title="Generated website preview"/>
-                </div>
-                <div className="card" style={{marginTop:16,textAlign:'center'}}>
-                  <p style={{color:'var(--text-2)',marginBottom:16}}>Want us to deploy this and connect it to your domain? That's included in Wovo Media Premium.</p>
-                  <button className="btn btn-outline" onClick={()=>window.open('https://calendly.com/wovomedia','_blank')}>Book a call to deploy →</button>
-                </div>
-              </div>
-            )}
-          </>
+          <WebsiteBuilderFull/>
         )}
       {activeTab==='video' && (
         <>
           <h1 style={{fontSize:30,fontWeight:700,marginBottom:8}}>AI <span style={{color:'var(--accent)'}}>Video Generator</span></h1>
-          <p style={{color:'var(--text-2)',marginBottom:32,fontSize:15}}>Generate short AI avatar videos for social media. Available on Growth and above.</p>
-          <VideoGenerator/>
+          <p style={{color:'var(--text-2)',marginBottom:32,fontSize:15}}>Generate short AI avatar videos for social media.</p>
+          {!isLoggedIn ? (
+            <div className="card card-accent" style={{textAlign:'center',padding:'48px 32px',maxWidth:500}}>
+              <div style={{fontSize:40,marginBottom:14}}>🔒</div>
+              <h3 style={{fontSize:20,fontWeight:700,marginBottom:10}}>Active subscription required</h3>
+              <p style={{color:'var(--text-2)',marginBottom:24,lineHeight:1.65}}>AI Video Generation is available on Growth ($49/mo) and above. Subscribe to unlock.</p>
+              <div style={{display:'flex',gap:10,justifyContent:'center'}}>
+                <a href="https://pay.wovomedia.com/b/fZu6oH6Q3fQf3HC0gocIE0Z" target="_blank" rel="noreferrer"><button className="btn btn-primary">Get Growth — $49/mo</button></a>
+                <a href="https://pay.wovomedia.com/b/aFafZhfmzfQf1zu2owcIE10" target="_blank" rel="noreferrer"><button className="btn btn-outline">Get Pro — $79/mo</button></a>
+              </div>
+            </div>
+          ) : !hasActiveSubscription ? (
+            <div className="card card-accent" style={{textAlign:'center',padding:'48px 32px',maxWidth:500}}>
+              <div style={{fontSize:40,marginBottom:14}}>🔒</div>
+              <h3 style={{fontSize:20,fontWeight:700,marginBottom:10}}>Upgrade to use AI Videos</h3>
+              <p style={{color:'var(--text-2)',marginBottom:24,lineHeight:1.65}}>You need a Growth plan or higher to generate AI videos.</p>
+              <a href="https://pay.wovomedia.com/b/fZu6oH6Q3fQf3HC0gocIE0Z" target="_blank" rel="noreferrer"><button className="btn btn-primary">Upgrade to Growth — $49/mo</button></a>
+            </div>
+          ) : (
+            <VideoGenerator/>
+          )}
         </>
       )}
       </div>

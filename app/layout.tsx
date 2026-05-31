@@ -10,16 +10,13 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 1,
-  themeColor: '#00E5C8',
-  viewportFit: 'cover',
+  width: 'device-width', initialScale: 1, maximumScale: 1,
+  themeColor: '#00E5C8', viewportFit: 'cover',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" data-theme="dark">
       <head>
         <link rel="apple-touch-icon" href="/icon-192.png"/>
         <link rel="icon" href="/icon-192.png"/>
@@ -28,20 +25,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css"/>
       </head>
       <body>
-        <script dangerouslySetInnerHTML={{ __html: `
-          (function() {
-            var t = localStorage.getItem('wovo-theme');
-            document.documentElement.setAttribute('data-theme', t === 'light' ? 'light' : 'dark');
-          })();
-        `}} />
         {children}
-        <script dangerouslySetInnerHTML={{ __html: `
-          if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-              navigator.serviceWorker.register('/sw.js').catch(() => {})
-            })
-          }
-        `}}/>
+        <script dangerouslySetInnerHTML={{ __html: `if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}))}` }}/>
       </body>
     </html>
   )
