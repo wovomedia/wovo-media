@@ -17,7 +17,11 @@ export async function POST(req: NextRequest) {
   // Check Supabase cache first - persists across deploys and all users
   const { data: cached } = await sb.from('nova_videos').select('*').eq('node_id', nodeId).single()
 
-  if (cached?.status === 'completed' && cached?.video_url) {
+  if (cached?.status === 'completed') {
+    // Always prefer permanent Supabase URL - never expires
+    if (cached?.permanent_url) {
+      return NextResponse.json({ videoId: cached.heygen_video_id, videoUrl: cached.permanent_url, cached: true, permanent: true })
+    }
     // Check if URL is stale (HeyGen URLs expire in 7 days)
     const age = cached.completed_at ? Date.now() - new Date(cached.completed_at).getTime() : 0
     const sixDays = 6 * 24 * 60 * 60 * 1000
