@@ -179,7 +179,7 @@ function WebsiteBuilderFull() {
 
       {step===0 && (
         <div className="card" style={{display:'flex',flexDirection:'column',gap:14}}>
-          <F label="Business name" k="businessName" placeholder="Mojo Tacos" req/>
+          <F label="Business name" k="businessName" placeholder="Your business name" req/>
           <div>
             <label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:5,fontWeight:500}}>Business type<span style={{color:'var(--accent)'}}>*</span></label>
             <select className="input" value={d.businessType} onChange={e=>set('businessType',e.target.value)}>
@@ -187,8 +187,8 @@ function WebsiteBuilderFull() {
               {['Restaurant / Food & Drink','Bar / Nightlife','Coffee Shop / Cafe','Retail / Boutique','Hair / Beauty Salon','Spa / Wellness','Healthcare / Medical','Auto / Car Services','HVAC / Plumbing / Electrical','Landscaping / Lawn Care','Cleaning Services','Photography / Videography','Real Estate','Gym / Fitness','Law / Legal Services','Accounting / Finance','Other Service Business','Other'].map(o=><option key={o}>{o}</option>)}
             </select>
           </div>
-          <F label="City, State" k="location" placeholder="Franklin, TN" req/>
-          <F label="Your tagline / what makes you special" k="tagline" placeholder="Best tacos in Middle Tennessee"/>
+          <F label="City, State" k="location" placeholder="City, State" req/>
+          <F label="Your tagline / what makes you special" k="tagline" placeholder="What makes your business special"/>
           <div>
             <label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:6,fontWeight:500}}>Website style</label>
             <div style={{display:'flex',gap:7,flexWrap:'wrap'}}>
