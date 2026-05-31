@@ -1,9 +1,15 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
 export default function ResetPassword() {
   const [email, setEmail] = useState('')
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const e = params.get('email')
+    if (e) setEmail(decodeURIComponent(e))
+  }, [])
   const [sent, setSent] = useState(false)
   const [loading, setLoading] = useState(false)
 

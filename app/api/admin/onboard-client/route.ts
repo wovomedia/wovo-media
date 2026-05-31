@@ -111,7 +111,8 @@ export async function POST(req: NextRequest) {
 
   // Send invite email
   const inviteToken = randomBytes(32).toString('hex')
-  const inviteUrl = `https://wovomedia.com/login?email=${encodeURIComponent(email)}`
+  // Send to reset password page so they set their own password
+  const inviteUrl = `https://wovomedia.com/reset-password?email=${encodeURIComponent(email)}`
 
   await resend.emails.send({
     from: 'Wovo Media <support@wovomedia.com>',
@@ -126,9 +127,9 @@ export async function POST(req: NextRequest) {
   <div style="padding:32px 28px">
     <h2 style="font-size:22px;font-weight:700;margin:0 0 12px;color:#fff">Welcome to Wovo Media, ${ownerName}! 🎉</h2>
     <p style="color:#888;line-height:1.7;margin:0 0 10px;font-size:15px">Your account for <strong style="color:#f0f0f0">${businessName}</strong> is all set up and ready to go.</p>
-    <p style="color:#888;line-height:1.7;margin:0 0 24px;font-size:14px">Log in to message your team, see your shoot schedule, and track your content.</p>
+    <p style="color:#888;line-height:1.7;margin:0 0 24px;font-size:14px">Click below to set your password and access your account. Once you're in, you can message your team, see your shoot schedule, and track your content.</p>
     <div style="text-align:center;margin:28px 0">
-      <a href="${inviteUrl}" style="display:inline-block;background:#00E5C8;color:#080808;padding:14px 36px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">Access Your Account →</a>
+      <a href="${inviteUrl}" style="display:inline-block;background:#00E5C8;color:#080808;padding:14px 36px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">Set Your Password & Log In →</a>
     </div>
     <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:16px 20px;margin:20px 0">
       <div style="font-size:12px;color:#555;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.07em">Your login</div>
