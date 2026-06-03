@@ -22,7 +22,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="icon" href="/icon-192.png"/>
         <meta name="apple-mobile-web-app-capable" content="yes"/>
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css"/>
+        <script dangerouslySetInnerHTML={{__html:`
+          var l=document.createElement('link');
+          l.rel='stylesheet';
+          l.href='https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css';
+          document.head.appendChild(l);
+        `}}/>
       </head>
       <body>
         {children}
