@@ -11,17 +11,14 @@ export default function Login() {
   const [businessName, setBusinessName] = useState('')
   const [terms, setTerms] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [checking, setChecking] = useState(true)
+  const [checking, setChecking] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
   useEffect(() => {
-    // 1 second max to check existing session - then show form regardless
-    const timeout = setTimeout(() => setChecking(false), 1000)
+    // Check silently in background - form shows immediately, redirects if already logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
-      clearTimeout(timeout)
-      if (!session?.user) { setChecking(false); return }
-      // Get role from metadata - zero DB call needed
+      if (!session?.user) return
       const role = session.user.user_metadata?.wovo_role || 'client'
       const routes: Record<string, string> = {
         owner: '/admin', admin: '/admin',
@@ -29,8 +26,7 @@ export default function Login() {
         employee: '/employee', client: '/home'
       }
       window.location.replace(routes[role] || '/home')
-    }).catch(() => { clearTimeout(timeout); setChecking(false) })
-    return () => clearTimeout(timeout)
+    }).catch(() => {})
   }, [])
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -73,12 +69,6 @@ export default function Login() {
     if (!res.ok) { setError(data.error || 'Signup failed.'); setLoading(false); return }
     setSuccess(email); setLoading(false)
   }
-
-  if (checking) return (
-    <div style={{minHeight:'100dvh',background:'var(--bg)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-      <div className="spinner"/>
-    </div>
-  )
 
   if (success) return (
     <div style={{minHeight:'100dvh',background:'var(--bg)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:24}}>
