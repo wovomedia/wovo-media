@@ -13,8 +13,8 @@ export default function AdminHome() {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       const data = { user: session?.user }
       if (!data.user) { window.location.replace('/login'); return }
-      const { data: profile } = await supabase.from('profiles').select('wovo_role').eq('user_id', data.user.id).single()
-      if (!profile || !['owner','admin'].includes(profile.wovo_role)) { window.location.href = '/home'; return }
+      const role = data.user.user_metadata?.wovo_role
+      if (!role || !['owner','admin'].includes(role)) { window.location.replace('/home'); return }
 
       const [c, j, e] = await Promise.all([
         supabase.from('clients').select('id, is_active'),
@@ -34,7 +34,7 @@ export default function AdminHome() {
     })
   }, [])
 
-  if (loading) return <div style={{minHeight:'100dvh',background:'var(--bg)',display:'flex',alignItems:'center',justifyContent:'center'}}><div className="spinner"/></div>
+  // Don't block on loading - show shell immediately
 
   const STATUS_COLOR: Record<string,string> = {
     pending: '#f59e0b', in_progress: '#00E5C8', needs_review: '#8b5cf6',
