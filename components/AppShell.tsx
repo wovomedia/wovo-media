@@ -39,6 +39,11 @@ export default function AppShell({ children, user }: { children: React.ReactNode
     { href: '/admin/schedule', icon: 'ti-calendar', label: 'Schedule' },
     { href: '/admin/ads', icon: 'ti-speakerphone', label: 'Ad Studio' },
     null,
+    { href: '/admin/tools/onboard', icon: 'ti-user-plus', label: 'Onboard Client' },
+    { href: '/admin/tools/website-builder', icon: 'ti-world', label: 'Website Builder' },
+    { href: '/admin/tools/video-gen', icon: 'ti-video', label: 'Video Generator' },
+    { href: '/admin/tools/image-gen', icon: 'ti-photo', label: 'Image Generator' },
+    null,
     { href: '/home', icon: 'ti-home', label: 'Client View' },
     { href: '/account', icon: 'ti-user', label: 'Account' },
   ] : isEmployee ? [
