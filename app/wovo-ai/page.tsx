@@ -113,6 +113,9 @@ function WebsiteBuilderFull({ isLoggedIn, hasActiveSubscription, authChecked }: 
     setResearching(false)
   }
 
+  const [files, setFiles] = useState<Record<string,string>>({})
+  const [activeFile, setActiveFile] = useState('page.tsx')
+
   const generate = async () => {
     setStep(4); setGenerating(true)
     const res = await fetch('/api/website-builder', {
@@ -120,8 +123,22 @@ function WebsiteBuilderFull({ isLoggedIn, hasActiveSubscription, authChecked }: 
       body: JSON.stringify({...d, researchData})
     })
     const data = await res.json()
-    setResult(data.html || '')
+    setFiles(data.files || {})
+    setActiveFile('page.tsx')
     setGenerating(false); setStep(5)
+  }
+
+  const downloadZip = async () => {
+    // Create a simple zip-like structure as a text file with all files
+    const content = Object.entries(files).map(([path, code]) =>
+      `${'='.repeat(60)}\n// FILE: ${path}\n${'='.repeat(60)}\n${code}`
+    ).join('\n\n')
+    const blob = new Blob([content], {type:'text/plain'})
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${d.businessName.toLowerCase().replace(/\s+/g,'-')}-website.txt`
+    a.click()
   }
 
   const F = ({label, k, placeholder, multi=false, req=false}: any) => (
