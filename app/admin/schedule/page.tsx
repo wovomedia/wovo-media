@@ -22,6 +22,14 @@ export default function Schedule() {
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
 
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session?.user) { window.location.replace('/login'); return }
+      const role = session?.user?.user_metadata?.wovo_role
+      if (!role || !['owner','admin'].includes(role)) { window.location.replace('/home'); return }
+    })
+  }, [])
+
   useEffect(() => { loadData() }, [year, month])
 
   const loadData = async () => {

@@ -12,6 +12,14 @@ export default function Jobs() {
   const [filter, setFilter] = useState<'all'|'pending'|'in_progress'|'needs_review'>('pending')
   const [loading, setLoading] = useState(true)
 
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session?.user) { window.location.replace('/login'); return }
+      const role = session?.user?.user_metadata?.wovo_role
+      if (!role || !['owner','admin'].includes(role)) { window.location.replace('/home'); return }
+    })
+  }, [])
+
   useEffect(() => { loadJobs() }, [filter])
 
   const loadJobs = async () => {

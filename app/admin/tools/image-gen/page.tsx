@@ -20,6 +20,9 @@ export default function AdminImageGen() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session?.user) { window.location.replace('/login'); return }
+      const role = session?.user?.user_metadata?.wovo_role
+      if (!role || !['owner','admin'].includes(role)) { window.location.replace('/home'); return }
+      if (!session?.user) { window.location.replace('/login'); return }
       supabase.from('clients').select('id,business_name').eq('is_active',true).order('business_name').then(({data})=>setClients(data||[]))
       // Load recent images
       supabase.from('client_images').select('prompt,image_url,created_at').order('created_at',{ascending:false}).limit(20)

@@ -18,6 +18,9 @@ export default function AdminOnboard() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session?.user) { window.location.replace('/login'); return }
+      const role = session?.user?.user_metadata?.wovo_role
+      if (!role || !['owner','admin'].includes(role)) { window.location.replace('/home'); return }
+      if (!session?.user) { window.location.replace('/login'); return }
       Promise.all([
         supabase.from('employees').select('*').order('full_name'),
         supabase.from('clients').select('id,business_name,owner_name,email,plan,is_active,monthly_rate').order('business_name')

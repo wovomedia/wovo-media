@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import AppShell from '@/components/AppShell'
 import { supabase as sb } from '@/lib/supabase'
 
 const ADS = [
@@ -53,6 +54,14 @@ export default function AdStudio() {
   const [status, setStatus] = useState<'idle'|'generating'|'polling'|'done'|'error'>('idle')
   const [copied, setCopied] = useState('')
   const pollRef = useRef<NodeJS.Timeout | undefined>(undefined)
+
+  useEffect(() => {
+    sb.auth.getSession().then(({ data: { session } }) => {
+      if (!session?.user) { window.location.replace('/login'); return }
+      const role = session?.user?.user_metadata?.wovo_role
+      if (!role || !['owner','admin'].includes(role)) { window.location.replace('/home'); return }
+    })
+  }, [])
 
   useEffect(() => {
     // Check if any ads already exist
