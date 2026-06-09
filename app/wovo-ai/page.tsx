@@ -316,10 +316,17 @@ function WovoAIContent() {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
         setIsLoggedIn(true)
-        const { data: client } = await supabase.from('clients').select('is_active, plan').eq('profile_id', session.user.id).single()
-        if (client?.is_active) {
-          setClientPlan(client.plan || '')
-          setHasActiveSubscription(['starter','growth','pro_ai','website'].includes(client.plan))
+        const role = session.user.user_metadata?.wovo_role
+        // Owners get full access to all tools for free
+        if (role === 'owner' || role === 'admin') {
+          setClientPlan('pro_ai')
+          setHasActiveSubscription(true)
+        } else {
+          const { data: client } = await supabase.from('clients').select('is_active, plan').eq('profile_id', session.user.id).single()
+          if (client?.is_active) {
+            setClientPlan(client.plan || '')
+            setHasActiveSubscription(['starter','growth','pro_ai','website'].includes(client.plan))
+          }
         }
       }
       setAuthChecked(true)

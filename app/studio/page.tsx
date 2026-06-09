@@ -9,6 +9,7 @@ export default function Studio() {
   const [client, setClient] = useState<any>(null)
   const [credits, setCredits] = useState(0)
   const [isActive, setIsActive] = useState(false)
+  const [isOwner, setIsOwner] = useState(false)
   const [tab, setTab] = useState<'remix'|'images'|'credits'>('remix')
   const [remixUrl, setRemixUrl] = useState('')
   const [remixResult, setRemixResult] = useState<any>(null)
@@ -22,6 +23,8 @@ export default function Studio() {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       const data = { user: session?.user }
       if (!data.user) { window.location.replace('/login'); return }
+      const role = data.user.user_metadata?.wovo_role
+      if (role === 'owner' || role === 'admin') { setIsOwner(true); setIsActive(true) }
       const { data: c } = await supabase.from('clients').select('*').eq('profile_id', data.user.id).single()
       if (c) {
         setClient(c); setIsActive(c.is_active)

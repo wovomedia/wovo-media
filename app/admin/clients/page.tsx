@@ -34,9 +34,18 @@ export default function AdminClients() {
     if (window.location.search.includes('onboard')) setShowOnboard(true)
   }, [])
 
+  const deleteClient = async (clientId: string, businessName: string) => {
+    if (!confirm(`DELETE "${businessName}" permanently?\n\nThis removes their account, all data, videos, messages, and login. This CANNOT be undone.`)) return
+    const res = await fetch('/api/admin/delete-client', {
+      method: 'DELETE', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ clientId })
+    })
+    if (res.ok) { await loadData(); setMsg(`✓ ${businessName} deleted permanently`) }
+    else setMsg('Error deleting account')
+  }
+
   const toggleActive = async (clientId: string, currentStatus: boolean) => {
-    const action = currentStatus ? 'deactivate' : 'activate'
-    if (!confirm(`${action.charAt(0).toUpperCase()+action.slice(1)} this account? ${currentStatus ? 'They will lose access immediately.' : 'They will regain full access.'}`)) return
+    if (!confirm(`${currentStatus ? 'Deactivate' : 'Activate'} this account?`)) return
     await supabase.from('clients').update({ is_active: !currentStatus }).eq('id', clientId)
     await loadData()
     setMsg(`✓ Account ${currentStatus ? 'deactivated' : 'activated'}`)
@@ -171,6 +180,9 @@ export default function AdminClients() {
                     {c.monthly_rate && <span style={{fontSize:11,color:'var(--text-3)',fontWeight:600}}>${c.monthly_rate}/mo</span>}
                     <button onClick={e=>{e.preventDefault();e.stopPropagation();toggleActive(c.id,c.is_active)}} style={{fontSize:10,padding:'3px 8px',borderRadius:6,border:'1px solid',borderColor:c.is_active?'rgba(239,68,68,0.3)':'rgba(34,197,94,0.3)',background:'transparent',color:c.is_active?'#ef4444':'#22c55e',cursor:'pointer',fontFamily:'inherit',fontWeight:600}}>
                       {c.is_active?'Deactivate':'Activate'}
+                    </button>
+                    <button onClick={e=>{e.preventDefault();e.stopPropagation();deleteClient(c.id,c.business_name)}} style={{fontSize:10,padding:'3px 8px',borderRadius:6,border:'1px solid',borderColor:'rgba(239,68,68,0.5)',background:'rgba(239,68,68,0.08)',color:'#ef4444',cursor:'pointer',fontFamily:'inherit',fontWeight:700}}>
+                      Delete
                     </button>
                   </div>
                 </div>
