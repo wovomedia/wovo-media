@@ -225,6 +225,64 @@ export default function Home() {
               </div>
             ))}
           </div>
+          {/* Bundle Plans */}
+          <div style={{marginTop:24,marginBottom:14}}>
+            <div style={{textAlign:'center',marginBottom:16}}>
+              <div style={{fontSize:11,color:'var(--text-3)',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.12em',marginBottom:6}}>Bundle & Save</div>
+              <h3 style={{fontFamily:'Outfit,sans-serif',fontSize:20,fontWeight:800,color:'var(--text)',marginBottom:4}}>Get more, pay less.</h3>
+              <p style={{fontSize:13,color:'var(--text-2)'}}>Add 2 plans → save $10/mo. Get everything → save $15/mo.</p>
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}} className="grid-2">
+
+              {/* Duo Bundle */}
+              <div className="card" style={{background:'linear-gradient(135deg,rgba(0,229,200,0.06),rgba(0,229,200,0.02))',border:'1px solid rgba(0,229,200,0.2)',position:'relative'}}>
+                <div style={{position:'absolute',top:-10,left:'50%',transform:'translateX(-50%)',background:'var(--bg-3)',border:'1px solid var(--accent-border)',color:'var(--accent)',fontSize:9,fontWeight:800,padding:'3px 12px',borderRadius:20,whiteSpace:'nowrap',textTransform:'uppercase',letterSpacing:'0.06em'}}>Save $10/mo</div>
+                <div style={{fontSize:11,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:'0.1em',fontWeight:600,marginBottom:6}}>Duo Bundle — Any 2 Plans</div>
+                <div style={{display:'flex',alignItems:'baseline',gap:8,marginBottom:4}}>
+                  <div style={{fontFamily:'Outfit,sans-serif',fontSize:28,fontWeight:800,color:'var(--text)'}}><span style={{fontSize:13,color:'var(--text-3)',fontWeight:400,textDecoration:'line-through',marginRight:6}}>Full price</span>−$10<span style={{fontSize:13,color:'var(--text-3)',fontWeight:400}}>/mo</span></div>
+                </div>
+                <p style={{fontSize:12,color:'var(--text-2)',marginBottom:14,lineHeight:1.6}}>Pick any 2 Wovo AI plans and get $10 off every month. Mix and match whatever fits your business.</p>
+                <div style={{display:'flex',flexDirection:'column',gap:6,marginBottom:16}}>
+                  {[['Starter + Growth','$29 + $49 → $68/mo'],['Growth + Cinematic Ads','$49 + $149 → $188/mo'],['Pro AI + Website','$79 + $99 → $168/mo'],['Any combination works','$10 off applied automatically']].map(([a,b])=>(
+                    <div key={a} style={{display:'flex',justifyContent:'space-between',fontSize:12,padding:'5px 0',borderTop:'0.5px solid var(--border)'}}>
+                      <span style={{color:'var(--text-2)'}}>{a}</span>
+                      <span style={{color:'var(--accent)',fontWeight:600}}>{b}</span>
+                    </div>
+                  ))}
+                </div>
+                <a href="mailto:support@wovomedia.com?subject=Duo Bundle" style={{textDecoration:'none'}}>
+                  <button style={{width:'100%',padding:10,fontSize:13,background:'var(--accent-dim)',border:'1px solid var(--accent-border)',color:'var(--accent)',borderRadius:8,cursor:'pointer',fontFamily:'inherit',fontWeight:700}}>Get Duo Bundle — Save $10/mo →</button>
+                </a>
+              </div>
+
+              {/* All-In Bundle */}
+              <div className="card" style={{background:'linear-gradient(135deg,rgba(139,92,246,0.08),rgba(0,229,200,0.04))',border:'1px solid rgba(139,92,246,0.25)',position:'relative'}}>
+                <div style={{position:'absolute',top:-10,left:'50%',transform:'translateX(-50%)',background:'#8b5cf6',color:'#fff',fontSize:9,fontWeight:800,padding:'3px 12px',borderRadius:20,whiteSpace:'nowrap',textTransform:'uppercase',letterSpacing:'0.06em'}}>Best Value · Save $15/mo</div>
+                <div style={{fontSize:11,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:'0.1em',fontWeight:600,marginBottom:6}}>All-In Bundle — Every Plan</div>
+                <div style={{display:'flex',alignItems:'baseline',gap:8,marginBottom:4}}>
+                  <div style={{fontFamily:'Outfit,sans-serif',fontSize:28,fontWeight:800,color:'var(--text)'}}><span style={{fontSize:13,color:'var(--text-3)',fontWeight:400,textDecoration:'line-through',marginRight:6}}>$375</span>$360<span style={{fontSize:13,color:'var(--text-3)',fontWeight:400}}>/mo</span></div>
+                </div>
+                <p style={{fontSize:12,color:'var(--text-2)',marginBottom:14,lineHeight:1.6}}>Every Wovo AI plan in one. Starter + Growth + Pro AI + Website Builder + Cinematic Ads. Full stack content machine.</p>
+                <div style={{display:'flex',flexDirection:'column',gap:6,marginBottom:16}}>
+                  {[['Starter','$29/mo'],['Growth','$49/mo'],['Pro AI','$79/mo'],['Website Builder','$99/mo'],['Cinematic Ads','$149/mo']].map(([a,b])=>(
+                    <div key={a} style={{display:'flex',justifyContent:'space-between',fontSize:12,padding:'5px 0',borderTop:'0.5px solid var(--border)'}}>
+                      <span style={{color:'var(--text-2)'}}>✓ {a}</span>
+                      <span style={{color:'var(--text-3)'}}>{b}</span>
+                    </div>
+                  ))}
+                  <div style={{display:'flex',justifyContent:'space-between',fontSize:13,padding:'8px 0',borderTop:'1px solid rgba(139,92,246,0.3)',fontWeight:700}}>
+                    <span style={{color:'#a78bfa'}}>You pay</span>
+                    <span style={{color:'#a78bfa'}}>$360/mo (save $15)</span>
+                  </div>
+                </div>
+                <a href="mailto:support@wovomedia.com?subject=All-In Bundle" style={{textDecoration:'none'}}>
+                  <button style={{width:'100%',padding:10,fontSize:13,background:'rgba(139,92,246,0.15)',border:'1px solid rgba(139,92,246,0.4)',color:'#a78bfa',borderRadius:8,cursor:'pointer',fontFamily:'inherit',fontWeight:700}}>Get All-In Bundle — Save $15/mo →</button>
+                </a>
+              </div>
+
+            </div>
+          </div>
+
           <div className="card" style={{marginTop:14,textAlign:'center',padding:'14px 20px'}}>
             <p style={{fontSize:13,color:'var(--text-2)',margin:0}}>
               Already have an account? <a href="/login" style={{color:'var(--accent)',fontWeight:600}}>Log in →</a>
