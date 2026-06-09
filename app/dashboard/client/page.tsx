@@ -81,7 +81,7 @@ export default function ClientDashboard() {
                 </div>
                 <div style={{display:'flex',flexDirection:'column',gap:8,flexShrink:0}}>
                   <a href="/wovo-ai" style={{textDecoration:'none'}}><button className="btn btn-primary" style={{padding:'11px 24px',fontSize:14,whiteSpace:'nowrap'}}>See Plans & Pricing →</button></a>
-                  <a href="https://calendly.com/wovomedia/wovo-media-strategy-call" target="_blank" rel="noreferrer" style={{textDecoration:'none'}}><button className="btn btn-ghost" style={{width:'100%',padding:'9px 0',fontSize:13}}>Book a Free Call</button></a>
+                  <a href="https://calendly.com/wovomedia/wovo-media-premium-strategy-call" target="_blank" rel="noreferrer" style={{textDecoration:'none'}}><button className="btn btn-ghost" style={{width:'100%',padding:'9px 0',fontSize:13}}>Book a Free Call</button></a>
                 </div>
               </div>
             </div>
@@ -113,7 +113,7 @@ export default function ClientDashboard() {
                   {name:'Starter',price:'$29',period:'/mo',features:['AI character (you)','3 posts/week','Captions'],url:'https://pay.wovomedia.com/b/7sY6oH3DRdI71zu0gocIE0Y'},
                   {name:'Growth',price:'$49',period:'/mo',features:['Entire team characters','5 posts/week','Unlimited edits'],url:'https://pay.wovomedia.com/b/fZu6oH6Q3fQf3HC0gocIE0Z',popular:true},
                   {name:'Pro AI',price:'$79',period:'/mo',features:['Daily posts + Stories','Multiple brand chars','Strategy report'],url:'https://pay.wovomedia.com/b/aFafZhfmzfQf1zu2owcIE10'},
-                  {name:'Premium',price:'Custom',period:'',features:['Real filming & drone','Full account mgmt','Website builds'],url:'https://calendly.com/wovomedia/wovo-media-strategy-call',cta:'Book a Call'},
+                  {name:'Premium',price:'Custom',period:'',features:['Real filming & drone','Full account mgmt','Website builds'],url:'https://calendly.com/wovomedia/wovo-media-premium-strategy-call',cta:'Book a Call'},
                 ].map(p=>(
                   <div key={p.name} style={{padding:'16px 14px',borderRadius:12,border:`1px solid ${p.popular?'var(--accent)':'var(--border)'}`,background:p.popular?'var(--accent-dim)':'var(--bg-3)',textAlign:'center'}}>
                     {p.popular && <div style={{fontSize:10,color:'var(--accent)',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:6}}>Most Popular</div>}
@@ -131,7 +131,7 @@ export default function ClientDashboard() {
                 ))}
               </div>
               <p style={{fontSize:12,color:'var(--text-3)',textAlign:'center',marginTop:14}}>
-                Questions? Email <a href="mailto:support@wovomedia.com" style={{color:'var(--accent)'}}>support@wovomedia.com</a> or <a href="https://calendly.com/wovomedia/wovo-media-strategy-call" target="_blank" rel="noreferrer" style={{color:'var(--accent)'}}>book a free strategy call</a>
+                Questions? Email <a href="mailto:support@wovomedia.com" style={{color:'var(--accent)'}}>support@wovomedia.com</a> or <a href="https://calendly.com/wovomedia/wovo-media-premium-strategy-call" target="_blank" rel="noreferrer" style={{color:'var(--accent)'}}>book a free strategy call</a>
               </p>
             </div>
           </div>
@@ -192,7 +192,7 @@ export default function ClientDashboard() {
                   <p style={{fontSize:13,color:'var(--text-2)',marginBottom:14}}>Our team is here for you.</p>
                   <div style={{display:'flex',gap:10}}>
                     <a href="mailto:support@wovomedia.com"><button className="btn btn-primary btn-sm">Email Support</button></a>
-                    <a href="https://calendly.com/wovomedia/wovo-media-strategy-call" target="_blank" rel="noreferrer"><button className="btn btn-ghost btn-sm">Book a Call</button></a>
+                    <a href="https://calendly.com/wovomedia/wovo-media-premium-strategy-call" target="_blank" rel="noreferrer"><button className="btn btn-ghost btn-sm">Book a Call</button></a>
                   </div>
                 </div>
               </>

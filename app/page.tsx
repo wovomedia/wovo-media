@@ -27,12 +27,12 @@ export default function Home() {
             <a key={l} href={h} style={{color:'var(--text-2)',fontSize:13,fontWeight:500,textDecoration:'none'}}>{l}</a>
           ))}
           <Link href="/login" style={{color:'var(--text-2)',fontSize:13,fontWeight:600,textDecoration:'none'}}>Login</Link>
-          <a href="https://calendly.com/wovomedia/wovo-media-strategy-call" target="_blank" rel="noreferrer">
+          <a href="https://calendly.com/wovomedia/wovo-media-premium-strategy-call" target="_blank" rel="noreferrer">
             <button className="btn btn-primary btn-sm">Book a call</button>
           </a>
         </div>
         <div className="mobile-nav-buttons" style={{display:'flex',gap:8,alignItems:'center'}}>
-          <a href="https://calendly.com/wovomedia/wovo-media-strategy-call" target="_blank" rel="noreferrer">
+          <a href="https://calendly.com/wovomedia/wovo-media-premium-strategy-call" target="_blank" rel="noreferrer">
             <button className="btn btn-primary btn-sm" style={{fontSize:12,padding:'7px 14px'}}>Book a call</button>
           </a>
           <button onClick={()=>setMenuOpen(o=>!o)} style={{background:'none',border:'none',color:'var(--text)',cursor:'pointer',padding:6}}>
@@ -71,7 +71,7 @@ export default function Home() {
           </p>
           <div style={{display:'flex',gap:10,justifyContent:'center',flexWrap:'wrap'}}>
             <a href="#wovo-ai" style={{textDecoration:'none'}}><button className="btn btn-primary" style={{fontSize:15,padding:'13px 28px'}}>See all products →</button></a>
-            <a href="https://calendly.com/wovomedia/wovo-media-strategy-call" target="_blank" rel="noreferrer" style={{textDecoration:'none'}}><button style={{fontSize:15,padding:'12px 24px',background:'rgba(255,255,255,0.1)',border:'1px solid rgba(255,255,255,0.25)',color:'#fff',borderRadius:10,cursor:'pointer',fontFamily:'inherit',fontWeight:600,backdropFilter:'blur(8px)'}}>Book a free call</button></a>
+            <a href="https://calendly.com/wovomedia/wovo-media-premium-strategy-call" target="_blank" rel="noreferrer" style={{textDecoration:'none'}}><button style={{fontSize:15,padding:'12px 24px',background:'rgba(255,255,255,0.1)',border:'1px solid rgba(255,255,255,0.25)',color:'#fff',borderRadius:10,cursor:'pointer',fontFamily:'inherit',fontWeight:600,backdropFilter:'blur(8px)'}}>Book a free call</button></a>
           </div>
         </div>
       </section>
@@ -151,7 +151,7 @@ export default function Home() {
                     <div key={f} style={{display:'flex',gap:6,fontSize:12,color:'var(--text-2)',alignItems:'flex-start'}}><span style={{color:'#a78bfa',flexShrink:0,marginTop:1}}>✓</span>{f}</div>
                   ))}
                 </div>
-                <a href="/wovo-ai?tab=video" style={{textDecoration:'none'}}><button style={{width:'100%',padding:11,fontSize:13,background:'rgba(139,92,246,0.1)',border:'1px solid rgba(139,92,246,0.3)',color:'#a78bfa',borderRadius:10,cursor:'pointer',fontFamily:'inherit',fontWeight:600}}>Create a Cinematic Ad →</button></a>
+                <a href="https://pay.wovomedia.com/b/fZu9AT5LZdI76TO6EMcIE1d" style={{textDecoration:'none'}}><button style={{width:'100%',padding:11,fontSize:13,background:'rgba(139,92,246,0.1)',border:'1px solid rgba(139,92,246,0.3)',color:'#a78bfa',borderRadius:10,cursor:'pointer',fontFamily:'inherit',fontWeight:600}}>Create a Cinematic Ad →</button></a>
               </div>
             </div>
 
@@ -172,7 +172,7 @@ export default function Home() {
                     <div key={f} style={{display:'flex',gap:6,fontSize:12,color:'var(--text-2)',alignItems:'flex-start'}}><span style={{color:'#f59e0b',flexShrink:0,marginTop:1}}>✓</span>{f}</div>
                   ))}
                 </div>
-                <a href="https://calendly.com/wovomedia/wovo-media-strategy-call" target="_blank" rel="noreferrer" style={{textDecoration:'none'}}>
+                <a href="https://calendly.com/wovomedia/wovo-media-premium-strategy-call" target="_blank" rel="noreferrer" style={{textDecoration:'none'}}>
                   <button style={{width:'100%',padding:11,fontSize:13,background:'rgba(245,158,11,0.08)',border:'1px solid rgba(245,158,11,0.25)',color:'#f59e0b',borderRadius:10,cursor:'pointer',fontFamily:'inherit',fontWeight:600}}>Book a free strategy call →</button>
                 </a>
               </div>
@@ -250,7 +250,7 @@ export default function Home() {
                     </div>
                   ))}
                 </div>
-                <a href="mailto:support@wovomedia.com?subject=Duo Bundle" style={{textDecoration:'none'}}>
+                <a href="https://pay.wovomedia.com/b/8x214n8YbfQf0vq0gocIE1g" target="_blank" rel="noreferrer" style={{textDecoration:'none'}}>
                   <button style={{width:'100%',padding:10,fontSize:13,background:'var(--accent-dim)',border:'1px solid var(--accent-border)',color:'var(--accent)',borderRadius:8,cursor:'pointer',fontFamily:'inherit',fontWeight:700}}>Get Duo Bundle — Save $10/mo →</button>
                 </a>
               </div>
@@ -275,7 +275,7 @@ export default function Home() {
                     <span style={{color:'#a78bfa'}}>$360/mo (save $15)</span>
                   </div>
                 </div>
-                <a href="mailto:support@wovomedia.com?subject=All-In Bundle" style={{textDecoration:'none'}}>
+                <a href="https://pay.wovomedia.com/b/28E3cveiv0Vlfqke7ecIE1h" target="_blank" rel="noreferrer" style={{textDecoration:'none'}}>
                   <button style={{width:'100%',padding:10,fontSize:13,background:'rgba(139,92,246,0.15)',border:'1px solid rgba(139,92,246,0.4)',color:'#a78bfa',borderRadius:8,cursor:'pointer',fontFamily:'inherit',fontWeight:700}}>Get All-In Bundle — Save $15/mo →</button>
                 </a>
               </div>

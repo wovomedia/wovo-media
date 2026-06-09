@@ -97,7 +97,7 @@ export default function Home() {
                 <a href={`/wovo-ai`} style={{flex:1,textDecoration:'none'}}>
                   <button className="btn btn-primary btn-block" style={{fontSize:13}}>See Plans →</button>
                 </a>
-                <a href="https://calendly.com/wovomedia/wovo-media-strategy-call" target="_blank" rel="noreferrer" style={{flex:1,textDecoration:'none'}}>
+                <a href="https://calendly.com/wovomedia/wovo-media-premium-strategy-call" target="_blank" rel="noreferrer" style={{flex:1,textDecoration:'none'}}>
                   <button className="btn btn-outline btn-block" style={{fontSize:13}}>Book a Call</button>
                 </a>
               </div>

@@ -66,7 +66,7 @@ export default function About() {
           <p style={{fontSize:14,color:'var(--text-2)',marginBottom:16,lineHeight:1.6}}>For general inquiries, support, or to learn more about our services, reach our team at any time.</p>
           <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
             <a href="mailto:support@wovomedia.com" style={{textDecoration:'none'}}><button className="btn btn-primary btn-sm">support@wovomedia.com</button></a>
-            <a href="https://calendly.com/wovomedia/wovo-media-strategy-call" target="_blank" style={{textDecoration:'none'}}><button className="btn btn-ghost btn-sm">Book a Strategy Call</button></a>
+            <a href="https://calendly.com/wovomedia/wovo-media-premium-strategy-call" target="_blank" style={{textDecoration:'none'}}><button className="btn btn-ghost btn-sm">Book a Strategy Call</button></a>
           </div>
         </div>
       </div>

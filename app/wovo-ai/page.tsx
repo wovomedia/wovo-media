@@ -188,7 +188,7 @@ function WebsiteBuilderFull({ isLoggedIn, hasActiveSubscription, authChecked }: 
       <div className="card" style={{ textAlign: 'center', padding: '20px 24px' }}>
         <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', marginBottom: 6 }}>Ready to go live?</p>
         <p style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 14 }}>Wovo Media can deploy this to your domain, add a contact form backend, and maintain it monthly.</p>
-        <a href="https://calendly.com/wovomedia/wovo-media-strategy-call" target="_blank" rel="noreferrer">
+        <a href="https://calendly.com/wovomedia/wovo-media-premium-strategy-call" target="_blank" rel="noreferrer">
           <button className="btn btn-primary">Book a call to deploy →</button>
         </a>
       </div>
@@ -330,6 +330,7 @@ function WovoAIContent() {
     starter: 'https://pay.wovomedia.com/b/7sY6oH3DRdI71zu0gocIE0Y',
     growth: 'https://pay.wovomedia.com/b/fZu6oH6Q3fQf3HC0gocIE0Z',
     pro_ai: 'https://pay.wovomedia.com/b/aFafZhfmzfQf1zu2owcIE10',
+    cinematic: 'https://pay.wovomedia.com/b/fZu9AT5LZdI76TO6EMcIE1d',
     website: 'https://pay.wovomedia.com/b/4gMcN57U7avV0vqbZ6cIE11',
   }
 

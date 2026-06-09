@@ -70,7 +70,7 @@ export default function Account() {
             <div style={{fontSize:14,color:'var(--text-2)',marginBottom:12}}>No active subscription. Upgrade to unlock all features.</div>
             <div style={{display:'flex',gap:8}}>
               <Link href="/wovo-ai" style={{flex:1,textDecoration:'none'}}><button className="btn btn-primary btn-block" style={{fontSize:13}}>See Plans</button></Link>
-              <a href="https://calendly.com/wovomedia/wovo-media-strategy-call" target="_blank" rel="noreferrer" style={{flex:1,textDecoration:'none'}}><button className="btn btn-outline btn-block" style={{fontSize:13}}>Book a Call</button></a>
+              <a href="https://calendly.com/wovomedia/wovo-media-premium-strategy-call" target="_blank" rel="noreferrer" style={{flex:1,textDecoration:'none'}}><button className="btn btn-outline btn-block" style={{fontSize:13}}>Book a Call</button></a>
             </div>
           </div>
         )}
@@ -83,7 +83,7 @@ export default function Account() {
             ['🎨', 'Creative Studio', '/studio'],
             ['🏢', 'Business Profile', '/business'],
             ['📧', 'Email Support', 'mailto:support@wovomedia.com'],
-            ['📅', 'Book a Strategy Call', 'https://calendly.com/wovomedia/wovo-media-strategy-call'],
+            ['📅', 'Book a Strategy Call', 'https://calendly.com/wovomedia/wovo-media-premium-strategy-call'],
           ].map(([icon,label,href],i)=>(
             <a key={label} href={href} style={{display:'flex',alignItems:'center',gap:12,padding:'14px 16px',borderBottom:i<5?'1px solid var(--border)':'none',textDecoration:'none',color:'var(--text-2)'}}>
               <span style={{fontSize:18}}>{icon}</span>

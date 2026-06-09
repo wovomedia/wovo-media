@@ -25,7 +25,7 @@ export default function WovoOS() {
         </Link>
         <div style={{display:'flex',gap:8,alignItems:'center'}}>
           <Link href="/" style={{fontSize:13,color:'var(--text-3)',textDecoration:'none'}}>← Back</Link>
-          <a href="https://calendly.com/wovomedia/wovo-media-strategy-call" target="_blank" rel="noreferrer">
+          <a href="https://calendly.com/wovomedia/wovo-media-premium-strategy-call" target="_blank" rel="noreferrer">
             <button className="btn btn-primary btn-sm">Book a demo</button>
           </a>
         </div>
@@ -49,7 +49,7 @@ export default function WovoOS() {
             Runs on your computer. Manages itself. You approve everything from your phone. Like hiring the best employee you've ever had — except they never sleep, never call in sick, and learn your business in days not months.
           </p>
           <div style={{display:'flex',gap:12,justifyContent:'center',flexWrap:'wrap'}}>
-            <a href="https://calendly.com/wovomedia/wovo-media-strategy-call" target="_blank" rel="noreferrer" style={{textDecoration:'none'}}>
+            <a href="https://calendly.com/wovomedia/wovo-media-premium-strategy-call" target="_blank" rel="noreferrer" style={{textDecoration:'none'}}>
               <button className="btn btn-primary" style={{fontSize:15,padding:'13px 28px'}}>Book a demo →</button>
             </a>
             <a href="#pricing" style={{textDecoration:'none'}}>
@@ -168,7 +168,7 @@ export default function WovoOS() {
           </div>
 
           <div style={{textAlign:'center'}}>
-            <a href="https://calendly.com/wovomedia/wovo-media-strategy-call" target="_blank" rel="noreferrer" style={{textDecoration:'none'}}>
+            <a href="https://calendly.com/wovomedia/wovo-media-premium-strategy-call" target="_blank" rel="noreferrer" style={{textDecoration:'none'}}>
               <button className="btn btn-primary" style={{fontSize:15,padding:'14px 32px'}}>Book a demo to get started →</button>
             </a>
             <p style={{fontSize:12,color:'var(--text-3)',marginTop:12}}>We walk you through everything on a call before purchase</p>
@@ -200,7 +200,7 @@ export default function WovoOS() {
           <p style={{fontSize:15,color:'var(--text-2)',marginBottom:28,maxWidth:440,margin:'0 auto 28px',lineHeight:1.7}}>
             Book a 30-minute demo. We walk you through exactly what WOVO OS will do for your specific business before you pay a cent.
           </p>
-          <a href="https://calendly.com/wovomedia/wovo-media-strategy-call" target="_blank" rel="noreferrer" style={{textDecoration:'none'}}>
+          <a href="https://calendly.com/wovomedia/wovo-media-premium-strategy-call" target="_blank" rel="noreferrer" style={{textDecoration:'none'}}>
             <button className="btn btn-primary" style={{fontSize:15,padding:'14px 32px'}}>Book a free demo →</button>
           </a>
           <p style={{fontSize:12,color:'var(--text-3)',marginTop:12}}>No commitment · Demo is free · Mon–Fri 9am–5pm CT</p>
