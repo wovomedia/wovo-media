@@ -257,12 +257,12 @@ export default function Home() {
 
               {/* All-In Bundle */}
               <div className="card" style={{background:'linear-gradient(135deg,rgba(139,92,246,0.08),rgba(0,229,200,0.04))',border:'1px solid rgba(139,92,246,0.25)',position:'relative'}}>
-                <div style={{position:'absolute',top:-10,left:'50%',transform:'translateX(-50%)',background:'#8b5cf6',color:'#fff',fontSize:9,fontWeight:800,padding:'3px 12px',borderRadius:20,whiteSpace:'nowrap',textTransform:'uppercase',letterSpacing:'0.06em'}}>Best Value · Save $15/mo</div>
-                <div style={{fontSize:11,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:'0.1em',fontWeight:600,marginBottom:6}}>All-In Bundle — Every Plan</div>
+                <div style={{position:'absolute',top:-10,left:'50%',transform:'translateX(-50%)',background:'#8b5cf6',color:'#fff',fontSize:9,fontWeight:800,padding:'3px 12px',borderRadius:20,whiteSpace:'nowrap',textTransform:'uppercase',letterSpacing:'0.06em'}}>Best Value · Save $30/mo</div>
+                <div style={{fontSize:11,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:'0.1em',fontWeight:600,marginBottom:6}}>All-In Bundle — All 5 AI Plans</div>
                 <div style={{display:'flex',alignItems:'baseline',gap:8,marginBottom:4}}>
-                  <div style={{fontFamily:'Outfit,sans-serif',fontSize:28,fontWeight:800,color:'var(--text)'}}><span style={{fontSize:13,color:'var(--text-3)',fontWeight:400,textDecoration:'line-through',marginRight:6}}>$375</span>$360<span style={{fontSize:13,color:'var(--text-3)',fontWeight:400}}>/mo</span></div>
+                  <div style={{fontFamily:'Outfit,sans-serif',fontSize:28,fontWeight:800,color:'var(--text)'}}><span style={{fontSize:13,color:'var(--text-3)',fontWeight:400,textDecoration:'line-through',marginRight:6}}>$375</span>$345<span style={{fontSize:13,color:'var(--text-3)',fontWeight:400}}>/mo</span></div>
                 </div>
-                <p style={{fontSize:12,color:'var(--text-2)',marginBottom:14,lineHeight:1.6}}>Every Wovo AI plan in one. Starter + Growth + Pro AI + Website Builder + Cinematic Ads. Full stack content machine.</p>
+                <p style={{fontSize:12,color:'var(--text-2)',marginBottom:14,lineHeight:1.6}}>All 5 Wovo AI plans bundled. Does not include WOVO OS (separate product with its own setup). The complete AI content stack.</p>
                 <div style={{display:'flex',flexDirection:'column',gap:6,marginBottom:16}}>
                   {[['Starter','$29/mo'],['Growth','$49/mo'],['Pro AI','$79/mo'],['Website Builder','$99/mo'],['Cinematic Ads','$149/mo']].map(([a,b])=>(
                     <div key={a} style={{display:'flex',justifyContent:'space-between',fontSize:12,padding:'5px 0',borderTop:'0.5px solid var(--border)'}}>
@@ -272,11 +272,11 @@ export default function Home() {
                   ))}
                   <div style={{display:'flex',justifyContent:'space-between',fontSize:13,padding:'8px 0',borderTop:'1px solid rgba(139,92,246,0.3)',fontWeight:700}}>
                     <span style={{color:'#a78bfa'}}>You pay</span>
-                    <span style={{color:'#a78bfa'}}>$360/mo (save $15)</span>
+                    <span style={{color:'#a78bfa'}}>$345/mo (save $30)</span>
                   </div>
                 </div>
-                <a href="https://pay.wovomedia.com/b/28E3cveiv0Vlfqke7ecIE1h" target="_blank" rel="noreferrer" style={{textDecoration:'none'}}>
-                  <button style={{width:'100%',padding:10,fontSize:13,background:'rgba(139,92,246,0.15)',border:'1px solid rgba(139,92,246,0.4)',color:'#a78bfa',borderRadius:8,cursor:'pointer',fontFamily:'inherit',fontWeight:700}}>Get All-In Bundle — Save $15/mo →</button>
+                <a href="https://pay.wovomedia.com/b/00w9AT1vJbzZguo2owcIE1i" target="_blank" rel="noreferrer" style={{textDecoration:'none'}}>
+                  <button style={{width:'100%',padding:10,fontSize:13,background:'rgba(139,92,246,0.15)',border:'1px solid rgba(139,92,246,0.4)',color:'#a78bfa',borderRadius:8,cursor:'pointer',fontFamily:'inherit',fontWeight:700}}>Get All-In Bundle — Save $30/mo →</button>
                 </a>
               </div>
 
