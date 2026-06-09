@@ -2,279 +2,250 @@
 import { useState } from 'react'
 import Link from 'next/link'
 
+// Canva-generated images (hosted via Canva export URLs - will be moved to /public after download)
+const IMGS = {
+  hero: 'https://export-download.canva.com/P38qM/DAHMG-P38qM/-1/0/0001-6419261260394945277.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUH5AO7UJ26%2F20260609%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260609T185512Z&X-Amz-Expires=8024&X-Amz-Signature=535b586a02c04fdc720d190a4d267529e5ea42ef84b8f1f44f08ec1542106e1d&X-Amz-SignedHeaders=host%3Bx-amz-expected-bucket-owner&response-expires=Tue%2C%2009%20Jun%202026%2021%3A08%3A56%20GMT',
+  social: 'https://export-download.canva.com/OXLjY/DAHMGxOXLjY/-1/0/0001-5062551874201616498.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUH5AO7UJ26%2F20260609%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260609T070009Z&X-Amz-Expires=51455&X-Amz-Signature=b33754468c8312456b2e17d3f2f2d6c703324fa397b11a8c061cbb5454aeac04&X-Amz-SignedHeaders=host%3Bx-amz-expected-bucket-owner&response-expires=Tue%2C%2009%20Jun%202026%2021%3A17%3A44%20GMT',
+  ai: 'https://export-download.canva.com/toFgU/DAHMG3toFgU/-1/0/0001-8782525166314400596.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUH5AO7UJ26%2F20260609%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260609T093046Z&X-Amz-Expires=43880&X-Amz-Signature=a6b00134126d4011906811b04d9283b1fc8dc17f0f2ad5cf56fe670ed38423c0&X-Amz-SignedHeaders=host%3Bx-amz-expected-bucket-owner&response-expires=Tue%2C%2009%20Jun%202026%2021%3A42%3A06%20GMT',
+  drone: 'https://export-download.canva.com/uzGrk/DAHMG9uzGrk/-1/0/0001-6741268634420483453.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUH5AO7UJ26%2F20260609%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260609T034702Z&X-Amz-Expires=61726&X-Amz-Signature=af328912734adcafd49ec6c0cd0d3250c5140e661e155cb58ad61157f32ab70d&X-Amz-SignedHeaders=host%3Bx-amz-expected-bucket-owner&response-expires=Tue%2C%2009%20Jun%202026%2020%3A55%3A48%20GMT',
+  cinAd: 'https://export-download.canva.com/V-Q3Y/DAHMG4V-Q3Y/-1/0/0001-4105536953893750653.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUH5AO7UJ26%2F20260609%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260609T190429Z&X-Amz-Expires=8517&X-Amz-Signature=7fb3f3611813f77205dbeb789806cbc59d517ab8712333bfe623b676e089ba14&X-Amz-SignedHeaders=host%3Bx-amz-expected-bucket-owner&response-expires=Tue%2C%2009%20Jun%202026%2021%3A26%3A26%20GMT',
+}
+
 export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false)
 
-  const NAV = [
-    { label: 'Wovo AI', href: '#wovo-ai' },
-    { label: 'WOVO OS', href: '/wovo-os' },
-    { label: 'Premium', href: '#premium' },
-    { label: 'Pricing', href: '#pricing' },
-  ]
-
   return (
-    <div style={{background:'var(--bg)',minHeight:'100vh',position:'relative'}}>
-      <div className="grid-bg"/><div className="grid-fade"/>
+    <div style={{background:'var(--bg)',minHeight:'100vh',overflowX:'hidden'}}>
 
-      {/* ── NAV ─────────────────────────────────────────── */}
+      {/* ── NAV ─────────────────────────────────── */}
       <nav style={{position:'sticky',top:0,zIndex:100,borderBottom:'0.5px solid var(--border)',background:'rgba(8,8,8,0.95)',backdropFilter:'blur(16px)',padding:'0 24px',height:56,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
         <Link href="/" style={{fontFamily:'Outfit,sans-serif',fontSize:20,fontWeight:800,color:'var(--text)',textDecoration:'none',letterSpacing:'-0.04em'}}>
           wovo<span style={{color:'var(--accent)'}}>media</span>
         </Link>
-
-        {/* Desktop nav */}
-        <div className="desktop-nav" style={{display:'flex',alignItems:'center',gap:28}}>
-          {NAV.map(n=>(
-            <a key={n.label} href={n.href} style={{color:'var(--text-2)',fontSize:13,fontWeight:500,textDecoration:'none',transition:'color 0.15s'}}
-              onMouseEnter={e=>(e.target as HTMLElement).style.color='var(--text)'}
-              onMouseLeave={e=>(e.target as HTMLElement).style.color='var(--text-2)'}>{n.label}</a>
+        <div className="desktop-nav" style={{display:'flex',alignItems:'center',gap:24}}>
+          {[['Wovo AI','#wovo-ai'],['WOVO OS','/wovo-os'],['Cinematic Ads','#cin-ads'],['Premium','#premium'],['Pricing','#pricing']].map(([l,h])=>(
+            <a key={l} href={h} style={{color:'var(--text-2)',fontSize:13,fontWeight:500,textDecoration:'none'}}>{l}</a>
           ))}
           <Link href="/login" style={{color:'var(--text-2)',fontSize:13,fontWeight:600,textDecoration:'none'}}>Login</Link>
           <a href="https://calendly.com/wovomedia/wovo-media-strategy-call" target="_blank" rel="noreferrer">
             <button className="btn btn-primary btn-sm">Book a call</button>
           </a>
         </div>
-
-        {/* Mobile nav */}
         <div className="mobile-nav-buttons" style={{display:'flex',gap:8,alignItems:'center'}}>
           <a href="https://calendly.com/wovomedia/wovo-media-strategy-call" target="_blank" rel="noreferrer">
             <button className="btn btn-primary btn-sm" style={{fontSize:12,padding:'7px 14px'}}>Book a call</button>
           </a>
-          <button onClick={()=>setMenuOpen(o=>!o)} style={{background:'none',border:'none',color:'var(--text)',cursor:'pointer',padding:6,display:'flex',flexDirection:'column',gap:4}}>
-            {menuOpen ? <span style={{fontSize:20,lineHeight:1}}>✕</span> : <>
-              <span style={{display:'block',width:20,height:2,background:'var(--text)',borderRadius:2}}/>
-              <span style={{display:'block',width:20,height:2,background:'var(--text)',borderRadius:2}}/>
-              <span style={{display:'block',width:14,height:2,background:'var(--text)',borderRadius:2}}/>
-            </>}
+          <button onClick={()=>setMenuOpen(o=>!o)} style={{background:'none',border:'none',color:'var(--text)',cursor:'pointer',padding:6}}>
+            {menuOpen ? <span style={{fontSize:20}}>✕</span> : <span style={{fontSize:20}}>☰</span>}
           </button>
         </div>
       </nav>
 
-      {/* Mobile menu dropdown */}
       {menuOpen && (
-        <div style={{position:'fixed',top:56,left:0,right:0,background:'var(--bg-2)',borderBottom:'1px solid var(--border)',zIndex:99,padding:'16px 24px',display:'flex',flexDirection:'column',gap:2}}>
-          {NAV.map(n=>(
-            <a key={n.label} href={n.href} onClick={()=>setMenuOpen(false)} style={{padding:'12px 0',fontSize:16,fontWeight:600,color:'var(--text)',textDecoration:'none',borderBottom:'0.5px solid var(--border)'}}>{n.label}</a>
+        <div style={{position:'fixed',top:56,left:0,right:0,background:'var(--bg-2)',borderBottom:'1px solid var(--border)',zIndex:99,padding:'16px 24px',display:'flex',flexDirection:'column',gap:0}}>
+          {[['Wovo AI','#wovo-ai'],['WOVO OS','/wovo-os'],['Cinematic Ads','#cin-ads'],['Premium','#premium'],['Pricing','#pricing']].map(([l,h])=>(
+            <a key={l} href={h} onClick={()=>setMenuOpen(false)} style={{padding:'13px 0',fontSize:16,fontWeight:600,color:'var(--text)',textDecoration:'none',borderBottom:'0.5px solid var(--border)'}}>{l}</a>
           ))}
-          <Link href="/login" onClick={()=>setMenuOpen(false)} style={{padding:'12px 0',fontSize:16,fontWeight:600,color:'var(--accent)',textDecoration:'none'}}>Login →</Link>
+          <Link href="/login" onClick={()=>setMenuOpen(false)} style={{padding:'13px 0',fontSize:16,fontWeight:600,color:'var(--accent)',textDecoration:'none'}}>Login →</Link>
         </div>
       )}
 
-      <div style={{position:'relative',zIndex:2}}>
-
-        {/* ── HERO ─────────────────────────────────────── */}
-        <section style={{maxWidth:860,margin:'0 auto',padding:'80px 24px 60px'}}>
-          <div className="fade-up" style={{display:'inline-flex',alignItems:'center',gap:16,background:'var(--bg-2)',border:'1px solid var(--accent-border)',borderRadius:40,padding:'6px 16px',marginBottom:24,boxShadow:'var(--shadow)'}}>
-            {[['11+','Clients'],['100M+','Views'],['24hr','Response']].map(([n,l])=>(
+      {/* ── HERO — full bleed image ──────────────── */}
+      <section style={{position:'relative',height:'92vh',minHeight:520,display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
+        <img src={IMGS.hero} alt="Wovo Media" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',objectPosition:'center'}}/>
+        <div style={{position:'absolute',inset:0,background:'linear-gradient(to bottom, rgba(8,8,8,0.55) 0%, rgba(8,8,8,0.3) 50%, rgba(8,8,8,0.85) 100%)'}}/>
+        <div style={{position:'relative',zIndex:2,textAlign:'center',padding:'0 24px',maxWidth:700}}>
+          <div style={{display:'inline-flex',alignItems:'center',gap:10,background:'rgba(0,229,200,0.1)',border:'1px solid rgba(0,229,200,0.3)',borderRadius:40,padding:'6px 18px',marginBottom:24}}>
+            {[['11+','Clients'],['100M+','Views'],['24hr','Support']].map(([n,l])=>(
               <div key={n} style={{display:'flex',alignItems:'center',gap:5}}>
                 <span style={{fontFamily:'Outfit,sans-serif',fontWeight:700,color:'var(--accent)',fontSize:13}}>{n}</span>
-                <span style={{fontSize:11,color:'var(--text-3)'}}>{l}</span>
+                <span style={{fontSize:11,color:'rgba(255,255,255,0.6)'}}>{l}</span>
               </div>
             ))}
           </div>
-
-          <h1 className="fade-up d1" style={{fontSize:'clamp(38px,7vw,62px)',fontWeight:800,lineHeight:1.05,marginBottom:18,color:'var(--text)',fontFamily:'Outfit,sans-serif',letterSpacing:'-0.03em'}}>
+          <h1 style={{fontFamily:'Outfit,sans-serif',fontSize:'clamp(36px,7vw,64px)',fontWeight:800,lineHeight:1.05,marginBottom:16,color:'#fff',letterSpacing:'-0.03em'}}>
             Your business,<br/><span style={{color:'var(--accent)'}}>seen everywhere.</span>
           </h1>
-          <p className="fade-up d2" style={{fontSize:'clamp(15px,2vw,17px)',color:'var(--text-2)',maxWidth:480,lineHeight:1.7,marginBottom:32}}>
-            AI content from $29/mo. Full-service production with a real team. Now with WOVO OS — your AI employee.
+          <p style={{fontSize:'clamp(15px,2vw,18px)',color:'rgba(255,255,255,0.75)',maxWidth:480,margin:'0 auto 32px',lineHeight:1.7}}>
+            AI content, cinematic ads, full-service production, and now WOVO OS — your AI employee.
           </p>
-          <div className="fade-up d3" style={{display:'flex',gap:10,flexWrap:'wrap'}}>
-            <a href="#wovo-ai" style={{textDecoration:'none'}}><button className="btn btn-primary" style={{fontSize:14,padding:'12px 26px'}}>See plans →</button></a>
-            <a href="https://calendly.com/wovomedia/wovo-media-strategy-call" target="_blank" rel="noreferrer" style={{textDecoration:'none'}}><button className="btn btn-outline" style={{fontSize:14,padding:'11px 24px'}}>Book a free call</button></a>
+          <div style={{display:'flex',gap:10,justifyContent:'center',flexWrap:'wrap'}}>
+            <a href="#wovo-ai" style={{textDecoration:'none'}}><button className="btn btn-primary" style={{fontSize:15,padding:'13px 28px'}}>See all products →</button></a>
+            <a href="https://calendly.com/wovomedia/wovo-media-strategy-call" target="_blank" rel="noreferrer" style={{textDecoration:'none'}}><button style={{fontSize:15,padding:'12px 24px',background:'rgba(255,255,255,0.1)',border:'1px solid rgba(255,255,255,0.25)',color:'#fff',borderRadius:10,cursor:'pointer',fontFamily:'inherit',fontWeight:600,backdropFilter:'blur(8px)'}}>Book a free call</button></a>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* ── PRODUCTS ─────────────────────────────────── */}
-        <section style={{borderTop:'0.5px solid var(--border)',padding:'60px 24px'}}>
-          <div style={{maxWidth:860,margin:'0 auto'}}>
-            <div style={{fontSize:11,color:'var(--text-3)',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.12em',marginBottom:12}}>Products</div>
-            <h2 style={{fontFamily:'Outfit,sans-serif',fontSize:'clamp(22px,4vw,30px)',fontWeight:700,marginBottom:32,color:'var(--text)'}}>Everything your business needs to grow online.</h2>
-
-            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))',gap:14}}>
-
-              {/* Wovo AI */}
-              <div className="card card-accent" style={{display:'flex',flexDirection:'column'}}>
-                <div style={{fontSize:11,color:'var(--accent)',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:8}}>Wovo AI</div>
-                <h3 style={{fontSize:18,fontWeight:700,color:'var(--text)',marginBottom:6,fontFamily:'Outfit,sans-serif'}}>AI-powered content</h3>
-                <p style={{fontSize:13,color:'var(--text-2)',lineHeight:1.65,marginBottom:16,flex:1}}>AI characters that post for you. 3–5 pieces of content per week, ready-to-copy captions, video generation — starting at $29/mo.</p>
-                <div style={{display:'flex',flexDirection:'column',gap:6,marginBottom:20}}>
-                  {['AI character for you or your whole team','3–5 posts/week, ready to copy','AI Video Generator (Growth+)','Website Builder ($99/mo)'].map(f=>(
-                    <div key={f} style={{display:'flex',gap:8,fontSize:12,color:'var(--text-2)'}}><span style={{color:'var(--accent)',flexShrink:0}}>✓</span>{f}</div>
-                  ))}
-                </div>
-                <a href="#wovo-ai" style={{textDecoration:'none'}}><button className="btn btn-primary" style={{width:'100%',padding:11,fontSize:13}}>See AI plans</button></a>
-              </div>
-
-              {/* WOVO OS */}
-              <div className="card" style={{display:'flex',flexDirection:'column',position:'relative',overflow:'hidden'}}>
-                <div style={{position:'absolute',top:12,right:12,background:'var(--accent)',color:'#080808',fontSize:9,fontWeight:800,padding:'3px 10px',borderRadius:20,textTransform:'uppercase',letterSpacing:'0.08em'}}>New</div>
-                <div style={{fontSize:11,color:'var(--text-3)',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:8}}>WOVO OS</div>
-                <h3 style={{fontSize:18,fontWeight:700,color:'var(--text)',marginBottom:6,fontFamily:'Outfit,sans-serif'}}>Your AI employee</h3>
-                <p style={{fontSize:13,color:'var(--text-2)',lineHeight:1.65,marginBottom:16,flex:1}}>Runs on your computer. Learns your business. Managed from your phone. Like having a full-time employee that never sleeps — starting at $850 setup + $350/mo.</p>
-                <div style={{display:'flex',flexDirection:'column',gap:6,marginBottom:20}}>
-                  {['Lives on your Mac or Windows PC','Managed from your phone','Learns your business deeply','Ask permission before every action'].map(f=>(
-                    <div key={f} style={{display:'flex',gap:8,fontSize:12,color:'var(--text-2)'}}><span style={{color:'var(--accent)',flexShrink:0}}>✓</span>{f}</div>
-                  ))}
-                </div>
-                <Link href="/wovo-os" style={{textDecoration:'none'}}><button className="btn btn-outline" style={{width:'100%',padding:11,fontSize:13}}>Learn about WOVO OS</button></Link>
-              </div>
-
-              {/* Wovo Media Premium */}
-              <div className="card" style={{display:'flex',flexDirection:'column'}}>
-                <div style={{fontSize:11,color:'var(--text-3)',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:8}}>Wovo Media Premium</div>
-                <h3 style={{fontSize:18,fontWeight:700,color:'var(--text)',marginBottom:6,fontFamily:'Outfit,sans-serif'}}>Full-service production</h3>
-                <p style={{fontSize:13,color:'var(--text-2)',lineHeight:1.65,marginBottom:16,flex:1}}>Real filming, drone, photography, website builds — fully managed by our team. Custom pricing.</p>
-                <div style={{display:'flex',flexDirection:'column',gap:6,marginBottom:20}}>
-                  {['On-site filming, drone & photography','Website design & development','We post for you — full admin access','Google Business Profile management'].map(f=>(
-                    <div key={f} style={{display:'flex',gap:8,fontSize:12,color:'var(--text-2)'}}><span style={{color:'var(--text-3)',flexShrink:0}}>✓</span>{f}</div>
-                  ))}
-                </div>
-                <a href="https://calendly.com/wovomedia/wovo-media-strategy-call" target="_blank" rel="noreferrer" style={{textDecoration:'none'}}><button className="btn btn-outline" style={{width:'100%',padding:11,fontSize:13}}>Book a call</button></a>
-              </div>
-
-            </div>
+      {/* ── PRODUCTS GRID ───────────────────────── */}
+      <section id="wovo-ai" style={{padding:'80px 24px'}}>
+        <div style={{maxWidth:1000,margin:'0 auto'}}>
+          <div style={{textAlign:'center',marginBottom:48}}>
+            <div style={{fontSize:11,color:'var(--text-3)',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.12em',marginBottom:10}}>Everything you need</div>
+            <h2 style={{fontFamily:'Outfit,sans-serif',fontSize:'clamp(24px,4vw,36px)',fontWeight:800,color:'var(--text)',letterSpacing:'-0.03em'}}>One platform. Total content domination.</h2>
           </div>
-        </section>
 
-        {/* ── WOVO AI PRICING ──────────────────────────── */}
-        <section id="wovo-ai" style={{borderTop:'0.5px solid var(--border)',padding:'60px 24px'}}>
-          <div style={{maxWidth:860,margin:'0 auto'}}>
-            <div style={{fontSize:11,color:'var(--text-3)',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.12em',marginBottom:12}}>Wovo AI Plans</div>
-            <h2 style={{fontFamily:'Outfit,sans-serif',fontSize:'clamp(22px,4vw,30px)',fontWeight:700,marginBottom:8,color:'var(--text)'}}>Start at $29/mo. Cancel anytime.</h2>
-            <p style={{color:'var(--text-2)',marginBottom:32,fontSize:14}}>Pay on Stripe. Account created automatically. Premium clients get Wovo AI at a discount.</p>
+          {/* Row 1 — Social Content + WOVO OS */}
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginBottom:16}} className="grid-2">
 
-            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:12}} id="pricing">
-              {[
-                {name:'Starter',price:'$29',features:['Your AI character','3 posts/week','Ready-to-copy captions','Posting tutorials'],link:'https://pay.wovomedia.com/b/7sY6oH3DRdI71zu0gocIE0Y'},
-                {name:'Growth',price:'$49',popular:true,features:['Whole team characters','5 posts/week','AI Video Generator','Unlimited edits'],link:'https://pay.wovomedia.com/b/fZu6oH6Q3fQf3HC0gocIE0Z'},
-                {name:'Pro AI',price:'$79',features:['Everything in Growth','Daily posts + Stories','Multiple brands','Image ad generator'],link:'https://pay.wovomedia.com/b/aFafZhfmzfQf1zu2owcIE10'},
-                {name:'Website',price:'$99',features:['Full Next.js site','7+ component files','Tailwind + TypeScript','Ready to deploy'],link:'https://pay.wovomedia.com/b/4gMcN57U7avV0vqbZ6cIE11'},
-              ].map(p=>(
-                <div key={p.name} className={`card ${(p as any).popular?'card-accent':''}`} style={{position:'relative'}}>
-                  {(p as any).popular && <div style={{position:'absolute',top:-10,left:'50%',transform:'translateX(-50%)',background:'var(--accent)',color:'#080808',fontSize:9,fontWeight:800,padding:'3px 10px',borderRadius:20,whiteSpace:'nowrap',textTransform:'uppercase',letterSpacing:'0.06em'}}>Most popular</div>}
-                  <div style={{fontSize:11,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:'0.1em',fontWeight:600,marginBottom:6}}>{p.name}</div>
-                  <div style={{fontSize:28,fontWeight:800,fontFamily:'Outfit,sans-serif',color:'var(--text)',marginBottom:14}}>{p.price}<span style={{fontSize:13,color:'var(--text-3)',fontWeight:400}}>/mo</span></div>
-                  {p.features.map(f=>(
-                    <div key={f} style={{fontSize:12,color:'var(--text-2)',padding:'5px 0',borderTop:'0.5px solid var(--border)',display:'flex',gap:7}}>
-                      <span style={{color:'var(--accent)',flexShrink:0}}>✓</span>{f}
-                    </div>
-                  ))}
-                  <a href={p.link} target="_blank" rel="noreferrer" style={{display:'block',marginTop:16,textDecoration:'none'}}>
-                    <button className={`btn ${(p as any).popular?'btn-primary':'btn-outline'}`} style={{width:'100%',padding:10,fontSize:12}}>Get {p.name} →</button>
-                  </a>
+            {/* Wovo AI Content */}
+            <div className="card" style={{padding:0,overflow:'hidden',display:'flex',flexDirection:'column'}}>
+              <div style={{position:'relative',height:220,overflow:'hidden'}}>
+                <img src={IMGS.social} alt="AI Content Creation" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                <div style={{position:'absolute',inset:0,background:'linear-gradient(to top,rgba(8,8,8,0.9) 0%,rgba(8,8,8,0.2) 60%,transparent 100%)'}}/>
+                <div style={{position:'absolute',bottom:16,left:16}}>
+                  <span style={{background:'var(--accent)',color:'#080808',fontSize:10,fontWeight:800,padding:'3px 10px',borderRadius:20,textTransform:'uppercase',letterSpacing:'0.06em'}}>Wovo AI</span>
                 </div>
-              ))}
+              </div>
+              <div style={{padding:'20px 20px 24px',flex:1,display:'flex',flexDirection:'column'}}>
+                <h3 style={{fontFamily:'Outfit,sans-serif',fontSize:20,fontWeight:800,color:'var(--text)',marginBottom:8,letterSpacing:'-0.02em'}}>AI Content Creation</h3>
+                <p style={{fontSize:13,color:'var(--text-2)',lineHeight:1.7,marginBottom:16,flex:1}}>AI characters that post for you. 3–5 pieces of ready-to-copy content per week. AI Video Generator, image ads, website builder — from $29/mo.</p>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:18}}>
+                  {['AI character for your team','3–5 posts/week','AI Video Generator','Website Builder','Image ad generator','Ready-to-copy captions'].map(f=>(
+                    <div key={f} style={{display:'flex',gap:6,fontSize:12,color:'var(--text-2)',alignItems:'flex-start'}}><span style={{color:'var(--accent)',flexShrink:0,marginTop:1}}>✓</span>{f}</div>
+                  ))}
+                </div>
+                <a href="#pricing" style={{textDecoration:'none'}}><button className="btn btn-primary" style={{width:'100%',padding:11,fontSize:13}}>See AI plans from $29/mo →</button></a>
+              </div>
             </div>
 
-            <div className="card" style={{marginTop:14,textAlign:'center',padding:'14px 20px'}}>
-              <p style={{fontSize:13,color:'var(--text-2)',margin:0}}>
-                Already have an account? <a href="/login" style={{color:'var(--accent)',fontWeight:600}}>Log in →</a>
-                &nbsp;·&nbsp; Questions? <a href="mailto:support@wovomedia.com" style={{color:'var(--accent)'}}>support@wovomedia.com</a>
-              </p>
+            {/* WOVO OS */}
+            <div className="card" style={{padding:0,overflow:'hidden',display:'flex',flexDirection:'column',position:'relative'}}>
+              <div style={{position:'absolute',top:12,right:12,zIndex:3,background:'var(--accent)',color:'#080808',fontSize:9,fontWeight:800,padding:'3px 10px',borderRadius:20,textTransform:'uppercase',letterSpacing:'0.08em'}}>New</div>
+              <div style={{position:'relative',height:220,overflow:'hidden'}}>
+                <img src={IMGS.ai} alt="WOVO OS AI Employee" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                <div style={{position:'absolute',inset:0,background:'linear-gradient(to top,rgba(8,8,8,0.9) 0%,rgba(8,8,8,0.2) 60%,transparent 100%)'}}/>
+                <div style={{position:'absolute',bottom:16,left:16}}>
+                  <span style={{background:'rgba(0,229,200,0.15)',border:'1px solid rgba(0,229,200,0.4)',color:'var(--accent)',fontSize:10,fontWeight:800,padding:'3px 10px',borderRadius:20,textTransform:'uppercase',letterSpacing:'0.06em'}}>WOVO OS</span>
+                </div>
+              </div>
+              <div style={{padding:'20px 20px 24px',flex:1,display:'flex',flexDirection:'column'}}>
+                <h3 style={{fontFamily:'Outfit,sans-serif',fontSize:20,fontWeight:800,color:'var(--text)',marginBottom:8,letterSpacing:'-0.02em'}}>Your AI Employee</h3>
+                <p style={{fontSize:13,color:'var(--text-2)',lineHeight:1.7,marginBottom:16,flex:1}}>Runs on your computer. Manages itself. Phone control. Learns your business deeply — handles emails, social, scheduling. Never acts without your approval.</p>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:18}}>
+                  {['Mac & Windows','Phone management','Learns your business','Always asks permission','Speaks naturally','Never sleeps'].map(f=>(
+                    <div key={f} style={{display:'flex',gap:6,fontSize:12,color:'var(--text-2)',alignItems:'flex-start'}}><span style={{color:'var(--accent)',flexShrink:0,marginTop:1}}>✓</span>{f}</div>
+                  ))}
+                </div>
+                <Link href="/wovo-os" style={{textDecoration:'none'}}><button className="btn btn-outline" style={{width:'100%',padding:11,fontSize:13}}>Learn about WOVO OS →</button></Link>
+              </div>
             </div>
           </div>
-        </section>
 
-        {/* ── WOVO OS PREVIEW ──────────────────────────── */}
-        <section style={{borderTop:'0.5px solid var(--border)',padding:'60px 24px',background:'var(--bg-2)'}}>
-          <div style={{maxWidth:860,margin:'0 auto',display:'grid',gridTemplateColumns:'1fr 1fr',gap:48,alignItems:'center'}} className="grid-2">
-            <div>
-              <div style={{display:'inline-flex',alignItems:'center',gap:8,background:'var(--accent-dim)',border:'1px solid var(--accent-border)',borderRadius:20,padding:'5px 14px',marginBottom:20}}>
-                <div style={{width:7,height:7,borderRadius:'50%',background:'var(--accent)',boxShadow:'0 0 8px var(--accent)'}}/>
-                <span style={{fontSize:12,fontWeight:700,color:'var(--accent)'}}>New Product</span>
+          {/* Row 2 — Cinematic Ads + Premium */}
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}} className="grid-2">
+
+            {/* Cinematic Ad Videos */}
+            <div id="cin-ads" className="card" style={{padding:0,overflow:'hidden',display:'flex',flexDirection:'column'}}>
+              <div style={{position:'relative',height:220,overflow:'hidden'}}>
+                <img src={IMGS.cinAd} alt="Cinematic Ad Videos" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                <div style={{position:'absolute',inset:0,background:'linear-gradient(to top,rgba(8,8,8,0.9) 0%,rgba(8,8,8,0.2) 60%,transparent 100%)'}}/>
+                <div style={{position:'absolute',bottom:16,left:16}}>
+                  <span style={{background:'rgba(139,92,246,0.2)',border:'1px solid rgba(139,92,246,0.4)',color:'#a78bfa',fontSize:10,fontWeight:800,padding:'3px 10px',borderRadius:20,textTransform:'uppercase',letterSpacing:'0.06em'}}>NEW · AI Ad Studio</span>
+                </div>
               </div>
-              <h2 style={{fontFamily:'Outfit,sans-serif',fontSize:'clamp(24px,4vw,34px)',fontWeight:800,marginBottom:12,color:'var(--text)',lineHeight:1.1,letterSpacing:'-0.03em'}}>
-                Meet WOVO OS.<br/><span style={{color:'var(--accent)'}}>Your AI employee.</span>
-              </h2>
-              <p style={{fontSize:15,color:'var(--text-2)',lineHeight:1.7,marginBottom:24}}>
-                Runs on their computer. Learns their business. They manage it from their phone like a boss. It never acts without permission — but it never sleeps either.
-              </p>
-              <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:28}}>
-                {[
-                  ['🖥️','Lives on their Mac or Windows computer'],
-                  ['📱','Managed entirely from their phone'],
-                  ['🧠','Learns the business — customers, tone, schedule'],
-                  ['✋','Asks permission before every consequential action'],
-                  ['💬','Speaks naturally, reads the room'],
-                ].map(([icon,text])=>(
-                  <div key={text as string} style={{display:'flex',alignItems:'center',gap:12,fontSize:14,color:'var(--text-2)'}}>
-                    <span style={{fontSize:18}}>{icon}</span>{text}
+              <div style={{padding:'20px 20px 24px',flex:1,display:'flex',flexDirection:'column'}}>
+                <h3 style={{fontFamily:'Outfit,sans-serif',fontSize:20,fontWeight:800,color:'var(--text)',marginBottom:8,letterSpacing:'-0.02em'}}>Cinematic Product Ads</h3>
+                <p style={{fontSize:13,color:'var(--text-2)',lineHeight:1.7,marginBottom:16,flex:1}}>Point it at any product. AI finds photos online or uses yours, creates a 30–45 second cinematic ad with voiceover, music, and a "shop now" CTA. Done in minutes.</p>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:18}}>
+                  {['30–45 sec cinematic video','AI voiceover included','Background music','Shop Now CTA','Finds product photos online','4K quality output'].map(f=>(
+                    <div key={f} style={{display:'flex',gap:6,fontSize:12,color:'var(--text-2)',alignItems:'flex-start'}}><span style={{color:'#a78bfa',flexShrink:0,marginTop:1}}>✓</span>{f}</div>
+                  ))}
+                </div>
+                <a href="/wovo-ai?tab=video" style={{textDecoration:'none'}}><button style={{width:'100%',padding:11,fontSize:13,background:'rgba(139,92,246,0.1)',border:'1px solid rgba(139,92,246,0.3)',color:'#a78bfa',borderRadius:10,cursor:'pointer',fontFamily:'inherit',fontWeight:600}}>Create a Cinematic Ad →</button></a>
+              </div>
+            </div>
+
+            {/* Premium Full Service */}
+            <div id="premium" className="card" style={{padding:0,overflow:'hidden',display:'flex',flexDirection:'column'}}>
+              <div style={{position:'relative',height:220,overflow:'hidden'}}>
+                <img src={IMGS.drone} alt="Wovo Media Premium Production" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                <div style={{position:'absolute',inset:0,background:'linear-gradient(to top,rgba(8,8,8,0.9) 0%,rgba(8,8,8,0.2) 60%,transparent 100%)'}}/>
+                <div style={{position:'absolute',bottom:16,left:16}}>
+                  <span style={{background:'rgba(245,158,11,0.15)',border:'1px solid rgba(245,158,11,0.35)',color:'#f59e0b',fontSize:10,fontWeight:800,padding:'3px 10px',borderRadius:20,textTransform:'uppercase',letterSpacing:'0.06em'}}>Premium</span>
+                </div>
+              </div>
+              <div style={{padding:'20px 20px 24px',flex:1,display:'flex',flexDirection:'column'}}>
+                <h3 style={{fontFamily:'Outfit,sans-serif',fontSize:20,fontWeight:800,color:'var(--text)',marginBottom:8,letterSpacing:'-0.02em'}}>Full-Service Production</h3>
+                <p style={{fontSize:13,color:'var(--text-2)',lineHeight:1.7,marginBottom:16,flex:1}}>Real filming, drone, photography, website builds — fully managed by our team in Middle Tennessee and beyond. Custom pricing.</p>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:18}}>
+                  {['On-site filming & drone','Website design & dev','We post for you','Google Business mgmt','Wovo AI at 50% off','Dedicated account manager'].map(f=>(
+                    <div key={f} style={{display:'flex',gap:6,fontSize:12,color:'var(--text-2)',alignItems:'flex-start'}}><span style={{color:'#f59e0b',flexShrink:0,marginTop:1}}>✓</span>{f}</div>
+                  ))}
+                </div>
+                <a href="https://calendly.com/wovomedia/wovo-media-strategy-call" target="_blank" rel="noreferrer" style={{textDecoration:'none'}}>
+                  <button style={{width:'100%',padding:11,fontSize:13,background:'rgba(245,158,11,0.08)',border:'1px solid rgba(245,158,11,0.25)',color:'#f59e0b',borderRadius:10,cursor:'pointer',fontFamily:'inherit',fontWeight:600}}>Book a free strategy call →</button>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── STATS BAR ───────────────────────────── */}
+      <section style={{background:'var(--bg-2)',borderTop:'0.5px solid var(--border)',borderBottom:'0.5px solid var(--border)',padding:'32px 24px'}}>
+        <div style={{maxWidth:800,margin:'0 auto',display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:16,textAlign:'center'}} className="grid-4">
+          {[['11+','Active clients'],['100M+','Combined views'],['4M+','Monthly views (1 client)'],['$29/mo','Starting price']].map(([n,l])=>(
+            <div key={l}>
+              <div style={{fontFamily:'Outfit,sans-serif',fontSize:'clamp(24px,4vw,36px)',fontWeight:800,color:'var(--accent)',letterSpacing:'-0.03em'}}>{n}</div>
+              <div style={{fontSize:12,color:'var(--text-3)',marginTop:4}}>{l}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── WOVO AI PRICING ─────────────────────── */}
+      <section id="pricing" style={{padding:'80px 24px'}}>
+        <div style={{maxWidth:1000,margin:'0 auto'}}>
+          <div style={{textAlign:'center',marginBottom:48}}>
+            <div style={{fontSize:11,color:'var(--text-3)',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.12em',marginBottom:10}}>Wovo AI Plans</div>
+            <h2 style={{fontFamily:'Outfit,sans-serif',fontSize:'clamp(24px,4vw,36px)',fontWeight:800,color:'var(--text)',letterSpacing:'-0.03em',marginBottom:10}}>Start at $29/mo. Cancel anytime.</h2>
+            <p style={{color:'var(--text-2)',fontSize:14}}>Pay on Stripe. Account created instantly. Premium clients get Wovo AI at 50% off.</p>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:12}}>
+            {[
+              {name:'Starter',price:'$29',color:'var(--accent)',features:['Your AI character','3 posts/week','Ready-to-copy captions','Posting tutorials'],link:'https://pay.wovomedia.com/b/7sY6oH3DRdI71zu0gocIE0Y'},
+              {name:'Growth',price:'$49',color:'var(--accent)',popular:true,features:['Whole team characters','5 posts/week','AI Video Generator','Unlimited edits'],link:'https://pay.wovomedia.com/b/fZu6oH6Q3fQf3HC0gocIE0Z'},
+              {name:'Pro AI',price:'$79',color:'var(--accent)',features:['Everything in Growth','Daily posts + Stories','Multiple brands','Image ad generator'],link:'https://pay.wovomedia.com/b/aFafZhfmzfQf1zu2owcIE10'},
+              {name:'Website',price:'$99',color:'var(--accent)',features:['Full Next.js site','7+ component files','Tailwind + TypeScript','Deploy-ready'],link:'https://pay.wovomedia.com/b/4gMcN57U7avV0vqbZ6cIE11'},
+              {name:'Cinematic Ads',price:'$149',color:'#a78bfa',features:['30–45 sec product ads','AI voiceover + music','Finds product photos','Shop now CTA'],link:'https://pay.wovomedia.com/b/aFafZhfmzfQf1zu2owcIE10',new:true},
+            ].map(p=>(
+              <div key={p.name} className={`card ${(p as any).popular?'card-accent':''}`} style={{position:'relative',borderColor:(p as any).new?'rgba(139,92,246,0.3)':''}}>
+                {(p as any).popular && <div style={{position:'absolute',top:-10,left:'50%',transform:'translateX(-50%)',background:'var(--accent)',color:'#080808',fontSize:9,fontWeight:800,padding:'3px 10px',borderRadius:20,whiteSpace:'nowrap',textTransform:'uppercase',letterSpacing:'0.06em'}}>Most popular</div>}
+                {(p as any).new && <div style={{position:'absolute',top:-10,left:'50%',transform:'translateX(-50%)',background:'#8b5cf6',color:'#fff',fontSize:9,fontWeight:800,padding:'3px 10px',borderRadius:20,whiteSpace:'nowrap',textTransform:'uppercase',letterSpacing:'0.06em'}}>New</div>}
+                <div style={{fontSize:11,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:'0.1em',fontWeight:600,marginBottom:6}}>{p.name}</div>
+                <div style={{fontSize:28,fontWeight:800,fontFamily:'Outfit,sans-serif',color:'var(--text)',marginBottom:14}}>{p.price}<span style={{fontSize:13,color:'var(--text-3)',fontWeight:400}}>/mo</span></div>
+                {p.features.map(f=>(
+                  <div key={f} style={{fontSize:12,color:'var(--text-2)',padding:'5px 0',borderTop:'0.5px solid var(--border)',display:'flex',gap:7}}>
+                    <span style={{color:p.color,flexShrink:0}}>✓</span>{f}
                   </div>
                 ))}
+                <a href={p.link} target="_blank" rel="noreferrer" style={{display:'block',marginTop:16,textDecoration:'none'}}>
+                  <button style={{width:'100%',padding:10,fontSize:12,background:(p as any).popular?'var(--accent)':(p as any).new?'rgba(139,92,246,0.15)':'transparent',border:`1px solid ${(p as any).popular?'var(--accent)':(p as any).new?'rgba(139,92,246,0.4)':'var(--border-2)'}`,color:(p as any).popular?'#080808':(p as any).new?'#a78bfa':'var(--text-2)',borderRadius:8,cursor:'pointer',fontFamily:'inherit',fontWeight:600}}>Get {p.name} →</button>
+                </a>
               </div>
-              <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
-                <Link href="/wovo-os" style={{textDecoration:'none'}}><button className="btn btn-primary" style={{padding:'12px 24px',fontSize:14}}>Learn more →</button></Link>
-                <a href="https://calendly.com/wovomedia/wovo-media-strategy-call" target="_blank" rel="noreferrer" style={{textDecoration:'none'}}><button className="btn btn-outline" style={{padding:'11px 22px',fontSize:14}}>Book a demo</button></a>
-              </div>
-            </div>
-
-            <div style={{background:'var(--bg-3)',borderRadius:16,border:'1px solid var(--border)',padding:24,fontFamily:'monospace'}}>
-              <div style={{display:'flex',gap:6,marginBottom:16}}>
-                <div style={{width:10,height:10,borderRadius:'50%',background:'#ef4444'}}/>
-                <div style={{width:10,height:10,borderRadius:'50%',background:'#f59e0b'}}/>
-                <div style={{width:10,height:10,borderRadius:'50%',background:'#22c55e'}}/>
-                <span style={{fontSize:11,color:'var(--text-3)',marginLeft:8}}>WOVO OS — Running</span>
-              </div>
-              {[
-                {role:'wovo',msg:'Good morning. I found 3 unread DMs and one Google review that needs a response. Want me to draft replies?'},
-                {role:'user',msg:'Yes, draft the review response.'},
-                {role:'wovo',msg:'Done. Here\'s what I wrote: "Thank you so much for the kind words! We love having you..." — approve to post?'},
-                {role:'user',msg:'Approved.'},
-                {role:'wovo',msg:'✓ Posted to Google. I also noticed your Tuesday post has 47 comments — shall I respond to the top ones?'},
-              ].map((m,i)=>(
-                <div key={i} style={{marginBottom:10,display:'flex',flexDirection:'column',alignItems:m.role==='user'?'flex-end':'flex-start'}}>
-                  <div style={{fontSize:9,color:'var(--text-3)',marginBottom:3,textTransform:'uppercase',letterSpacing:'0.08em'}}>{m.role==='wovo'?'WOVO OS':'You'}</div>
-                  <div style={{background:m.role==='wovo'?'var(--bg-4)':'var(--accent)',color:m.role==='wovo'?'var(--text-2)':'#080808',borderRadius:10,padding:'8px 12px',fontSize:11,maxWidth:'85%',lineHeight:1.5}}>{m.msg}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ── STATS ────────────────────────────────────── */}
-        <section style={{borderTop:'0.5px solid var(--border)',padding:'60px 24px'}}>
-          <div style={{maxWidth:860,margin:'0 auto',textAlign:'center'}}>
-            <div style={{fontSize:11,color:'var(--text-3)',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.12em',marginBottom:12}}>Proven results</div>
-            <h2 style={{fontFamily:'Outfit,sans-serif',fontSize:'clamp(22px,4vw,30px)',fontWeight:700,marginBottom:32,color:'var(--text)'}}>Real businesses. Real numbers.</h2>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:12}}>
-              {[['11+','Active clients'],['100M+','Combined views'],['4M+','Monthly views, one client'],['24hr','Response time']].map(([n,l])=>(
-                <div key={l} className="card" style={{textAlign:'center',padding:'20px 16px'}}>
-                  <div style={{fontFamily:'Outfit,sans-serif',fontSize:32,fontWeight:800,color:'var(--accent)',letterSpacing:'-0.03em'}}>{n}</div>
-                  <div style={{fontSize:12,color:'var(--text-3)',marginTop:6,lineHeight:1.4}}>{l}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ── PREMIUM ──────────────────────────────────── */}
-        <section id="premium" style={{borderTop:'0.5px solid var(--border)',padding:'60px 24px',textAlign:'center'}}>
-          <div style={{maxWidth:560,margin:'0 auto'}}>
-            <div style={{fontSize:11,color:'var(--text-3)',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.12em',marginBottom:12}}>Wovo Media Premium</div>
-            <h2 style={{fontFamily:'Outfit,sans-serif',fontSize:'clamp(22px,4vw,30px)',fontWeight:700,marginBottom:12,color:'var(--text)'}}>Ready for the full package?</h2>
-            <p style={{color:'var(--text-2)',lineHeight:1.7,marginBottom:32,fontSize:14}}>On-site filming, drone, website builds, Google Business management — fully handled by our team. Wovo AI included at a discount.</p>
-            <a href="https://calendly.com/wovomedia/wovo-media-strategy-call" target="_blank" rel="noreferrer" style={{textDecoration:'none'}}>
-              <button className="btn btn-primary" style={{fontSize:15,padding:'14px 32px'}}>Book a free strategy call →</button>
-            </a>
-            <p style={{fontSize:12,color:'var(--text-3)',marginTop:12}}>No commitment · Mon–Fri 9am–5pm CT</p>
-          </div>
-        </section>
-
-        {/* ── FOOTER ───────────────────────────────────── */}
-        <footer style={{borderTop:'1px solid var(--border)',padding:'28px 24px',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:14}}>
-          <Link href="/" style={{fontFamily:'Outfit,sans-serif',fontSize:16,fontWeight:800,color:'var(--text)',textDecoration:'none',letterSpacing:'-0.04em'}}>
-            wovo<span style={{color:'var(--accent)'}}>media</span>
-          </Link>
-          <div style={{display:'flex',gap:20,flexWrap:'wrap'}}>
-            {[['WOVO OS','/wovo-os'],['About','/about'],['Privacy','/privacy'],['Terms','/terms'],['Contact','mailto:support@wovomedia.com']].map(([l,h])=>(
-              <a key={l} href={h} style={{fontSize:12,color:'var(--text-3)',textDecoration:'none',fontWeight:500}}>{l}</a>
             ))}
           </div>
-          <div style={{fontSize:12,color:'var(--text-3)'}}>© {new Date().getFullYear()} Wovo Media</div>
-        </footer>
+          <div className="card" style={{marginTop:14,textAlign:'center',padding:'14px 20px'}}>
+            <p style={{fontSize:13,color:'var(--text-2)',margin:0}}>
+              Already have an account? <a href="/login" style={{color:'var(--accent)',fontWeight:600}}>Log in →</a>
+              &nbsp;·&nbsp; Questions? <a href="mailto:support@wovomedia.com" style={{color:'var(--accent)'}}>support@wovomedia.com</a>
+            </p>
+          </div>
+        </div>
+      </section>
 
-      </div>
+      {/* ── FOOTER ──────────────────────────────── */}
+      <footer style={{borderTop:'1px solid var(--border)',padding:'28px 24px',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:14}}>
+        <Link href="/" style={{fontFamily:'Outfit,sans-serif',fontSize:16,fontWeight:800,color:'var(--text)',textDecoration:'none',letterSpacing:'-0.04em'}}>
+          wovo<span style={{color:'var(--accent)'}}>media</span>
+        </Link>
+        <div style={{display:'flex',gap:20,flexWrap:'wrap'}}>
+          {[['WOVO OS','/wovo-os'],['Wovo AI','/wovo-ai'],['About','/about'],['Privacy','/privacy'],['Terms','/terms'],['Contact','mailto:support@wovomedia.com']].map(([l,h])=>(
+            <a key={l} href={h} style={{fontSize:12,color:'var(--text-3)',textDecoration:'none',fontWeight:500}}>{l}</a>
+          ))}
+        </div>
+        <div style={{fontSize:12,color:'var(--text-3)'}}>© {new Date().getFullYear()} Wovo Media LLC</div>
+      </footer>
     </div>
   )
 }
