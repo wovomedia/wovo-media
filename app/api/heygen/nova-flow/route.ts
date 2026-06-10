@@ -4,10 +4,10 @@ import { createClient } from '@supabase/supabase-js'
 
 const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
-const AVATAR_ID = 'Josh_in_brown_body_20230516'
+const AVATAR_ID = 'Tyler-incasualsuit-20220721'
 // Pro Confident Male voice
-const VOICE_ID = '2d5b0e6cf36f460aa7fc47e3eee4ba54'
-const BG_URL = 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=1280&q=80'
+const VOICE_ID = 'f4ae3907c6e5446ea1daeab0c2f82bd5'
+const BG_URL = 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1280&q=80'
 
 export async function POST(req: NextRequest) {
   const { nodeId } = await req.json()
