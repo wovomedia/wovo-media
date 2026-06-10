@@ -1,90 +1,84 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 
 const FAL_KEY = process.env.FAL_API_KEY!
+const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
 const IMAGES = {
-  hero: 'https://v3b.fal.media/files/b/0a9db43e/-uLoWg3o-1RSESNxB1W5r.jpg',
-  ai: 'https://v3b.fal.media/files/b/0a9db43e/1ur9TGpHGvlMFZDARj0Ky.jpg',
-  drone: 'https://v3b.fal.media/files/b/0a9db43d/H_XDi7HNUnec0eLey58zO.jpg',
+  hero: 'https://v3b.fal.media/files/b/0a9dbfe1/O1INKqRoIQAgUfHQv4kJ5.jpg',
+  ai: 'https://v3b.fal.media/files/b/0a9dbfe2/dYb9XqiI45UdQ4bTyviSw.jpg',
+  drone: 'https://v3b.fal.media/files/b/0a9dbfe1/KcYIG3LwJ0OlSZdYMfDmG.jpg',
 }
 
-// POST - start video generation jobs
-export async function POST(req: NextRequest) {
-  const { type } = await req.json()
-
-  const configs: Record<string, { prompt: string; image: string }> = {
-    hero: {
-      prompt: 'Slow cinematic camera drift over dark city at night, teal neon bokeh lights, ultra smooth slow motion',
-      image: IMAGES.hero
-    },
-    ai: {
-      prompt: 'Floating glowing neural network particles slowly pulsing, ambient teal light movement, cinematic',
-      image: IMAGES.ai
-    },
-    drone: {
-      prompt: 'Smooth slow aerial drone glide over restaurant golden hour, warm cinematic motion, professional',
-      image: IMAGES.drone
-    }
-  }
-
-  const config = configs[type]
-  if (!config) return NextResponse.json({ error: 'Invalid type' }, { status: 400 })
-
+async function startJob(prompt: string, imageUrl: string): Promise<string> {
   const res = await fetch('https://queue.fal.run/fal-ai/bytedance/seedance-1-5/image-to-video', {
     method: 'POST',
     headers: { 'Authorization': `Key ${FAL_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      prompt: config.prompt,
-      image_url: config.image,
-      duration: '5',
-      resolution: '720p',
-      motion_intensity: 'low'
-    })
+    body: JSON.stringify({ prompt, image_url: imageUrl, duration: '5', resolution: '720p', motion_intensity: 'low' })
   })
   const data = await res.json()
-  return NextResponse.json({ requestId: data.request_id })
+  return data.request_id || ''
 }
 
-// GET with ?start=1 - kick off all 3 video jobs
-// GET with ?id=X - check specific job status
+async function saveToSupabase(url: string, filename: string): Promise<string> {
+  try {
+    const res = await fetch(url)
+    const buffer = Buffer.from(await res.arrayBuffer())
+    await sb.storage.from('client-videos').upload(`homepage/${filename}`, buffer, {
+      contentType: 'video/mp4', upsert: true
+    })
+    const { data } = sb.storage.from('client-videos').getPublicUrl(`homepage/${filename}`)
+    return data.publicUrl
+  } catch { return url }
+}
+
 export async function GET(req: NextRequest) {
   const start = req.nextUrl.searchParams.get('start')
+  const requestId = req.nextUrl.searchParams.get('id')
+  const save = req.nextUrl.searchParams.get('save') // ?save=hero|ai|drone&url=...
 
+  // Start all 3 video jobs
   if (start === '1') {
-    const jobs = await Promise.all([
-      fetch('https://queue.fal.run/fal-ai/bytedance/seedance-1-5/image-to-video', {
-        method: 'POST',
-        headers: { 'Authorization': `Key ${FAL_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: 'Slow cinematic camera drift over dark city at night, teal neon bokeh, ultra smooth slow motion', image_url: IMAGES.hero, duration: '5', resolution: '720p', motion_intensity: 'low' })
-      }).then(r => r.json()),
-      fetch('https://queue.fal.run/fal-ai/bytedance/seedance-1-5/image-to-video', {
-        method: 'POST',
-        headers: { 'Authorization': `Key ${FAL_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: 'Floating glowing neural network particles slowly pulsing, ambient teal light movement', image_url: IMAGES.ai, duration: '5', resolution: '720p', motion_intensity: 'low' })
-      }).then(r => r.json()),
-      fetch('https://queue.fal.run/fal-ai/bytedance/seedance-1-5/image-to-video', {
-        method: 'POST',
-        headers: { 'Authorization': `Key ${FAL_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: 'Smooth slow aerial drone glide over restaurant golden hour, warm cinematic motion', image_url: IMAGES.drone, duration: '5', resolution: '720p', motion_intensity: 'low' })
-      }).then(r => r.json()),
+    const [heroId, aiId, droneId] = await Promise.all([
+      startJob('Slow cinematic camera drift over dark city at night, teal neon bokeh, ultra smooth slow motion', IMAGES.hero),
+      startJob('Floating glowing neural network particles slowly pulsing, ambient teal light movement', IMAGES.ai),
+      startJob('Smooth slow aerial drone glide over restaurant golden hour, warm cinematic motion', IMAGES.drone),
     ])
+    return NextResponse.json({ heroId, aiId, droneId })
+  }
+
+  // Save a completed video to Supabase permanently
+  if (save && req.nextUrl.searchParams.get('url')) {
+    const videoUrl = req.nextUrl.searchParams.get('url')!
+    const permanent = await saveToSupabase(videoUrl, `${save}.mp4`)
+    return NextResponse.json({ permanent })
+  }
+
+  // Poll job status
+  if (requestId) {
+    const res = await fetch(
+      `https://queue.fal.run/fal-ai/bytedance/seedance-1-5/image-to-video/requests/${requestId}`,
+      { headers: { 'Authorization': `Key ${FAL_KEY}` } }
+    )
+    const data = await res.json()
     return NextResponse.json({
-      heroId: jobs[0].request_id,
-      aiId: jobs[1].request_id,
-      droneId: jobs[2].request_id,
+      status: data.status === 'COMPLETED' ? 'completed' : data.status === 'FAILED' ? 'failed' : 'processing',
+      videoUrl: data.video?.url || null
     })
   }
 
-  const requestId = req.nextUrl.searchParams.get('id')
-  if (!requestId) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
+  return NextResponse.json({ error: 'Missing params' }, { status: 400 })
+}
 
-  const res = await fetch(
-    `https://queue.fal.run/fal-ai/bytedance/seedance-1-5/image-to-video/requests/${requestId}`,
-    { headers: { 'Authorization': `Key ${FAL_KEY}` } }
-  )
-  const data = await res.json()
-  return NextResponse.json({
-    status: data.status === 'COMPLETED' ? 'completed' : data.status === 'FAILED' ? 'failed' : 'processing',
-    videoUrl: data.video?.url || null
-  })
+export async function POST(req: NextRequest) {
+  const { type } = await req.json()
+  const configs: Record<string, { prompt: string; image: string }> = {
+    hero: { prompt: 'Slow cinematic camera drift over dark city at night, teal neon bokeh, ultra smooth', image: IMAGES.hero },
+    ai: { prompt: 'Floating neural network particles pulsing, teal light, cinematic', image: IMAGES.ai },
+    drone: { prompt: 'Smooth aerial drone over restaurant golden hour, cinematic motion', image: IMAGES.drone },
+  }
+  const config = configs[type]
+  if (!config) return NextResponse.json({ error: 'Invalid type' }, { status: 400 })
+  const id = await startJob(config.prompt, config.image)
+  return NextResponse.json({ requestId: id })
 }
