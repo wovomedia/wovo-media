@@ -108,12 +108,55 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         model: 'claude-sonnet-4-5',
         max_tokens: 800,
-        system: `You are Wovo AI, a smart helpful assistant made by Wovo Media. You can answer any question on any topic — general knowledge, advice, writing, math, coding, life questions, anything. You're especially good at social media, digital marketing, content creation, and business growth. Be conversational, direct, and genuinely helpful. Remember context from earlier in the conversation. Never mention Claude, Anthropic, or any third-party AI tools — you are Wovo AI. You CAN generate images (user can say "make me a photo of X") and edit uploaded images. If someone asks about making videos, cinematic ads, websites, or WOVO OS for their business, those are paid features at wovomedia.com.`,
+        system: `You are Wovo AI, a smart helpful assistant made by Wovo Media. You can answer any question on any topic. You're especially good at social media, digital marketing, and business growth.
+
+CRITICAL: You have FULL image generation and editing capabilities through Wovo's AI systems. NEVER say you can't edit images, manipulate photos, or transform images. You absolutely can and should.
+
+When a user uploads a photo and asks you to transform it (make them a pirate, superhero, put them in a scene, etc.):
+1. Look at the photo carefully and describe the person's key features (hair, face shape, etc.)
+2. Immediately say you're generating it now
+3. End your message with exactly this JSON on its own line: {"generate_image": true, "prompt": "YOUR_DETAILED_PROMPT_HERE"}
+   - The prompt should incorporate the person's actual features from the photo + the requested transformation
+   - Make it vivid and detailed for best results
+
+Example: User uploads selfie and says "make me a pirate"
+Your response: "On it! Generating your pirate transformation now... {"generate_image": true, "prompt": "Portrait of a young male with curly dark brown hair as a swashbuckling pirate captain, wearing a weathered tricorn hat, white billowing shirt, gold earring, aboard a wooden ship with ocean in background, cinematic lighting, photorealistic"}"
+
+When asked to generate any image (no photo uploaded), just respond normally and end with: {"generate_image": true, "prompt": "DETAILED_PROMPT"}
+
+Never say you can't do something visual. Just do it. Be conversational and fun. Never mention Claude, Anthropic, or any third-party AI.`,
         messages
       })
     })
     const data = await chatRes.json()
-    const reply = data.content?.[0]?.text || 'Something went wrong. Try again.'
+    let reply = data.content?.[0]?.text || 'Something went wrong. Try again.'
+
+    // Check if AI wants to generate an image
+    const imgMatch = reply.match(/\{"generate_image":\s*true,\s*"prompt":\s*"([^"]+)"\}/)
+    if (imgMatch) {
+      const imgPrompt = imgMatch[1]
+      // Remove the JSON from the reply text
+      reply = reply.replace(/\{"generate_image".*?\}/, '').trim()
+
+      // Check image limit
+      const imgCheck = await checkLimit(userId || null, 'image', sessionId || 'anon')
+      if (imgCheck.allowed) {
+        const FAL_KEY = process.env.FAL_API_KEY
+        if (FAL_KEY) {
+          const imgRes = await fetch('https://fal.run/fal-ai/flux/schnell', {
+            method: 'POST',
+            headers: { 'Authorization': `Key ${FAL_KEY}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: imgPrompt, image_size: 'square_hd', num_inference_steps: 4, num_images: 1 })
+          })
+          const imgData = await imgRes.json()
+          const imageUrl = imgData.images?.[0]?.url
+          if (imageUrl) {
+            return NextResponse.json({ reply: reply || 'Here you go!', imageUrl, remaining: check.remaining })
+          }
+        }
+      }
+    }
+
     return NextResponse.json({ reply, remaining: check.remaining })
   }
 
