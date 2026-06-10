@@ -65,7 +65,7 @@ export default function AppShell({ children, user }: { children: React.ReactNode
   const active = (href: string) => href === '/admin' ? path === '/admin' : path === href || path.startsWith(href + '/')
 
   return (
-    <div id="app-shell">
+    <div id="app-shell" style={{background:"var(--bg)",minHeight:"100dvh",color:"var(--text)"}}>
       {/* Desktop side nav */}
       <nav className="side-nav">
         <div style={{padding:'22px 20px 18px',borderBottom:'1px solid var(--border)'}}>

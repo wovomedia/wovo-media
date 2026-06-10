@@ -202,15 +202,27 @@ export default function Home() {
           ))}
         </div>
 
-        {/* Sign up CTA */}
-        {!userId && (
-          <div style={{ padding: '10px', borderTop: '0.5px solid var(--border)' }}>
-            <Link href="/login?tab=signup" style={{ textDecoration: 'none' }}>
-              <button className="btn btn-primary" style={{ width: '100%', fontSize: 13, padding: '9px' }}>Sign up free →</button>
-            </Link>
-            <div style={{ fontSize: 10, color: 'var(--text-3)', textAlign: 'center', marginTop: 5 }}>3 free · Sign up for 10/day</div>
-          </div>
-        )}
+        {/* Bottom CTA */}
+        <div style={{ padding: '10px', borderTop: '0.5px solid var(--border)' }}>
+          {userId ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+              <Link href="/home" style={{ textDecoration: 'none' }}><button style={{ width: '100%', padding: '8px', borderRadius: 8, background: 'var(--bg-2)', border: '1px solid var(--border)', color: 'var(--text-2)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, fontWeight: 600, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 7 }}><span>🏠</span> Dashboard</button></Link>
+              <Link href="/videos" style={{ textDecoration: 'none' }}><button style={{ width: '100%', padding: '8px', borderRadius: 8, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-2)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, fontWeight: 600, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 7 }}><span>🎬</span> My Videos</button></Link>
+              <Link href="/business" style={{ textDecoration: 'none' }}><button style={{ width: '100%', padding: '8px', borderRadius: 8, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-2)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, fontWeight: 600, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 7 }}><span>🏢</span> My Business</button></Link>
+              <Link href="/account" style={{ textDecoration: 'none' }}><button style={{ width: '100%', padding: '8px', borderRadius: 8, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-2)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, fontWeight: 600, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 7 }}><span>👤</span> Account</button></Link>
+            </div>
+          ) : (
+            <>
+              <Link href="/login?tab=signup" style={{ textDecoration: 'none' }}>
+                <button className="btn btn-primary" style={{ width: '100%', fontSize: 13, padding: '9px' }}>Sign up free →</button>
+              </Link>
+              <Link href="/login" style={{ textDecoration: 'none', display: 'block', marginTop: 5 }}>
+                <button style={{ width: '100%', padding: '7px', borderRadius: 8, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-3)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12 }}>Already have an account? Sign in</button>
+              </Link>
+              <div style={{ fontSize: 10, color: 'var(--text-3)', textAlign: 'center', marginTop: 5 }}>3 free · Sign up for 10/day</div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* ── CHAT AREA ───────────────────────── */}
