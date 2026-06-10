@@ -77,8 +77,6 @@ export async function GET(req: NextRequest) {
 
   const requestId = req.nextUrl.searchParams.get('id')
   if (!requestId) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
-  const requestId = req.nextUrl.searchParams.get('id')
-  if (!requestId) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
 
   const res = await fetch(
     `https://queue.fal.run/fal-ai/bytedance/seedance-1-5/image-to-video/requests/${requestId}`,
