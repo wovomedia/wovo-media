@@ -5,10 +5,10 @@ const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPAB
 
 // Free tier limits
 const LIMITS = {
-  anonymous: { chat: 3, image: 0 },      // not logged in: 3 chats, no images
-  free: { chat: 10, image: 2 },           // logged in free: 10 chats, 2 images/day
-  starter: { chat: 999, image: 10 },
-  growth: { chat: 999, image: 25 },
+  anonymous: { chat: 10, image: 3 },     // not logged in: 10 chats, 3 images/day
+  free: { chat: 50, image: 10 },          // logged in free: 50 chats, 10 images/day
+  starter: { chat: 999, image: 50 },
+  growth: { chat: 999, image: 150 },
   pro_ai: { chat: 999, image: 999 },
 }
 
