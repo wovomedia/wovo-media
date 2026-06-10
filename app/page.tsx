@@ -4,11 +4,11 @@ import Link from 'next/link'
 
 // fal.ai permanent image URLs
 const IMGS = {
-  hero: 'https://v3b.fal.media/files/b/0a9dbfe1/O1INKqRoIQAgUfHQv4kJ5.jpg',
-  social: 'https://v3b.fal.media/files/b/0a9dbfe1/WWiD5Ve9dVO8qbUP9oEyU.jpg',
-  ai: 'https://v3b.fal.media/files/b/0a9dbfe2/dYb9XqiI45UdQ4bTyviSw.jpg',
-  drone: 'https://v3b.fal.media/files/b/0a9dbfe1/KcYIG3LwJ0OlSZdYMfDmG.jpg',
-  cinAd: 'https://v3b.fal.media/files/b/0a9dbfe1/kWoCXu5J00vLNtiTalzHk.jpg',
+  hero: 'https://v3b.fal.media/files/b/0a9dc82f/qSFW82dOEK5PMHb--MQvl.jpg',
+  social: 'https://v3b.fal.media/files/b/0a9dc82f/e43qNXw5XXtLdWq6XTQWQ.jpg',
+  ai: 'https://v3b.fal.media/files/b/0a9dc82f/88gQU_rbqHUneOexDyfHO.jpg',
+  drone: 'https://v3b.fal.media/files/b/0a9dc82f/tjT9L2NkpUNYPNnkQ-8gY.jpg',
+  cinAd: 'https://v3b.fal.media/files/b/0a9dc82f/B6tH2UjRVW9J90tvdjJF9.jpg',
 }
 
 export default function Home() {
