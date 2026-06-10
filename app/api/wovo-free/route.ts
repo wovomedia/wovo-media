@@ -90,7 +90,17 @@ export async function POST(req: NextRequest) {
       content: m.content || ''
     })).filter((m: any) => m.content)
     // Add current message
-    const messages = [...historyMsgs, { role: 'user', content: prompt }]
+    // If user uploaded an image, include it in the message so Claude can see it
+    let userContent: any = prompt
+    if (body.imageBase64) {
+      const base64Data = body.imageBase64.replace(/^data:image\/[^;]+;base64,/, '')
+      const mediaType = body.imageBase64.match(/data:(image\/[^;]+)/)?.[1] || 'image/jpeg'
+      userContent = [
+        { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64Data } },
+        { type: 'text', text: prompt }
+      ]
+    }
+    const messages = [...historyMsgs, { role: 'user', content: userContent }]
 
     const chatRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',

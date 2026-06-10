@@ -38,6 +38,7 @@ export default function Home() {
   const [uploadedImg, setUploadedImg] = useState<string | null>(null)
   const [showAuthWall, setShowAuthWall] = useState(false)
   const [chatLoading, setChatLoading] = useState(true)
+  const [editingChatId, setEditingChatId] = useState<string | null>(null)
   const [sessionId] = useState(() => {
     if (typeof window === 'undefined') return 'anon'
     return localStorage.getItem('wovo_sid') || (() => {
@@ -128,6 +129,17 @@ export default function Home() {
       if (remaining.length === 0) { createNewChat(); return c }
       if (id === activeChatId) setActiveChatId(remaining[0].id)
       return remaining
+    })
+  }
+
+  const renameChat = async (chatId: string, newTitle: string) => {
+    setEditingChatId(null)
+    if (!newTitle.trim()) return
+    setChats(c => c.map(chat => chat.id === chatId ? { ...chat, title: newTitle.trim() } : chat))
+    await fetch('/api/wovo-chats', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chatId, title: newTitle.trim(), sessionId, userId })
     })
   }
 
@@ -258,13 +270,23 @@ export default function Home() {
               {chats.length > 0 && <div style={{ fontSize: 9, color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '6px 8px 4px' }}>Chats</div>}
               {chats.map(chat => (
                 <div key={chat.id} style={{ position: 'relative', marginBottom: 1 }} className="chat-row">
-                  <button onClick={() => setActiveChatId(chat.id)} style={{
-                    width: '100%', padding: '7px 28px 7px 10px', borderRadius: 7, border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
-                    background: chat.id === activeChatId ? 'var(--bg-2)' : 'transparent',
-                    borderLeft: chat.id === activeChatId ? '2px solid var(--accent)' : '2px solid transparent',
-                  }}>
-                    <div style={{ fontSize: 12, color: chat.id === activeChatId ? 'var(--text)' : 'var(--text-2)', fontWeight: chat.id === activeChatId ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{chat.title}</div>
-                  </button>
+                  {editingChatId === chat.id ? (
+                    <input
+                      autoFocus
+                      defaultValue={chat.title}
+                      onBlur={e => renameChat(chat.id, e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setEditingChatId(null) }}
+                      style={{ width: '100%', padding: '6px 10px', borderRadius: 7, border: '1px solid var(--accent)', background: 'var(--bg-2)', color: 'var(--text)', fontSize: 12, fontFamily: 'inherit', outline: 'none' }}
+                    />
+                  ) : (
+                    <button onClick={() => setActiveChatId(chat.id)} onDoubleClick={() => setEditingChatId(chat.id)} title="Double-click to rename" style={{
+                      width: '100%', padding: '7px 28px 7px 10px', borderRadius: 7, border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
+                      background: chat.id === activeChatId ? 'var(--bg-2)' : 'transparent',
+                      borderLeft: chat.id === activeChatId ? '2px solid var(--accent)' : '2px solid transparent',
+                    }}>
+                      <div style={{ fontSize: 12, color: chat.id === activeChatId ? 'var(--text)' : 'var(--text-2)', fontWeight: chat.id === activeChatId ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{chat.title}</div>
+                    </button>
+                  )}
                   <button onClick={() => deleteChat(chat.id)} className="del-chat" title="Delete" style={{ position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: 14, padding: '2px 5px', borderRadius: 4, opacity: 0, transition: 'opacity 0.12s' }}>×</button>
                 </div>
               ))}
