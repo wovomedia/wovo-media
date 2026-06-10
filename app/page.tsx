@@ -1,47 +1,19 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 
-// fal.ai Flux Dev generated images — permanent URLs
+// fal.ai permanent image URLs
 const IMGS = {
-  hero: 'https://v3b.fal.media/files/b/0a9db43e/-uLoWg3o-1RSESNxB1W5r.jpg',
-  social: 'https://v3b.fal.media/files/b/0a9db43e/yseDTWwlwqOhrAgFbcTlM.jpg',
-  ai: 'https://v3b.fal.media/files/b/0a9db43e/1ur9TGpHGvlMFZDARj0Ky.jpg',
-  drone: 'https://v3b.fal.media/files/b/0a9db43d/H_XDi7HNUnec0eLey58zO.jpg',
-  cinAd: 'https://v3b.fal.media/files/b/0a9db43e/sio-XwxTiP6K8ZGa5SNxp.jpg',
+  hero: 'https://v3b.fal.media/files/b/0a9dbfe1/O1INKqRoIQAgUfHQv4kJ5.jpg',
+  social: 'https://v3b.fal.media/files/b/0a9dbfe1/WWiD5Ve9dVO8qbUP9oEyU.jpg',
+  ai: 'https://v3b.fal.media/files/b/0a9dbfe2/dYb9XqiI45UdQ4bTyviSw.jpg',
+  drone: 'https://v3b.fal.media/files/b/0a9dbfe1/KcYIG3LwJ0OlSZdYMfDmG.jpg',
+  cinAd: 'https://v3b.fal.media/files/b/0a9dbfe1/kWoCXu5J00vLNtiTalzHk.jpg',
 }
 
 export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false)
-  const [videos, setVideos] = useState<Record<string,string>>({})
 
-  useEffect(() => {
-    // Auto-generate and swap in background videos
-    const generate = async (type: string) => {
-      try {
-        const r = await fetch('/api/generate-homepage-videos', {
-          method: 'POST', headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({ type })
-        })
-        const { requestId } = await r.json()
-        if (!requestId) return
-        // Poll until done
-        for (let i = 0; i < 30; i++) {
-          await new Promise(res => setTimeout(res, 8000))
-          const poll = await fetch(`/api/generate-homepage-videos?id=${requestId}`)
-          const d = await poll.json()
-          if (d.status === 'completed' && d.videoUrl) {
-            setVideos(v => ({...v, [type]: d.videoUrl}))
-            return
-          }
-          if (d.status === 'failed') return
-        }
-      } catch {}
-    }
-    generate('hero')
-    generate('ai')
-    generate('drone')
-  }, [])
 
   return (
     <div style={{background:'var(--bg)',minHeight:'100vh',overflowX:'hidden'}}>
@@ -81,10 +53,7 @@ export default function Home() {
 
       {/* ── HERO — full bleed image ──────────────── */}
       <section style={{position:'relative',height:'92vh',minHeight:520,display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
-        <video autoPlay muted loop playsInline style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',objectPosition:'center'}}>
-          <source src={videos.hero ||"https://export-download.canva.com/xSqN8/DAHMIGxSqN8/-1/0-187405300476265060.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUH5AO7UJ26%2F20260609%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260609T234234Z&X-Amz-Expires=8115&X-Amz-Signature=2ecc9954b9d242b0448ad71f5c835fdddbad12ecd35ae9633211329b91860c7f&X-Amz-SignedHeaders=host%3Bx-amz-expected-bucket-owner&response-expires=Wed%2C%2010%20Jun%202026%2001%3A57%3A49%20GMT" } type="video/mp4"/>
-          <img src={IMGS.hero} alt="Wovo Media" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}}/>
-        </video>
+        <img src={IMGS.hero} alt="Wovo Media" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',objectPosition:'center'}}/>
         <div style={{position:'absolute',inset:0,background:'linear-gradient(to bottom, rgba(8,8,8,0.55) 0%, rgba(8,8,8,0.3) 50%, rgba(8,8,8,0.85) 100%)'}}/>
         <div style={{position:'relative',zIndex:2,textAlign:'center',padding:'0 24px',maxWidth:700}}>
           <div style={{display:'inline-flex',alignItems:'center',gap:10,background:'rgba(0,229,200,0.1)',border:'1px solid rgba(0,229,200,0.3)',borderRadius:40,padding:'6px 18px',marginBottom:24}}>
@@ -193,10 +162,7 @@ export default function Home() {
             {/* Premium Full Service */}
             <div id="premium" className="card" style={{padding:0,overflow:'hidden',display:'flex',flexDirection:'column'}}>
               <div style={{position:'relative',height:220,overflow:'hidden'}}>
-                <video autoPlay muted loop playsInline style={{width:'100%',height:'100%',objectFit:'cover'}}>
-                  <source src="https://export-download.canva.com/5YCPA/DAHMID5YCPA/-1/0-2974007567750190567.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUH5AO7UJ26%2F20260609%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260609T031129Z&X-Amz-Expires=81875&X-Amz-Signature=4d800439678e3505677cd752a1c03ed800c3c5abdd707090f80f492bba0509f0&X-Amz-SignedHeaders=host%3Bx-amz-expected-bucket-owner&response-expires=Wed%2C%2010%20Jun%202026%2001%3A56%3A04%20GMT" type="video/mp4"/>
-                  <img src={IMGS.drone} alt="Premium Production" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
-                </video>
+                <img src={IMGS.drone} alt="Premium Production" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
                 <div style={{position:'absolute',inset:0,background:'linear-gradient(to top,rgba(8,8,8,0.9) 0%,rgba(8,8,8,0.2) 60%,transparent 100%)'}}/>
                 <div style={{position:'absolute',bottom:16,left:16}}>
                   <span style={{background:'rgba(245,158,11,0.15)',border:'1px solid rgba(245,158,11,0.35)',color:'#f59e0b',fontSize:10,fontWeight:800,padding:'3px 10px',borderRadius:20,textTransform:'uppercase',letterSpacing:'0.06em'}}>Premium</span>
