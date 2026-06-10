@@ -10,6 +10,7 @@ export default function Login() {
   const [fullName, setFullName] = useState('')
   const [businessName, setBusinessName] = useState('')
   const [terms, setTerms] = useState(false)
+  const [referral, setReferral] = useState('')
   const [loading, setLoading] = useState(false)
   const [checking, setChecking] = useState(false)
   const [error, setError] = useState('')
@@ -63,7 +64,7 @@ export default function Login() {
     setLoading(true); setError('')
     const res = await fetch('/api/auth/signup', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, fullName, businessName })
+      body: JSON.stringify({ email, password, fullName, businessName, referral })
     })
     const data = await res.json()
     if (!res.ok) { setError(data.error || 'Signup failed.'); setLoading(false); return }
@@ -117,13 +118,29 @@ export default function Login() {
             <input className="input" value={businessName} onChange={e=>setBusinessName(e.target.value)} placeholder="Business name (optional)" style={{fontSize:16}}/>
             <input className="input" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="Email address" required autoComplete="email" style={{fontSize:16}}/>
             <input className="input" type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Password (min 8 chars)" minLength={8} required autoComplete="new-password" style={{fontSize:16}}/>
+            <div>
+              <label style={{fontSize:12,color:'var(--text-3)',display:'block',marginBottom:6,fontWeight:600}}>How did you hear about Wovo Media?<span style={{color:'var(--accent)'}}>*</span></label>
+              <select className="input" value={referral} onChange={e=>setReferral(e.target.value)} style={{fontSize:15}} required>
+                <option value="">Select one...</option>
+                <option value="word_of_mouth">Word of mouth / Friend</option>
+                <option value="instagram">Instagram</option>
+                <option value="tiktok">TikTok</option>
+                <option value="facebook">Facebook</option>
+                <option value="youtube">YouTube</option>
+                <option value="twitter">X / Twitter</option>
+                <option value="google">Google Search</option>
+                <option value="client_referral">Referred by a Wovo client</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
             <div className="policy-check">
               <input type="checkbox" id="terms" checked={terms} onChange={e=>setTerms(e.target.checked)}/>
               <label htmlFor="terms" style={{fontSize:12,lineHeight:1.5,color:'var(--text-2)'}}>
                 I agree to the <Link href="/terms" target="_blank" style={{color:'var(--accent)'}}>Terms</Link> and <Link href="/privacy" target="_blank" style={{color:'var(--accent)'}}>Privacy Policy</Link>
               </label>
             </div>
-            <button className="btn btn-primary btn-block" type="submit" disabled={loading||!fullName||!email||!password||!terms} style={{padding:14,fontSize:15}}>
+            <button className="btn btn-primary btn-block" type="submit" disabled={loading||!fullName||!email||!password||!terms||!referral} style={{padding:14,fontSize:15}}>
               {loading
                 ? <span style={{display:'flex',alignItems:'center',gap:8,justifyContent:'center'}}>
                     <span style={{width:15,height:15,border:'2px solid rgba(0,0,0,0.25)',borderTopColor:'#080808',borderRadius:'50%',animation:'spin 0.7s linear infinite',display:'inline-block'}}/>

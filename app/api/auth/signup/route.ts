@@ -9,7 +9,7 @@ const sb = createClient(
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 export async function POST(req: NextRequest) {
-  const { email, password, fullName, businessName } = await req.json()
+  const { email, password, fullName, businessName, referral } = await req.json()
 
   // Validate
   if (!email || !password || !fullName) {
@@ -45,6 +45,7 @@ export async function POST(req: NextRequest) {
     user_id: data.user.id,
     full_name: fullName,
     wovo_role: 'client',
+      referral_source: referral || null,
     terms_accepted_at: new Date().toISOString(),
   })
 
