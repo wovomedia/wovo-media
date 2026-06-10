@@ -5,7 +5,6 @@ import Link from 'next/link'
 
 type Msg = { role: 'user' | 'ai'; content: string; imageUrl?: string }
 
-const AVATAR = 'https://v3b.fal.media/files/b/0a9dc045/i1MJb4Rv11UqEM1NlCVX8.jpg'
 
 const IMGS = {
   hero: 'https://v3b.fal.media/files/b/0a9dc82f/qSFW82dOEK5PMHb--MQvl.jpg',
@@ -152,8 +151,8 @@ export default function Home() {
             >
               <span style={{ fontSize: 15 }}>✦</span>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: activeNav === 'chat' ? 'var(--accent)' : 'var(--text)', fontFamily: 'inherit' }}>Wovo AI Chat</div>
-                <div style={{ fontSize: 10, color: 'var(--text-3)', fontFamily: 'inherit' }}>Ask & generate images free</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: activeNav === 'chat' ? 'var(--accent)' : 'var(--text)', fontFamily: 'inherit' }}>Wovo AI</div>
+                <div style={{ fontSize: 10, color: 'var(--text-3)', fontFamily: 'inherit' }}>Chat · Images · Free tier</div>
               </div>
             </button>
           </div>
@@ -207,7 +206,7 @@ export default function Home() {
             )}
             <Link href="/meet-nova" style={{ textDecoration: 'none', display: 'block', marginTop: 6 }}>
               <button style={{ width: '100%', padding: '8px', background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-3)', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
-                ✦ Meet Nova — find your plan
+                ✦ Meet Wovo — find your plan
               </button>
             </Link>
           </div>
@@ -228,12 +227,12 @@ export default function Home() {
               {msgs.length === 0 && (
                 <div style={{ textAlign: 'center', paddingTop: 40 }}>
                   {/* Hero image behind greeting */}
-                  <div style={{ position: 'relative', borderRadius: 20, overflow: 'hidden', marginBottom: 28, height: 200 }}>
+                  <div style={{ position: 'relative', borderRadius: 16, overflow: 'hidden', marginBottom: 28, height: 180 }}>
                     <img src={IMGS.hero} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 40%' }}/>
                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(8,8,8,0.3), rgba(8,8,8,0.8))' }}/>
                     <div style={{ position: 'absolute', bottom: 20, left: 0, right: 0, textAlign: 'center' }}>
-                      <div style={{ width: 52, height: 52, borderRadius: '50%', overflow: 'hidden', margin: '0 auto 10px', border: '2px solid var(--accent)', boxShadow: '0 0 20px rgba(0,229,200,0.3)' }}>
-                        <img src={AVATAR} alt="Wovo AI" style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
+                      <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'linear-gradient(135deg,#00E5C8,#00b89c)', margin: '0 auto 10px', border: '2px solid var(--accent)', boxShadow: '0 0 20px rgba(0,229,200,0.3)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                        <span style={{ fontFamily:'Outfit,sans-serif', fontWeight:900, fontSize:22, color:'#080808', letterSpacing:'-0.04em' }}>W</span>
                       </div>
                       <h1 style={{ fontFamily: 'Outfit,sans-serif', fontSize: 22, fontWeight: 800, color: '#fff', margin: '0 0 4px', letterSpacing: '-0.02em' }}>Wovo AI</h1>
                       <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: 13, margin: 0 }}>
@@ -300,8 +299,8 @@ export default function Home() {
 
               {loading && (
                 <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 20 }}>
-                  <div style={{ width: 30, height: 30, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, border: '1.5px solid var(--accent)', marginTop: 2 }}>
-                    <img src={AVATAR} alt="AI" style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
+                  <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,#00E5C8,#00b89c)', flexShrink: 0, border: '1.5px solid var(--accent)', marginTop: 2, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                    <span style={{ fontFamily:'Outfit,sans-serif', fontWeight:900, fontSize:13, color:'#080808' }}>W</span>
                   </div>
                   <div style={{ padding: '14px 18px', background: 'var(--bg-2)', borderRadius: 14, borderBottomLeftRadius: 4 }}>
                     <div style={{ display: 'flex', gap: 5 }}>

@@ -81,7 +81,7 @@ export default function WovoAIFree() {
     }
   }
 
-  const AVATAR = 'https://v3b.fal.media/files/b/0a9dc045/i1MJb4Rv11UqEM1NlCVX8.jpg'
+  const AVATAR_STYLE = {width:'100%',height:'100%',background:'linear-gradient(135deg,#00E5C8,#00b89c)',display:'flex',alignItems:'center',justifyContent:'center'} as const
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
@@ -107,8 +107,8 @@ export default function WovoAIFree() {
 
         {msgs.length === 0 && (
           <div style={{ textAlign: 'center', paddingTop: 48 }}>
-            <div style={{ width: 64, height: 64, borderRadius: '50%', overflow: 'hidden', margin: '0 auto 14px', border: '2px solid var(--accent)', boxShadow: '0 0 24px rgba(0,229,200,0.2)' }}>
-              <img src={AVATAR} alt="Wovo AI" style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
+            <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'linear-gradient(135deg,#00E5C8,#00b89c)', margin: '0 auto 14px', border: '2px solid var(--accent)', boxShadow: '0 0 24px rgba(0,229,200,0.2)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <span style={{ fontFamily:'Outfit,sans-serif', fontWeight:900, fontSize:26, color:'#080808' }}>W</span>
             </div>
             <h2 style={{ fontFamily: 'Outfit,sans-serif', fontSize: 22, fontWeight: 800, color: 'var(--text)', marginBottom: 6, letterSpacing: '-0.02em' }}>Wovo AI</h2>
             <p style={{ color: 'var(--text-3)', fontSize: 14, marginBottom: 8 }}>
