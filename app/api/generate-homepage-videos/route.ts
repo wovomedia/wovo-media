@@ -56,15 +56,22 @@ export async function GET(req: NextRequest) {
 
   // Poll job status
   if (requestId) {
-    const res = await fetch(
-      `https://queue.fal.run/fal-ai/bytedance/seedance-1-5/image-to-video/requests/${requestId}`,
-      { headers: { 'Authorization': `Key ${FAL_KEY}` } }
-    )
-    const data = await res.json()
-    return NextResponse.json({
-      status: data.status === 'COMPLETED' ? 'completed' : data.status === 'FAILED' ? 'failed' : 'processing',
-      videoUrl: data.video?.url || null
-    })
+    try {
+      const res = await fetch(
+        `https://queue.fal.run/fal-ai/bytedance/seedance-1-5/image-to-video/requests/${requestId}`,
+        { headers: { 'Authorization': `Key ${FAL_KEY}` } }
+      )
+      const text = await res.text()
+      if (!text || text.trim() === '') {
+        return NextResponse.json({ status: 'processing', videoUrl: null })
+      }
+      const data = JSON.parse(text)
+      const status = data.status === 'COMPLETED' ? 'completed' : data.status === 'FAILED' ? 'failed' : 'processing'
+      const videoUrl = data.video?.url || data.output?.video?.url || null
+      return NextResponse.json({ status, videoUrl })
+    } catch {
+      return NextResponse.json({ status: 'processing', videoUrl: null })
+    }
   }
 
   return NextResponse.json({ error: 'Missing params' }, { status: 400 })
