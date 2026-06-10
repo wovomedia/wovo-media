@@ -2,13 +2,13 @@
 import { useState } from 'react'
 import Link from 'next/link'
 
-// Canva-generated images — permanently stored via Canva design IDs
+// fal.ai Flux Dev generated images — permanent URLs
 const IMGS = {
-  hero: 'https://export-download.canva.com/P38qM/DAHMG-P38qM/-1/0/0001-7894190142243735253.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUH5AO7UJ26%2F20260609%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260609T082743Z&X-Amz-Expires=46898&X-Amz-Signature=99d70ed114b865e023951c382bef47b8770fe7d1903fb75f81e699b3006a5d40&X-Amz-SignedHeaders=host%3Bx-amz-expected-bucket-owner&response-expires=Tue%2C%2009%20Jun%202026%2021%3A29%3A21%20GMT',
-  social: 'https://export-download.canva.com/OXLjY/DAHMGxOXLjY/-1/0/0001-4578414915737400910.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUH5AO7UJ26%2F20260609%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260609T012524Z&X-Amz-Expires=72052&X-Amz-Signature=4eb861466be2baee5037faac2cacaf5fe934ee9dee682c71291d68344a94ed04&X-Amz-SignedHeaders=host%3Bx-amz-expected-bucket-owner&response-expires=Tue%2C%2009%20Jun%202026%2021%3A26%3A16%20GMT',
-  ai: 'https://export-download.canva.com/toFgU/DAHMG3toFgU/-1/0/0001-6364092167592370930.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUH5AO7UJ26%2F20260609%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260609T074857Z&X-Amz-Expires=47441&X-Amz-Signature=4e0598f0fcc501c403cd406953d8c67d08a33809dbc2d6e3e7241b8afb9df1a9&X-Amz-SignedHeaders=host%3Bx-amz-expected-bucket-owner&response-expires=Tue%2C%2009%20Jun%202026%2020%3A59%3A38%20GMT',
-  drone: 'https://export-download.canva.com/uzGrk/DAHMG9uzGrk/-1/0/0001-2779226865631604278.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUH5AO7UJ26%2F20260608%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260608T235319Z&X-Amz-Expires=76524&X-Amz-Signature=4395969801995b2f47df6405d0c912c20039f1183ec7707dc34604c1b2058c5c&X-Amz-SignedHeaders=host%3Bx-amz-expected-bucket-owner&response-expires=Tue%2C%2009%20Jun%202026%2021%3A08%3A43%20GMT',
-  cinAd: 'https://export-download.canva.com/V-Q3Y/DAHMG4V-Q3Y/-1/0/0001-6727757837845582073.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUH5AO7UJ26%2F20260608%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260608T225316Z&X-Amz-Expires=82570&X-Amz-Signature=36dbaf2c13a6d2065249c99b378c10f03e25950624e65c25974a276b2459acf1&X-Amz-SignedHeaders=host%3Bx-amz-expected-bucket-owner&response-expires=Tue%2C%2009%20Jun%202026%2021%3A49%3A26%20GMT',
+  hero: 'https://v3b.fal.media/files/b/0a9db43e/-uLoWg3o-1RSESNxB1W5r.jpg',
+  social: 'https://v3b.fal.media/files/b/0a9db43e/yseDTWwlwqOhrAgFbcTlM.jpg',
+  ai: 'https://v3b.fal.media/files/b/0a9db43e/1ur9TGpHGvlMFZDARj0Ky.jpg',
+  drone: 'https://v3b.fal.media/files/b/0a9db43d/H_XDi7HNUnec0eLey58zO.jpg',
+  cinAd: 'https://v3b.fal.media/files/b/0a9db43e/sio-XwxTiP6K8ZGa5SNxp.jpg',
 }
 
 export default function Home() {
