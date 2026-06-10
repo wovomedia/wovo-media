@@ -30,8 +30,21 @@ const PAID_SIDEBAR = [
 ]
 
 export default function Home() {
-  const [chats, setChats] = useState<Chat[]>([{ id: '1', title: 'New chat', msgs: [], createdAt: Date.now() }])
-  const [activeChatId, setActiveChatId] = useState('1')
+  const [chats, setChats] = useState<Chat[]>(() => {
+    if (typeof window === 'undefined') return [{ id: '1', title: 'New chat', msgs: [], createdAt: Date.now() }]
+    try {
+      const saved = localStorage.getItem('wovo_chats')
+      if (saved) {
+        const parsed = JSON.parse(saved) as Chat[]
+        if (parsed.length > 0) return parsed
+      }
+    } catch {}
+    return [{ id: '1', title: 'New chat', msgs: [], createdAt: Date.now() }]
+  })
+  const [activeChatId, setActiveChatId] = useState<string>(() => {
+    if (typeof window === 'undefined') return '1'
+    try { return localStorage.getItem('wovo_active_chat') || '1' } catch { return '1' }
+  })
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
@@ -55,6 +68,17 @@ export default function Home() {
     })
   }, [])
 
+  // Save chats to localStorage whenever they change (device-private)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      // Keep max 50 chats, trim old ones
+      const toSave = chats.slice(-50)
+      localStorage.setItem('wovo_chats', JSON.stringify(toSave))
+      localStorage.setItem('wovo_active_chat', activeChatId)
+    } catch {}
+  }, [chats, activeChatId])
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [msgs, loading])
@@ -66,6 +90,30 @@ export default function Home() {
     setUploadedImg(null)
     setUploadedImgUrl(null)
     setShowAuthWall(false)
+  }
+
+  const deleteChat = (id: string) => {
+    setChats(c => {
+      const remaining = c.filter(chat => chat.id !== id)
+      if (remaining.length === 0) {
+        const newId = Date.now().toString()
+        setActiveChatId(newId)
+        return [{ id: newId, title: 'New chat', msgs: [], createdAt: Date.now() }]
+      }
+      if (id === activeChatId) setActiveChatId(remaining[remaining.length - 1].id)
+      return remaining
+    })
+  }
+
+  const deleteMessage = (chatId: string, msgIndex: number) => {
+    setChats(c => c.map(chat => chat.id === chatId
+      ? { ...chat, msgs: chat.msgs.filter((_, i) => i !== msgIndex) }
+      : chat
+    ))
+  }
+
+  const clearChat = (id: string) => {
+    setChats(c => c.map(chat => chat.id === id ? { ...chat, msgs: [], title: 'New chat' } : chat))
   }
 
   const updateChat = (id: string, msgs: Msg[]) => {
@@ -169,13 +217,16 @@ export default function Home() {
             <>
               <div style={{ fontSize: 10, color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '4px 8px 6px' }}>Chats</div>
               {[...chats].reverse().map(chat => (
-                <button key={chat.id} onClick={() => setActiveChatId(chat.id)} style={{
-                  width: '100%', padding: '8px 10px', borderRadius: 8, border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', marginBottom: 2,
-                  background: chat.id === activeChatId ? 'var(--bg-2)' : 'transparent',
-                  borderLeft: chat.id === activeChatId ? '2px solid var(--accent)' : '2px solid transparent',
-                }}>
-                  <div style={{ fontSize: 12, color: chat.id === activeChatId ? 'var(--text)' : 'var(--text-2)', fontWeight: chat.id === activeChatId ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{chat.title}</div>
-                </button>
+                <div key={chat.id} style={{ position: 'relative', marginBottom: 2 }} className="chat-item-wrap">
+                  <button onClick={() => setActiveChatId(chat.id)} style={{
+                    width: '100%', padding: '8px 30px 8px 10px', borderRadius: 8, border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
+                    background: chat.id === activeChatId ? 'var(--bg-2)' : 'transparent',
+                    borderLeft: chat.id === activeChatId ? '2px solid var(--accent)' : '2px solid transparent',
+                  }}>
+                    <div style={{ fontSize: 12, color: chat.id === activeChatId ? 'var(--text)' : 'var(--text-2)', fontWeight: chat.id === activeChatId ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{chat.title}</div>
+                  </button>
+                  <button onClick={e => { e.stopPropagation(); deleteChat(chat.id) }} className="chat-delete-btn" title="Delete chat" style={{ position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: 14, padding: '2px 4px', borderRadius: 4, opacity: 0, transition: 'opacity 0.15s' }}>×</button>
+                </div>
               ))}
             </>
           )}
@@ -255,7 +306,7 @@ export default function Home() {
             )}
 
             {msgs.map((m, i) => (
-              <div key={i} style={{ marginBottom: 18, display: 'flex', gap: 10, flexDirection: m.role === 'user' ? 'row-reverse' : 'row', alignItems: 'flex-start' }}>
+              <div key={i} style={{ marginBottom: 18, display: 'flex', gap: 10, flexDirection: m.role === 'user' ? 'row-reverse' : 'row', alignItems: 'flex-start', position: 'relative' }} className="msg-wrap">
                 {m.role === 'ai' && <WLogo size={28}/>}
                 <div style={{ maxWidth: '82%' }}>
                   {m.uploadedImg && (
@@ -290,6 +341,7 @@ export default function Home() {
                     </div>
                   )}
                 </div>
+                <button onClick={() => deleteMessage(activeChatId, i)} className="msg-delete-btn" title="Delete message" style={{ position: 'absolute', top: 0, right: m.role === 'user' ? 'auto' : 0, left: m.role === 'user' ? 0 : 'auto', background: 'var(--bg-3)', border: '1px solid var(--border)', color: 'var(--text-3)', cursor: 'pointer', fontSize: 11, padding: '2px 6px', borderRadius: 5, opacity: 0, transition: 'opacity 0.15s', whiteSpace: 'nowrap' }}>✕ delete</button>
               </div>
             ))}
 
@@ -370,7 +422,11 @@ export default function Home() {
         </div>
       </div>
 
-      <style>{`@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}`}</style>
+      <style>{`
+        @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+        .chat-item-wrap:hover .chat-delete-btn { opacity: 1 !important; }
+        .msg-wrap:hover .msg-delete-btn { opacity: 1 !important; }
+      `}</style>
     </div>
   )
 }
