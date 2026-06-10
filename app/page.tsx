@@ -299,7 +299,7 @@ export default function Home() {
       {/* ── NOVA FLOATING HELP BUTTON ─────────── */}
       <a href="/meet-nova" style={{position:'fixed',bottom:24,right:24,zIndex:999,display:'flex',alignItems:'center',gap:10,background:'var(--accent)',borderRadius:40,padding:'12px 20px 12px 14px',boxShadow:'0 4px 24px rgba(0,229,200,0.35)',textDecoration:'none',animation:'pulse-nova 2.5s ease-in-out infinite'}}>
         <div style={{width:36,height:36,borderRadius:'50%',overflow:'hidden',border:'2px solid rgba(0,0,0,0.15)',flexShrink:0}}>
-          <img src="https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&q=80" alt="Nova" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+          <img src="https://v3b.fal.media/files/b/0a9dc045/i1MJb4Rv11UqEM1NlCVX8.jpg" alt="Nova" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
         </div>
         <div>
           <div style={{fontSize:12,fontWeight:800,color:'#080808',lineHeight:1}}>Nova</div>

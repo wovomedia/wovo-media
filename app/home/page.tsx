@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase'
 import AppShell from '@/components/AppShell'
 import Link from 'next/link'
 
-const TYLER = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80'
+const TYLER = 'https://v3b.fal.media/files/b/0a9dc045/i1MJb4Rv11UqEM1NlCVX8.jpg'
 
 export default function Home() {
   const [client, setClient] = useState<any>(null)
