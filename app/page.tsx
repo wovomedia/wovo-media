@@ -167,8 +167,8 @@ export default function Home() {
     const chatId = activeChatId
     const lower = prompt.toLowerCase()
     const imgPreview = uploadedImg
-    const wantsEdit = !!imgPreview && /edit|change|remove|add|make.*look|background|color|replace|swap/i.test(lower)
-    const wantsImage = !imgPreview && /make.*(image|photo|picture|poster|logo)|generate.*(image|photo|picture)|photo of|picture of|image of/i.test(lower)
+    const wantsEdit = !!imgPreview && /edit|change|remove|add|make.*look|background|color|replace|swap|put.*in|insert|photo of me/i.test(lower)
+    const wantsImage = !imgPreview && /\b(make|generate|create|draw|design)\b.*(image|photo|picture|poster|logo|graphic)|\b(photo|picture|image)\s+of\b/i.test(lower)
     const wantsPaid = /make.*(video|ad|website|series)|generate.*video|cinematic|wovo os|clone|avatar/i.test(lower)
 
     // Add user message locally + save to server
@@ -196,7 +196,11 @@ export default function Home() {
     const res = await fetch('/api/wovo-free', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, prompt, userId, sessionId, imageBase64: imgPreview || undefined })
+      body: JSON.stringify({
+        action, prompt, userId, sessionId,
+        imageBase64: imgPreview || undefined,
+        history: msgs.slice(-12).map(m => ({ role: m.role, content: m.content }))
+      })
     })
     const data = await res.json()
     setLoading(false)

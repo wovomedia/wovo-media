@@ -74,23 +74,32 @@ async function checkLimit(userId: string | null, action: string, sessionId: stri
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  const { action, prompt, userId, sessionId } = body
+  const { action, prompt, userId, sessionId, history } = body
 
-  const check = await checkLimit(userId || null, action, sessionId || 'anon')
+  const limitAction = (action === 'edit_image') ? 'image' : action
+  const check = await checkLimit(userId || null, limitAction, sessionId || 'anon')
   if (!check.allowed) {
     return NextResponse.json({ error: check.message, reason: check.reason, requiresAuth: !userId, requiresPlan: check.reason === 'paid' || check.reason === 'limit' }, { status: 403 })
   }
 
   // Handle chat
   if (action === 'chat') {
+    // Build conversation history for context
+    const historyMsgs = (history || []).slice(-10).map((m: any) => ({
+      role: m.role === 'ai' ? 'assistant' : 'user',
+      content: m.content || ''
+    })).filter((m: any) => m.content)
+    // Add current message
+    const messages = [...historyMsgs, { role: 'user', content: prompt }]
+
     const chatRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY!, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
         model: 'claude-sonnet-4-5',
-        max_tokens: 500,
-        system: `You are Wovo AI, a smart helpful assistant made by Wovo Media. You can answer any question on any topic — general knowledge, advice, writing, math, coding, life questions, anything. You're especially knowledgeable about social media, digital marketing, content creation, and growing a business online. Be conversational, direct, and genuinely helpful. Keep responses concise unless detail is needed. Never mention Claude, Anthropic, or any third-party AI. If someone asks about making videos, websites, cinematic ads, or AI employees for their business, mention those are available as paid features at wovomedia.com but don't push it unless relevant.`,
-        messages: [{ role: 'user', content: prompt }]
+        max_tokens: 800,
+        system: `You are Wovo AI, a smart helpful assistant made by Wovo Media. You can answer any question on any topic — general knowledge, advice, writing, math, coding, life questions, anything. You're especially good at social media, digital marketing, content creation, and business growth. Be conversational, direct, and genuinely helpful. Remember context from earlier in the conversation. Never mention Claude, Anthropic, or any third-party AI tools — you are Wovo AI. You CAN generate images (user can say "make me a photo of X") and edit uploaded images. If someone asks about making videos, cinematic ads, websites, or WOVO OS for their business, those are paid features at wovomedia.com.`,
+        messages
       })
     })
     const data = await chatRes.json()
