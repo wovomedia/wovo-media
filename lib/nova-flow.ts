@@ -1,200 +1,124 @@
 export type NovaNode = {
   id: string
-  script: string        // What Nova says
-  options?: {
-    label: string       // Button text shown to user
-    next: string        // Which node to go to
-  }[]
-  outcome?: 'wovo_ai' | 'premium' | 'both'  // Terminal nodes
+  script: string
+  options?: { label: string; next: string }[]
+  outcome?: 'wovo_ai' | 'premium' | 'both'
   cta?: { label: string; url: string }
 }
 
+// FAST flow — max 3 questions, under 90 seconds total
 export const NOVA_FLOW: Record<string, NovaNode> = {
+
   intro: {
     id: 'intro',
-    script: `Hey! I'm Nova, and I'm here to help you figure out the best way to grow your business online with Wovo Media. I just have a few quick questions. First one — what kind of business are you running?`,
+    script: `Hey! I'm Nova. Two quick questions and I'll tell you exactly which Wovo plan fits your business. What type of business do you run?`,
     options: [
-      { label: '🍽️ Restaurant or food & drink', next: 'restaurant' },
-      { label: '🛍️ Retail or boutique', next: 'retail' },
-      { label: '💼 Service business', next: 'service' },
-      { label: '🏥 Healthcare or wellness', next: 'service' },
-      { label: '🎯 Something else', next: 'other' },
+      { label: '🍽️ Restaurant / Food', next: 'food' },
+      { label: '🛍️ Retail / Boutique', next: 'product' },
+      { label: '💼 Service Business', next: 'service' },
+      { label: '📱 Content Creator', next: 'creator' },
     ]
   },
 
-  restaurant: {
-    id: 'restaurant',
-    script: `Restaurants are honestly our best category — daily specials, behind-the-scenes videos, promotions — they perform incredibly well on social. Quick question: do you have a team, or is it mostly just you running things?`,
+  food: {
+    id: 'food',
+    script: `Restaurants are our strongest category — daily specials, behind-the-scenes, promotions. We have clients hitting four million views a month. What's your monthly budget for content?`,
     options: [
-      { label: '👥 I have a team of staff', next: 'has_team' },
-      { label: '🙋 Just me for now', next: 'solo' },
+      { label: '💰 Under $100/mo', next: 'budget_low' },
+      { label: '💰 $100–$300/mo', next: 'budget_mid' },
+      { label: '💰 $300+/mo', next: 'budget_high' },
     ]
   },
 
-  retail: {
-    id: 'retail',
-    script: `Boutiques and retail brands do amazing with consistent content — new arrivals, styling tips, behind the scenes. Love it. Are you mostly running things yourself, or do you have staff who could also be part of your content?`,
+  product: {
+    id: 'product',
+    script: `Boutiques and retail brands crush it with new arrivals, styling videos, and product showcases. What are you spending on content right now?`,
     options: [
-      { label: '👥 I have a team', next: 'has_team' },
-      { label: '🙋 Just me', next: 'solo' },
+      { label: '💰 Under $100/mo', next: 'budget_low' },
+      { label: '💰 $100–$300/mo', next: 'budget_mid' },
+      { label: '💰 $300+/mo', next: 'budget_high' },
     ]
   },
 
   service: {
     id: 'service',
-    script: `Service businesses can build huge trust through content — showing your expertise, your team, your results. That's exactly what we help with. Do you have staff or is it mainly you?`,
+    script: `Service businesses build massive trust through content — showing your work, your team, your results. What's your content budget right now?`,
     options: [
-      { label: '👥 I have a team', next: 'has_team' },
-      { label: '🙋 Solo for now', next: 'solo' },
+      { label: '💰 Under $100/mo', next: 'budget_low' },
+      { label: '💰 $100–$300/mo', next: 'budget_mid' },
+      { label: '💰 $300+/mo', next: 'budget_high' },
     ]
   },
 
-  other: {
-    id: 'other',
-    script: `No worries — we work with all kinds of businesses. Let me ask you something that'll help me point you in the right direction. What's your current situation with social media?`,
+  creator: {
+    id: 'creator',
+    script: `Love it. AI characters, consistent posting, multiple platforms — Wovo AI was basically built for creators. What's your monthly budget?`,
     options: [
-      { label: '😬 Barely posting at all', next: 'not_posting' },
-      { label: '📱 Posting but not growing', next: 'not_growing' },
-      { label: '🤔 I want someone to handle it for me', next: 'wants_managed' },
+      { label: '💰 Under $100/mo', next: 'budget_low' },
+      { label: '💰 $100–$300/mo', next: 'budget_mid' },
+      { label: '💰 $300+/mo', next: 'budget_high' },
     ]
   },
 
-  has_team: {
-    id: 'has_team',
-    script: `That's awesome — having a team is actually a huge advantage with Wovo AI. Our Growth plan lets you create AI characters for every single person on your team, not just yourself. So your whole staff is posting consistently. Now, what's your monthly budget looking like for marketing?`,
+  budget_low: {
+    id: 'budget_low',
+    script: `Perfect — Wovo AI Starter at twenty-nine dollars a month gets you an AI character, three posts per week, ready-to-copy captions, and full posting tutorials. Most clients see real growth within the first thirty days.`,
     options: [
-      { label: '💰 Under $100/month', next: 'budget_low_team' },
-      { label: '💰 $100 to $500/month', next: 'budget_mid' },
-      { label: '💰 $500 or more', next: 'budget_high' },
-    ]
-  },
-
-  solo: {
-    id: 'solo',
-    script: `Totally fine — you'd be surprised how much our Starter plan can do for just one person. Your own AI character, three to five posts a week, ready-to-copy captions. You don't have to do anything. What's your monthly budget for marketing?`,
-    options: [
-      { label: '💰 Under $50/month', next: 'budget_very_low' },
-      { label: '💰 $50 to $150/month', next: 'budget_low_solo' },
-      { label: '💰 $150 or more', next: 'budget_mid' },
-    ]
-  },
-
-  not_posting: {
-    id: 'not_posting',
-    script: `Honestly, that's exactly who Wovo AI is built for. You don't need to know what to post or when — your AI character handles all of it. Posts, captions, everything. What matters most to you right now?`,
-    options: [
-      { label: '⚡ I just need to start posting consistently', next: 'budget_low_solo' },
-      { label: '🚀 I want real results fast, budget isn\'t the issue', next: 'budget_high' },
-    ]
-  },
-
-  not_growing: {
-    id: 'not_growing',
-    script: `That's one of the most common things I hear. You're putting in the effort but the algorithm isn't rewarding it. The issue is usually consistency and content quality. We fix both. Are you open to a strategy where we handle everything — filming included?`,
-    options: [
-      { label: '🎬 Yes, I want real filming and full management', next: 'wants_premium' },
-      { label: '🤖 I\'d start with AI content first', next: 'budget_mid' },
-    ]
-  },
-
-  wants_managed: {
-    id: 'wants_managed',
-    script: `Then you're describing Wovo Media Premium exactly. We come to you — filming, drone, photography, website, social media — everything managed by our team. You focus on running your business. We handle your entire online presence. Want to learn more?`,
-    options: [
-      { label: '🔥 Yes, tell me more about Premium', next: 'wants_premium' },
-      { label: '💡 What about a more affordable option?', next: 'budget_mid' },
-    ]
-  },
-
-  wants_premium: {
-    id: 'wants_premium',
-    script: `Wovo Media Premium is our full-service option. Our team comes on-site to film, capture drone footage, do photography, manage your social accounts, and build your website. Everything handled for you. Pricing is custom — usually three hundred to two thousand a month. The best next step is a free strategy call. No commitment, just a real conversation about what's possible.`,
-    options: [
-      { label: '📅 Book a free strategy call', next: 'close_premium' },
-      { label: '🤔 Still considering — what\'s Wovo AI?', next: 'explain_ai' },
-    ]
-  },
-
-  budget_very_low: {
-    id: 'budget_very_low',
-    script: `Totally understandable — that's exactly why we built Wovo AI Starter. For twenty-nine dollars a month — literally less than a tank of gas — you get an AI character built around you, three to five posts a week, and ready-to-copy captions. No filming, no editing, no effort on your end. Want to get started?`,
-    options: [
-      { label: '✅ Yes, let\'s do the Starter plan', next: 'close_ai_starter' },
-      { label: '👀 Tell me more first', next: 'explain_ai' },
-    ]
-  },
-
-  budget_low_solo: {
-    id: 'budget_low_solo',
-    script: `Perfect — Wovo AI Starter is exactly right for you. Twenty-nine dollars a month, your own AI character, consistent posts every week. You'll never have to stress about what to post again. Want to jump in?`,
-    options: [
-      { label: '🚀 Start Wovo AI Starter — $29/mo', next: 'close_ai_starter' },
-      { label: '📅 I want to talk to someone first', next: 'close_call' },
-    ]
-  },
-
-  budget_low_team: {
-    id: 'budget_low_team',
-    script: `For a team, Wovo AI Growth at forty-nine a month is perfect. Every team member gets their own AI character. Five posts a week, unlimited edits. Your whole team stays active and visible.`,
-    options: [
-      { label: '🚀 Start Wovo AI Growth — $49/mo', next: 'close_ai_growth' },
-      { label: '📅 Book a call to learn more', next: 'close_call' },
+      { label: '🚀 Start for $29/mo', next: 'close_starter' },
+      { label: '📞 Talk to someone first', next: 'close_call' },
     ]
   },
 
   budget_mid: {
     id: 'budget_mid',
-    script: `Two great options for you — Wovo AI Growth at forty-nine a month for your whole team, or Premium with real filming if you're ready for that. Which direction feels right?`,
+    script: `Growth plan at forty-nine dollars a month is perfect. You get AI characters for your whole team, five posts a week, the AI video generator, and unlimited edits. It's our most popular plan by far.`,
     options: [
-      { label: '🤖 Wovo AI Growth — $49/mo', next: 'close_ai_growth' },
-      { label: '🎬 I want real filming — let\'s talk Premium', next: 'close_premium' },
+      { label: '🚀 Get Growth — $49/mo', next: 'close_growth' },
+      { label: '📞 Talk to someone first', next: 'close_call' },
     ]
   },
 
   budget_high: {
     id: 'budget_high',
-    script: `With that kind of budget, you should seriously consider Wovo Media Premium. Real filming, drone footage, photography, website, full account management — everything done for you. Businesses we manage are hitting millions of views a month. I'd love to get you on a quick strategy call so we can map out exactly what that looks like for your business.`,
+    script: `At that budget you've got two great options — Wovo AI Pro at seventy-nine a month for full AI content, or Wovo Media Premium where our real team films, edits, and posts for you. Which sounds better?`,
     options: [
-      { label: '📅 Book a free strategy call', next: 'close_premium' },
-      { label: '🤖 Start with Wovo AI first', next: 'close_ai_growth' },
+      { label: '🤖 AI Pro — $79/mo', next: 'close_pro' },
+      { label: '🎬 Full-Service Premium', next: 'close_premium' },
     ]
   },
 
-  explain_ai: {
-    id: 'explain_ai',
-    script: `Wovo AI creates an AI character based on you or your team. It generates ready-to-post content every week — captions, post ideas, everything tailored to your business. You review it, approve it, and post. No filming, no editing, no stress. Starter is twenty-nine a month for just you. Growth is forty-nine and includes AI characters for your whole team. Which one sounds right?`,
-    options: [
-      { label: '🙋 Just me — Starter at $29', next: 'close_ai_starter' },
-      { label: '👥 My team too — Growth at $49', next: 'close_ai_growth' },
-      { label: '🎬 I want the full Premium experience', next: 'close_premium' },
-    ]
+  close_starter: {
+    id: 'close_starter',
+    script: `Let's get you started. Click below to subscribe — your account is created automatically and you'll be posting within the hour.`,
+    outcome: 'wovo_ai',
+    cta: { label: 'Start Wovo AI — $29/mo →', url: 'https://pay.wovomedia.com/b/7sY6oH3DRdI71zu0gocIE0Y' }
   },
 
-  close_ai_starter: {
-    id: 'close_ai_starter',
-    script: `Love it — let's get you started. Your AI character will be ready in no time. Welcome to Wovo Media!`,
+  close_growth: {
+    id: 'close_growth',
+    script: `Awesome choice. Growth is our most popular plan — click below and you're set up instantly. I'll see you on the other side.`,
     outcome: 'wovo_ai',
-    cta: { label: 'Start Wovo AI Starter — $29/mo →', url: '/wovo-ai?plan=starter' }
+    cta: { label: 'Get Growth — $49/mo →', url: 'https://pay.wovomedia.com/b/fZu6oH6Q3fQf3HC0gocIE0Z' }
   },
 
-  close_ai_growth: {
-    id: 'close_ai_growth',
-    script: `Great choice! Your whole team is going to love this. Let's get everyone their own AI character. Welcome to Wovo Media!`,
+  close_pro: {
+    id: 'close_pro',
+    script: `Pro AI is the full package — daily posts, Stories, multiple brands, image ad generator. Click below and let's get you growing.`,
     outcome: 'wovo_ai',
-    cta: { label: 'Start Wovo AI Growth — $49/mo →', url: '/wovo-ai?plan=growth' }
+    cta: { label: 'Get Pro AI — $79/mo →', url: 'https://pay.wovomedia.com/b/aFafZhfmzfQf1zu2owcIE10' }
   },
 
   close_premium: {
     id: 'close_premium',
-    script: `You're going to love Premium. Book a free strategy call and our team will build a custom plan for you. No pressure — just a real conversation about what's possible.`,
+    script: `Premium is where we really shine. Real filming, drone, photography, website builds — our team handles everything. Book a free call and we'll put together a custom plan for you.`,
     outcome: 'premium',
-    cta: { label: 'Book a Free Strategy Call →', url: 'https://calendly.com/wovomedia/wovo-media-strategy-call' }
+    cta: { label: 'Book a Free Strategy Call →', url: 'https://calendly.com/wovomedia/wovo-media-premium-strategy-call' }
   },
 
   close_call: {
     id: 'close_call',
-    script: `Let's talk! Book a free call and we'll figure out exactly what fits your business. Takes about twenty minutes and there's zero commitment.`,
+    script: `No problem at all. Book a free fifteen-minute call and we'll walk you through exactly what works for your business. Zero pressure.`,
     outcome: 'both',
-    cta: { label: 'Book a Free Strategy Call →', url: 'https://calendly.com/wovomedia/wovo-media-strategy-call' }
+    cta: { label: 'Book a Free Call →', url: 'https://calendly.com/wovomedia/wovo-media-premium-strategy-call' }
   },
 }

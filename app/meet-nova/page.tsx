@@ -219,7 +219,7 @@ export default function MeetNova() {
             {/* Waiting for video to finish */}
             {node.options && !showOptions && videoState === 'playing' && (
               <div style={{textAlign:'center',padding:'8px 0'}}>
-                <p style={{fontSize:13,color:'rgba(255,255,255,0.25)',margin:0}}>Watch Nova finish speaking, then choose your answer</p>
+                <p style={{fontSize:13,color:'rgba(255,255,255,0.25)',margin:0}}>Watch Nova — or skip straight to the options</p>
                 <button onClick={()=>setShowOptions(true)} style={{background:'none',border:'none',color:'rgba(255,255,255,0.3)',fontSize:12,cursor:'pointer',marginTop:8,fontFamily:'inherit'}}>Skip to options →</button>
               </div>
             )}
