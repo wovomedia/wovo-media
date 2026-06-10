@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
 // fal.ai Flux Dev generated images — permanent URLs
@@ -13,6 +13,35 @@ const IMGS = {
 
 export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [videos, setVideos] = useState<Record<string,string>>({})
+
+  useEffect(() => {
+    // Auto-generate and swap in background videos
+    const generate = async (type: string) => {
+      try {
+        const r = await fetch('/api/generate-homepage-videos', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ type })
+        })
+        const { requestId } = await r.json()
+        if (!requestId) return
+        // Poll until done
+        for (let i = 0; i < 30; i++) {
+          await new Promise(res => setTimeout(res, 8000))
+          const poll = await fetch(`/api/generate-homepage-videos?id=${requestId}`)
+          const d = await poll.json()
+          if (d.status === 'completed' && d.videoUrl) {
+            setVideos(v => ({...v, [type]: d.videoUrl}))
+            return
+          }
+          if (d.status === 'failed') return
+        }
+      } catch {}
+    }
+    generate('hero')
+    generate('ai')
+    generate('drone')
+  }, [])
 
   return (
     <div style={{background:'var(--bg)',minHeight:'100vh',overflowX:'hidden'}}>
@@ -53,7 +82,7 @@ export default function Home() {
       {/* ── HERO — full bleed image ──────────────── */}
       <section style={{position:'relative',height:'92vh',minHeight:520,display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
         <video autoPlay muted loop playsInline style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',objectPosition:'center'}}>
-          <source src="https://export-download.canva.com/xSqN8/DAHMIGxSqN8/-1/0-187405300476265060.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUH5AO7UJ26%2F20260609%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260609T234234Z&X-Amz-Expires=8115&X-Amz-Signature=2ecc9954b9d242b0448ad71f5c835fdddbad12ecd35ae9633211329b91860c7f&X-Amz-SignedHeaders=host%3Bx-amz-expected-bucket-owner&response-expires=Wed%2C%2010%20Jun%202026%2001%3A57%3A49%20GMT" type="video/mp4"/>
+          <source src={videos.hero ||"https://export-download.canva.com/xSqN8/DAHMIGxSqN8/-1/0-187405300476265060.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUH5AO7UJ26%2F20260609%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260609T234234Z&X-Amz-Expires=8115&X-Amz-Signature=2ecc9954b9d242b0448ad71f5c835fdddbad12ecd35ae9633211329b91860c7f&X-Amz-SignedHeaders=host%3Bx-amz-expected-bucket-owner&response-expires=Wed%2C%2010%20Jun%202026%2001%3A57%3A49%20GMT" } type="video/mp4"/>
           <img src={IMGS.hero} alt="Wovo Media" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}}/>
         </video>
         <div style={{position:'absolute',inset:0,background:'linear-gradient(to bottom, rgba(8,8,8,0.55) 0%, rgba(8,8,8,0.3) 50%, rgba(8,8,8,0.85) 100%)'}}/>
