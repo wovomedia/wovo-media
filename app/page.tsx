@@ -1,8 +1,12 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
-// fal.ai permanent image URLs
+type Msg = { role: 'user' | 'ai'; content: string; imageUrl?: string }
+
+const AVATAR = 'https://v3b.fal.media/files/b/0a9dc045/i1MJb4Rv11UqEM1NlCVX8.jpg'
+
 const IMGS = {
   hero: 'https://v3b.fal.media/files/b/0a9dc82f/qSFW82dOEK5PMHb--MQvl.jpg',
   social: 'https://v3b.fal.media/files/b/0a9dc82f/e43qNXw5XXtLdWq6XTQWQ.jpg',
@@ -11,312 +15,359 @@ const IMGS = {
   cinAd: 'https://v3b.fal.media/files/b/0a9dc82f/B6tH2UjRVW9J90tvdjJF9.jpg',
 }
 
-export default function Home() {
-  const [menuOpen, setMenuOpen] = useState(false)
+const NAV_ITEMS = [
+  { id: 'chat', icon: '✦', label: 'Wovo AI', sub: 'Chat + Image gen' },
+  { id: 'wovo-ai', icon: '⚡', label: 'AI Content Plans', sub: 'From $29/mo', href: '/wovo-ai' },
+  { id: 'cinematic', icon: '🎬', label: 'Cinematic Ads', sub: '$149/mo', href: '/wovo-ai?tab=cinematic' },
+  { id: 'websites', icon: '🌐', label: 'Website Builder', sub: '$99/mo', href: '/wovo-ai?tab=website' },
+  { id: 'wovo-os', icon: '🤖', label: 'WOVO OS', sub: 'AI Employee', href: '/wovo-os' },
+  { id: 'premium', icon: '🎥', label: 'Premium', sub: 'Full-service', href: '#premium-section' },
+]
 
+const SUGGESTIONS = [
+  'Write a caption for a restaurant special',
+  'How do I get more Instagram followers?',
+  'Make me a photo of a modern coffee shop',
+  'What content works best for restaurants?',
+]
+
+export default function Home() {
+  const [msgs, setMsgs] = useState<Msg[]>([])
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [sessionId] = useState(() => {
+    if (typeof window === 'undefined') return 'anon'
+    return localStorage.getItem('wovo_sid') || (() => {
+      const id = Math.random().toString(36).slice(2)
+      localStorage.setItem('wovo_sid', id)
+      return id
+    })()
+  })
+  const [showAuthWall, setShowAuthWall] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [activeNav, setActiveNav] = useState('chat')
+  const bottomRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) setUserId(session.user.id)
+    })
+  }, [])
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [msgs, loading])
+
+  const send = async (promptOverride?: string) => {
+    const prompt = (promptOverride || input).trim()
+    if (!prompt || loading) return
+    setInput('')
+    setShowAuthWall(false)
+
+    const lower = prompt.toLowerCase()
+    const wantsImage = /make.*(image|photo|picture|poster|logo)|generate.*(image|photo|picture)|create.*(image|photo|picture)|draw|photo of|picture of/i.test(lower)
+    const wantsPaid = /make.*(video|ad|website|series)|generate.*video|cinematic|wovo os|clone|avatar|website/i.test(lower)
+
+    setMsgs(m => [...m, { role: 'user', content: prompt }])
+    setLoading(true)
+
+    if (wantsPaid) {
+      setLoading(false)
+      setMsgs(m => [...m, { role: 'ai', content: `That's a paid feature — video generation, cinematic ads, website building, and WOVO OS are available on paid plans.\n\nCheck out the services on the left to find the right plan for you.` }])
+      return
+    }
+
+    const res = await fetch('/api/wovo-free', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: wantsImage ? 'image' : 'chat', prompt, userId, sessionId })
+    })
+    const data = await res.json()
+    setLoading(false)
+
+    if (!res.ok) {
+      if (data.requiresAuth) {
+        setShowAuthWall(true)
+        setMsgs(m => [...m, { role: 'ai', content: `You've used your 3 free messages for today. Create a free account to get 10 per day — no credit card needed.` }])
+      } else {
+        setMsgs(m => [...m, { role: 'ai', content: data.error || 'Something went wrong. Try again.' }])
+      }
+      return
+    }
+
+    if (wantsImage && data.imageUrl) {
+      setMsgs(m => [...m, { role: 'ai', content: 'Here you go:', imageUrl: data.imageUrl }])
+    } else {
+      setMsgs(m => [...m, { role: 'ai', content: data.reply }])
+    }
+  }
 
   return (
-    <div style={{background:'var(--bg)',minHeight:'100vh',overflowX:'hidden'}}>
+    <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--bg)', overflow: 'hidden' }}>
 
-      {/* ── NAV ─────────────────────────────────── */}
-      <nav style={{position:'sticky',top:0,zIndex:100,borderBottom:'0.5px solid var(--border)',background:'rgba(8,8,8,0.95)',backdropFilter:'blur(16px)',padding:'0 24px',height:56,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-        <Link href="/" style={{fontFamily:'Outfit,sans-serif',fontSize:20,fontWeight:800,color:'var(--text)',textDecoration:'none',letterSpacing:'-0.04em'}}>
-          wovo<span style={{color:'var(--accent)'}}>media</span>
-        </Link>
-        <div className="desktop-nav" style={{display:'flex',alignItems:'center',gap:24}}>
-          {[['Wovo AI','#wovo-ai'],['WOVO OS','/wovo-os'],['Cinematic Ads','#cin-ads'],['Premium','#premium'],['Pricing','#pricing']].map(([l,h])=>(
-            <a key={l} href={h} style={{color:'var(--text-2)',fontSize:13,fontWeight:500,textDecoration:'none'}}>{l}</a>
-          ))}
-          <Link href="/login" style={{color:'var(--text-2)',fontSize:13,fontWeight:600,textDecoration:'none'}}>Login</Link>
-          <a href="https://calendly.com/wovomedia/wovo-media-premium-strategy-call" target="_blank" rel="noreferrer">
-            <button className="btn btn-primary btn-sm">Book a call</button>
-          </a>
-        </div>
-        <div className="mobile-nav-buttons" style={{display:'flex',gap:8,alignItems:'center'}}>
-          <a href="https://calendly.com/wovomedia/wovo-media-premium-strategy-call" target="_blank" rel="noreferrer">
-            <button className="btn btn-primary btn-sm" style={{fontSize:12,padding:'7px 14px'}}>Book a call</button>
-          </a>
-          <button onClick={()=>setMenuOpen(o=>!o)} style={{background:'none',border:'none',color:'var(--text)',cursor:'pointer',padding:6}}>
-            {menuOpen ? <span style={{fontSize:20}}>✕</span> : <span style={{fontSize:20}}>☰</span>}
+      {/* ── TOP NAV ─────────────────────────── */}
+      <nav style={{ height: 52, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', borderBottom: '0.5px solid var(--border)', background: 'rgba(8,8,8,0.98)', zIndex: 60 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button onClick={() => setSidebarOpen(o => !o)} style={{ background: 'none', border: 'none', color: 'var(--text)', cursor: 'pointer', fontSize: 18, padding: '4px 6px', borderRadius: 6 }} className="mobile-only">
+            ☰
           </button>
+          <Link href="/" style={{ fontFamily: 'Outfit,sans-serif', fontSize: 18, fontWeight: 800, color: 'var(--text)', textDecoration: 'none', letterSpacing: '-0.04em' }}>
+            wovo<span style={{ color: 'var(--accent)' }}>media</span>
+          </Link>
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {userId
+            ? <Link href="/home"><button className="btn btn-outline btn-sm">Dashboard</button></Link>
+            : <>
+                <Link href="/login"><button className="btn btn-ghost btn-sm" style={{ fontSize: 13 }}>Sign in</button></Link>
+                <Link href="/login?tab=signup"><button className="btn btn-primary btn-sm" style={{ fontSize: 13 }}>Sign up free</button></Link>
+              </>
+          }
         </div>
       </nav>
 
-      {menuOpen && (
-        <div style={{position:'fixed',top:56,left:0,right:0,background:'var(--bg-2)',borderBottom:'1px solid var(--border)',zIndex:99,padding:'16px 24px',display:'flex',flexDirection:'column',gap:0}}>
-          {[['Wovo AI','#wovo-ai'],['WOVO OS','/wovo-os'],['Cinematic Ads','#cin-ads'],['Premium','#premium'],['Pricing','#pricing']].map(([l,h])=>(
-            <a key={l} href={h} onClick={()=>setMenuOpen(false)} style={{padding:'13px 0',fontSize:16,fontWeight:600,color:'var(--text)',textDecoration:'none',borderBottom:'0.5px solid var(--border)'}}>{l}</a>
-          ))}
-          <Link href="/login" onClick={()=>setMenuOpen(false)} style={{padding:'13px 0',fontSize:16,fontWeight:600,color:'var(--accent)',textDecoration:'none'}}>Login →</Link>
-        </div>
-      )}
+      {/* ── MAIN LAYOUT ─────────────────────── */}
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden', position: 'relative' }}>
 
-      {/* ── HERO — full bleed image ──────────────── */}
-      <section style={{position:'relative',height:'92vh',minHeight:520,display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
-        <img src={IMGS.hero} alt="Wovo Media" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',objectPosition:'center'}}/>
-        <div style={{position:'absolute',inset:0,background:'linear-gradient(to bottom, rgba(8,8,8,0.55) 0%, rgba(8,8,8,0.3) 50%, rgba(8,8,8,0.85) 100%)'}}/>
-        <div style={{position:'relative',zIndex:2,textAlign:'center',padding:'0 24px',maxWidth:700}}>
-          <div style={{display:'inline-flex',alignItems:'center',gap:10,background:'rgba(0,229,200,0.1)',border:'1px solid rgba(0,229,200,0.3)',borderRadius:40,padding:'6px 18px',marginBottom:24}}>
-            {[['11+','Clients'],['100M+','Views'],['24hr','Support']].map(([n,l])=>(
-              <div key={n} style={{display:'flex',alignItems:'center',gap:5}}>
-                <span style={{fontFamily:'Outfit,sans-serif',fontWeight:700,color:'var(--accent)',fontSize:13}}>{n}</span>
-                <span style={{fontSize:11,color:'rgba(255,255,255,0.6)'}}>{l}</span>
+        {/* ── SIDEBAR ─────────────────────── */}
+        <div style={{
+          width: 220, flexShrink: 0, borderRight: '0.5px solid var(--border)',
+          background: 'var(--bg)', display: 'flex', flexDirection: 'column',
+          overflowY: 'auto', transition: 'transform 0.2s',
+        }} className="sidebar">
+
+          {/* Wovo AI section */}
+          <div style={{ padding: '14px 10px 8px' }}>
+            <div style={{ fontSize: 9, color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', padding: '0 8px', marginBottom: 4 }}>Wovo AI — Free</div>
+            <button
+              onClick={() => setActiveNav('chat')}
+              style={{
+                width: '100%', padding: '9px 10px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                background: activeNav === 'chat' ? 'rgba(0,229,200,0.1)' : 'transparent',
+                display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left',
+                borderLeft: activeNav === 'chat' ? '2px solid var(--accent)' : '2px solid transparent',
+              }}
+            >
+              <span style={{ fontSize: 15 }}>✦</span>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: activeNav === 'chat' ? 'var(--accent)' : 'var(--text)', fontFamily: 'inherit' }}>Wovo AI Chat</div>
+                <div style={{ fontSize: 10, color: 'var(--text-3)', fontFamily: 'inherit' }}>Ask & generate images free</div>
               </div>
-            ))}
-          </div>
-          <h1 style={{fontFamily:'Outfit,sans-serif',fontSize:'clamp(36px,7vw,64px)',fontWeight:800,lineHeight:1.05,marginBottom:16,color:'#fff',letterSpacing:'-0.03em'}}>
-            Your business,<br/><span style={{color:'var(--accent)'}}>seen everywhere.</span>
-          </h1>
-          <p style={{fontSize:'clamp(15px,2vw,18px)',color:'rgba(255,255,255,0.75)',maxWidth:480,margin:'0 auto 32px',lineHeight:1.7}}>
-            AI content, cinematic ads, full-service production, and now WOVO OS — your AI employee.
-          </p>
-          <div style={{display:'flex',gap:10,justifyContent:'center',flexWrap:'wrap'}}>
-            <a href="#wovo-ai" style={{textDecoration:'none'}}><button className="btn btn-primary" style={{fontSize:15,padding:'13px 28px'}}>See all products →</button></a>
-            <a href="https://calendly.com/wovomedia/wovo-media-premium-strategy-call" target="_blank" rel="noreferrer" style={{textDecoration:'none'}}><button style={{fontSize:15,padding:'12px 24px',background:'rgba(255,255,255,0.1)',border:'1px solid rgba(255,255,255,0.25)',color:'#fff',borderRadius:10,cursor:'pointer',fontFamily:'inherit',fontWeight:600,backdropFilter:'blur(8px)'}}>Book a free call</button></a>
-          </div>
-        </div>
-      </section>
-
-      {/* ── PRODUCTS GRID ───────────────────────── */}
-      <section id="wovo-ai" style={{padding:'80px 24px'}}>
-        <div style={{maxWidth:1000,margin:'0 auto'}}>
-          <div style={{textAlign:'center',marginBottom:48}}>
-            <div style={{fontSize:11,color:'var(--text-3)',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.12em',marginBottom:10}}>Everything you need</div>
-            <h2 style={{fontFamily:'Outfit,sans-serif',fontSize:'clamp(24px,4vw,36px)',fontWeight:800,color:'var(--text)',letterSpacing:'-0.03em'}}>One platform. Total content domination.</h2>
+            </button>
           </div>
 
-          {/* Row 1 — Social Content + WOVO OS */}
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginBottom:16}} className="grid-2">
+          <div style={{ height: '0.5px', background: 'var(--border)', margin: '4px 10px' }}/>
 
-            {/* Wovo AI Content */}
-            <div className="card" style={{padding:0,overflow:'hidden',display:'flex',flexDirection:'column'}}>
-              <div style={{position:'relative',height:220,overflow:'hidden'}}>
-                <img src={IMGS.social} alt="AI Content Creation" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
-                <div style={{position:'absolute',inset:0,background:'linear-gradient(to top,rgba(8,8,8,0.9) 0%,rgba(8,8,8,0.2) 60%,transparent 100%)'}}/>
-                <div style={{position:'absolute',bottom:16,left:16}}>
-                  <span style={{background:'var(--accent)',color:'#080808',fontSize:10,fontWeight:800,padding:'3px 10px',borderRadius:20,textTransform:'uppercase',letterSpacing:'0.06em'}}>Wovo AI</span>
-                </div>
-              </div>
-              <div style={{padding:'20px 20px 24px',flex:1,display:'flex',flexDirection:'column'}}>
-                <h3 style={{fontFamily:'Outfit,sans-serif',fontSize:20,fontWeight:800,color:'var(--text)',marginBottom:8,letterSpacing:'-0.02em'}}>AI Content Creation</h3>
-                <p style={{fontSize:13,color:'var(--text-2)',lineHeight:1.7,marginBottom:16,flex:1}}>AI characters that post for you. 3–5 pieces of ready-to-copy content per week. AI Video Generator, image ads, website builder — from $29/mo.</p>
-                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:18}}>
-                  {['AI character for your team','3–5 posts/week','AI Video Generator','Website Builder','Image ad generator','Ready-to-copy captions'].map(f=>(
-                    <div key={f} style={{display:'flex',gap:6,fontSize:12,color:'var(--text-2)',alignItems:'flex-start'}}><span style={{color:'var(--accent)',flexShrink:0,marginTop:1}}>✓</span>{f}</div>
-                  ))}
-                </div>
-                <a href="#pricing" style={{textDecoration:'none'}}><button className="btn btn-primary" style={{width:'100%',padding:11,fontSize:13}}>See AI plans from $29/mo →</button></a>
-              </div>
-            </div>
-
-            {/* WOVO OS */}
-            <div className="card" style={{padding:0,overflow:'hidden',display:'flex',flexDirection:'column',position:'relative'}}>
-              <div style={{position:'absolute',top:12,right:12,zIndex:3,background:'var(--accent)',color:'#080808',fontSize:9,fontWeight:800,padding:'3px 10px',borderRadius:20,textTransform:'uppercase',letterSpacing:'0.08em'}}>New</div>
-              <div style={{position:'relative',height:220,overflow:'hidden'}}>
-                <img src={IMGS.ai} alt="WOVO OS" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
-                <div style={{position:'absolute',inset:0,background:'linear-gradient(to top,rgba(8,8,8,0.9) 0%,rgba(8,8,8,0.2) 60%,transparent 100%)'}}/>
-                <div style={{position:'absolute',bottom:16,left:16}}>
-                  <span style={{background:'rgba(0,229,200,0.15)',border:'1px solid rgba(0,229,200,0.4)',color:'var(--accent)',fontSize:10,fontWeight:800,padding:'3px 10px',borderRadius:20,textTransform:'uppercase',letterSpacing:'0.06em'}}>WOVO OS</span>
-                </div>
-              </div>
-              <div style={{padding:'20px 20px 24px',flex:1,display:'flex',flexDirection:'column'}}>
-                <h3 style={{fontFamily:'Outfit,sans-serif',fontSize:20,fontWeight:800,color:'var(--text)',marginBottom:8,letterSpacing:'-0.02em'}}>Your AI Employee</h3>
-                <p style={{fontSize:13,color:'var(--text-2)',lineHeight:1.7,marginBottom:16,flex:1}}>Runs on your computer. Manages itself. Phone control. Learns your business deeply — handles emails, social, scheduling. Never acts without your approval.</p>
-                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:18}}>
-                  {['Mac & Windows','Phone management','Learns your business','Always asks permission','Speaks naturally','Never sleeps'].map(f=>(
-                    <div key={f} style={{display:'flex',gap:6,fontSize:12,color:'var(--text-2)',alignItems:'flex-start'}}><span style={{color:'var(--accent)',flexShrink:0,marginTop:1}}>✓</span>{f}</div>
-                  ))}
-                </div>
-                <Link href="/wovo-os" style={{textDecoration:'none'}}><button className="btn btn-outline" style={{width:'100%',padding:11,fontSize:13}}>Learn about WOVO OS →</button></Link>
-              </div>
-            </div>
-          </div>
-
-          {/* Row 2 — Cinematic Ads + Premium */}
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}} className="grid-2">
-
-            {/* Cinematic Ad Videos */}
-            <div id="cin-ads" className="card" style={{padding:0,overflow:'hidden',display:'flex',flexDirection:'column'}}>
-              <div style={{position:'relative',height:220,overflow:'hidden'}}>
-                <img src={IMGS.cinAd} alt="Cinematic Ad Videos" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
-                <div style={{position:'absolute',inset:0,background:'linear-gradient(to top,rgba(8,8,8,0.9) 0%,rgba(8,8,8,0.2) 60%,transparent 100%)'}}/>
-                <div style={{position:'absolute',bottom:16,left:16}}>
-                  <span style={{background:'rgba(139,92,246,0.2)',border:'1px solid rgba(139,92,246,0.4)',color:'#a78bfa',fontSize:10,fontWeight:800,padding:'3px 10px',borderRadius:20,textTransform:'uppercase',letterSpacing:'0.06em'}}>NEW · AI Ad Studio</span>
-                </div>
-              </div>
-              <div style={{padding:'20px 20px 24px',flex:1,display:'flex',flexDirection:'column'}}>
-                <h3 style={{fontFamily:'Outfit,sans-serif',fontSize:20,fontWeight:800,color:'var(--text)',marginBottom:8,letterSpacing:'-0.02em'}}>Cinematic Product Ads</h3>
-                <p style={{fontSize:13,color:'var(--text-2)',lineHeight:1.7,marginBottom:16,flex:1}}>Point it at any product. AI finds photos online or uses yours, creates a 30–45 second cinematic ad with voiceover, music, and a "shop now" CTA. Done in minutes.</p>
-                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:18}}>
-                  {['30–45 sec cinematic video','AI voiceover included','Background music','Shop Now CTA','Finds product photos online','4K quality output'].map(f=>(
-                    <div key={f} style={{display:'flex',gap:6,fontSize:12,color:'var(--text-2)',alignItems:'flex-start'}}><span style={{color:'#a78bfa',flexShrink:0,marginTop:1}}>✓</span>{f}</div>
-                  ))}
-                </div>
-                <a href="https://pay.wovomedia.com/b/fZu9AT5LZdI76TO6EMcIE1d" style={{textDecoration:'none'}}><button style={{width:'100%',padding:11,fontSize:13,background:'rgba(139,92,246,0.1)',border:'1px solid rgba(139,92,246,0.3)',color:'#a78bfa',borderRadius:10,cursor:'pointer',fontFamily:'inherit',fontWeight:600}}>Create a Cinematic Ad →</button></a>
-              </div>
-            </div>
-
-            {/* Premium Full Service */}
-            <div id="premium" className="card" style={{padding:0,overflow:'hidden',display:'flex',flexDirection:'column'}}>
-              <div style={{position:'relative',height:220,overflow:'hidden'}}>
-                <img src={IMGS.drone} alt="Premium Production" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
-                <div style={{position:'absolute',inset:0,background:'linear-gradient(to top,rgba(8,8,8,0.9) 0%,rgba(8,8,8,0.2) 60%,transparent 100%)'}}/>
-                <div style={{position:'absolute',bottom:16,left:16}}>
-                  <span style={{background:'rgba(245,158,11,0.15)',border:'1px solid rgba(245,158,11,0.35)',color:'#f59e0b',fontSize:10,fontWeight:800,padding:'3px 10px',borderRadius:20,textTransform:'uppercase',letterSpacing:'0.06em'}}>Premium</span>
-                </div>
-              </div>
-              <div style={{padding:'20px 20px 24px',flex:1,display:'flex',flexDirection:'column'}}>
-                <h3 style={{fontFamily:'Outfit,sans-serif',fontSize:20,fontWeight:800,color:'var(--text)',marginBottom:8,letterSpacing:'-0.02em'}}>Full-Service Production</h3>
-                <p style={{fontSize:13,color:'var(--text-2)',lineHeight:1.7,marginBottom:16,flex:1}}>Real filming, drone, photography, website builds — fully managed by our team in Middle Tennessee and beyond. Custom pricing.</p>
-                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:18}}>
-                  {['On-site filming & drone','Website design & dev','We post for you','Google Business mgmt','Wovo AI at 50% off','Dedicated account manager'].map(f=>(
-                    <div key={f} style={{display:'flex',gap:6,fontSize:12,color:'var(--text-2)',alignItems:'flex-start'}}><span style={{color:'#f59e0b',flexShrink:0,marginTop:1}}>✓</span>{f}</div>
-                  ))}
-                </div>
-                <a href="https://calendly.com/wovomedia/wovo-media-premium-strategy-call" target="_blank" rel="noreferrer" style={{textDecoration:'none'}}>
-                  <button style={{width:'100%',padding:11,fontSize:13,background:'rgba(245,158,11,0.08)',border:'1px solid rgba(245,158,11,0.25)',color:'#f59e0b',borderRadius:10,cursor:'pointer',fontFamily:'inherit',fontWeight:600}}>Book a free strategy call →</button>
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── STATS BAR ───────────────────────────── */}
-      <section style={{background:'var(--bg-2)',borderTop:'0.5px solid var(--border)',borderBottom:'0.5px solid var(--border)',padding:'32px 24px'}}>
-        <div style={{maxWidth:800,margin:'0 auto',display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:16,textAlign:'center'}} className="grid-4">
-          {[['11+','Active clients'],['100M+','Combined views'],['4M+','Monthly views (1 client)'],['$29/mo','Starting price']].map(([n,l])=>(
-            <div key={l}>
-              <div style={{fontFamily:'Outfit,sans-serif',fontSize:'clamp(24px,4vw,36px)',fontWeight:800,color:'var(--accent)',letterSpacing:'-0.03em'}}>{n}</div>
-              <div style={{fontSize:12,color:'var(--text-3)',marginTop:4}}>{l}</div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── WOVO AI PRICING ─────────────────────── */}
-      <section id="pricing" style={{padding:'80px 24px'}}>
-        <div style={{maxWidth:1000,margin:'0 auto'}}>
-          <div style={{textAlign:'center',marginBottom:48}}>
-            <div style={{fontSize:11,color:'var(--text-3)',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.12em',marginBottom:10}}>Wovo AI Plans</div>
-            <h2 style={{fontFamily:'Outfit,sans-serif',fontSize:'clamp(24px,4vw,36px)',fontWeight:800,color:'var(--text)',letterSpacing:'-0.03em',marginBottom:10}}>Start at $29/mo. Cancel anytime.</h2>
-            <p style={{color:'var(--text-2)',fontSize:14}}>Pay securely. Account created instantly. Premium clients get Wovo AI at 50% off.</p>
-          </div>
-          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:12}}>
+          {/* Paid products */}
+          <div style={{ padding: '8px 10px', flex: 1 }}>
+            <div style={{ fontSize: 9, color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', padding: '0 8px', marginBottom: 4 }}>Paid Plans</div>
             {[
-              {name:'Starter',price:'$29',color:'var(--accent)',features:['Your AI character','3 posts/week','Ready-to-copy captions','Posting tutorials'],link:'https://pay.wovomedia.com/b/7sY6oH3DRdI71zu0gocIE0Y'},
-              {name:'Growth',price:'$49',color:'var(--accent)',popular:true,features:['Whole team characters','5 posts/week','AI Video Generator','Unlimited edits'],link:'https://pay.wovomedia.com/b/fZu6oH6Q3fQf3HC0gocIE0Z'},
-              {name:'Pro AI',price:'$79',color:'var(--accent)',features:['Everything in Growth','Daily posts + Stories','Multiple brands','Image ad generator'],link:'https://pay.wovomedia.com/b/aFafZhfmzfQf1zu2owcIE10'},
-              {name:'Website',price:'$99',color:'var(--accent)',features:['Full Next.js site','7+ component files','Tailwind + TypeScript','Deploy-ready'],link:'https://pay.wovomedia.com/b/4gMcN57U7avV0vqbZ6cIE11'},
-              {name:'Cinematic Ads',price:'$149',color:'#a78bfa',features:['30–45 sec product ads','AI voiceover + music','Finds product photos','Shop now CTA'],link:'https://pay.wovomedia.com/b/aFafZhfmzfQf1zu2owcIE10',new:true},
-            ].map(p=>(
-              <div key={p.name} className={`card ${(p as any).popular?'card-accent':''}`} style={{position:'relative',borderColor:(p as any).new?'rgba(139,92,246,0.3)':''}}>
-                {(p as any).popular && <div style={{position:'absolute',top:-10,left:'50%',transform:'translateX(-50%)',background:'var(--accent)',color:'#080808',fontSize:9,fontWeight:800,padding:'3px 10px',borderRadius:20,whiteSpace:'nowrap',textTransform:'uppercase',letterSpacing:'0.06em'}}>Most popular</div>}
-                {(p as any).new && <div style={{position:'absolute',top:-10,left:'50%',transform:'translateX(-50%)',background:'#8b5cf6',color:'#fff',fontSize:9,fontWeight:800,padding:'3px 10px',borderRadius:20,whiteSpace:'nowrap',textTransform:'uppercase',letterSpacing:'0.06em'}}>New</div>}
-                <div style={{fontSize:11,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:'0.1em',fontWeight:600,marginBottom:6}}>{p.name}</div>
-                <div style={{fontSize:28,fontWeight:800,fontFamily:'Outfit,sans-serif',color:'var(--text)',marginBottom:14}}>{p.price}<span style={{fontSize:13,color:'var(--text-3)',fontWeight:400}}>/mo</span></div>
-                {p.features.map(f=>(
-                  <div key={f} style={{fontSize:12,color:'var(--text-2)',padding:'5px 0',borderTop:'0.5px solid var(--border)',display:'flex',gap:7}}>
-                    <span style={{color:p.color,flexShrink:0}}>✓</span>{f}
+              { id: 'wovo-ai', icon: '⚡', label: 'AI Content', sub: 'Posts, captions, characters', href: '/wovo-ai', badge: 'From $29' },
+              { id: 'cinematic', icon: '🎬', label: 'Cinematic Ads', sub: '30–45 sec product ads', href: '/wovo-ai', badge: '$149/mo' },
+              { id: 'websites', icon: '🌐', label: 'Website Builder', sub: 'Full Next.js site', href: '/wovo-ai', badge: '$99/mo' },
+              { id: 'wovo-os', icon: '🤖', label: 'WOVO OS', sub: 'AI employee on your PC', href: '/wovo-os', badge: '$350/mo' },
+              { id: 'premium', icon: '🎥', label: 'Premium', sub: 'Real filming & drone', href: '#premium-section', badge: 'Custom' },
+            ].map(item => (
+              <a key={item.id} href={item.href} style={{ textDecoration: 'none', display: 'block' }}
+                onClick={() => setActiveNav(item.id)}>
+                <div style={{
+                  padding: '9px 10px', borderRadius: 10, marginBottom: 2, cursor: 'pointer',
+                  background: activeNav === item.id ? 'var(--bg-2)' : 'transparent',
+                  borderLeft: activeNav === item.id ? '2px solid var(--border-2)' : '2px solid transparent',
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  transition: 'background 0.1s',
+                }}>
+                  <span style={{ fontSize: 14 }}>{item.icon}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', fontFamily: 'inherit' }}>{item.label}</div>
+                    <div style={{ fontSize: 10, color: 'var(--text-3)', fontFamily: 'inherit', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.sub}</div>
                   </div>
-                ))}
-                <a href={p.link} target="_blank" rel="noreferrer" style={{display:'block',marginTop:16,textDecoration:'none'}}>
-                  <button style={{width:'100%',padding:10,fontSize:12,background:(p as any).popular?'var(--accent)':(p as any).new?'rgba(139,92,246,0.15)':'transparent',border:`1px solid ${(p as any).popular?'var(--accent)':(p as any).new?'rgba(139,92,246,0.4)':'var(--border-2)'}`,color:(p as any).popular?'#080808':(p as any).new?'#a78bfa':'var(--text-2)',borderRadius:8,cursor:'pointer',fontFamily:'inherit',fontWeight:600}}>Get {p.name} →</button>
-                </a>
-              </div>
+                  <span style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 700, flexShrink: 0, fontFamily: 'inherit' }}>{item.badge}</span>
+                </div>
+              </a>
             ))}
           </div>
-          {/* Bundle Plans */}
-          <div style={{marginTop:24,marginBottom:14}}>
-            <div style={{textAlign:'center',marginBottom:16}}>
-              <div style={{fontSize:11,color:'var(--text-3)',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.12em',marginBottom:6}}>Bundle & Save</div>
-              <h3 style={{fontFamily:'Outfit,sans-serif',fontSize:20,fontWeight:800,color:'var(--text)',marginBottom:4}}>Get more, pay less.</h3>
-              <p style={{fontSize:13,color:'var(--text-2)'}}>Add 2 plans → save $10/mo. Get everything → save $15/mo.</p>
-            </div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}} className="grid-2">
 
-              {/* Duo Bundle */}
-              <div className="card" style={{background:'linear-gradient(135deg,rgba(0,229,200,0.06),rgba(0,229,200,0.02))',border:'1px solid rgba(0,229,200,0.2)',position:'relative'}}>
-                <div style={{position:'absolute',top:-10,left:'50%',transform:'translateX(-50%)',background:'var(--bg-3)',border:'1px solid var(--accent-border)',color:'var(--accent)',fontSize:9,fontWeight:800,padding:'3px 12px',borderRadius:20,whiteSpace:'nowrap',textTransform:'uppercase',letterSpacing:'0.06em'}}>Save $10/mo</div>
-                <div style={{fontSize:11,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:'0.1em',fontWeight:600,marginBottom:6}}>Duo Bundle — Any 2 Plans</div>
-                <div style={{display:'flex',alignItems:'baseline',gap:8,marginBottom:4}}>
-                  <div style={{fontFamily:'Outfit,sans-serif',fontSize:28,fontWeight:800,color:'var(--text)'}}><span style={{fontSize:13,color:'var(--text-3)',fontWeight:400,textDecoration:'line-through',marginRight:6}}>Full price</span>−$10<span style={{fontSize:13,color:'var(--text-3)',fontWeight:400}}>/mo</span></div>
-                </div>
-                <p style={{fontSize:12,color:'var(--text-2)',marginBottom:14,lineHeight:1.6}}>Pick any 2 Wovo AI plans and get $10 off every month. Mix and match whatever fits your business.</p>
-                <div style={{display:'flex',flexDirection:'column',gap:6,marginBottom:16}}>
-                  {[['Starter + Growth','$29 + $49 → $68/mo'],['Growth + Cinematic Ads','$49 + $149 → $188/mo'],['Pro AI + Website','$79 + $99 → $168/mo'],['Any combination works','$10 off applied automatically']].map(([a,b])=>(
-                    <div key={a} style={{display:'flex',justifyContent:'space-between',fontSize:12,padding:'5px 0',borderTop:'0.5px solid var(--border)'}}>
-                      <span style={{color:'var(--text-2)'}}>{a}</span>
-                      <span style={{color:'var(--accent)',fontWeight:600}}>{b}</span>
-                    </div>
-                  ))}
-                </div>
-                <a href="https://pay.wovomedia.com/b/8x214n8YbfQf0vq0gocIE1g" target="_blank" rel="noreferrer" style={{textDecoration:'none'}}>
-                  <button style={{width:'100%',padding:10,fontSize:13,background:'var(--accent-dim)',border:'1px solid var(--accent-border)',color:'var(--accent)',borderRadius:8,cursor:'pointer',fontFamily:'inherit',fontWeight:700}}>Get Duo Bundle — Save $10/mo →</button>
-                </a>
-              </div>
+          {/* Bottom CTA */}
+          <div style={{ padding: '10px', borderTop: '0.5px solid var(--border)' }}>
+            {!userId ? (
+              <Link href="/login?tab=signup" style={{ textDecoration: 'none' }}>
+                <button className="btn btn-primary" style={{ width: '100%', fontSize: 13, padding: '10px' }}>
+                  Sign up free →
+                </button>
+              </Link>
+            ) : (
+              <Link href="/home" style={{ textDecoration: 'none' }}>
+                <button className="btn btn-outline" style={{ width: '100%', fontSize: 13, padding: '10px' }}>
+                  Go to dashboard →
+                </button>
+              </Link>
+            )}
+            <Link href="/meet-nova" style={{ textDecoration: 'none', display: 'block', marginTop: 6 }}>
+              <button style={{ width: '100%', padding: '8px', background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-3)', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
+                ✦ Meet Nova — find your plan
+              </button>
+            </Link>
+          </div>
+        </div>
 
-              {/* All-In Bundle */}
-              <div className="card" style={{background:'linear-gradient(135deg,rgba(139,92,246,0.08),rgba(0,229,200,0.04))',border:'1px solid rgba(139,92,246,0.25)',position:'relative'}}>
-                <div style={{position:'absolute',top:-10,left:'50%',transform:'translateX(-50%)',background:'#8b5cf6',color:'#fff',fontSize:9,fontWeight:800,padding:'3px 12px',borderRadius:20,whiteSpace:'nowrap',textTransform:'uppercase',letterSpacing:'0.06em'}}>Best Value · Save $30/mo</div>
-                <div style={{fontSize:11,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:'0.1em',fontWeight:600,marginBottom:6}}>All-In Bundle — All 5 AI Plans</div>
-                <div style={{display:'flex',alignItems:'baseline',gap:8,marginBottom:4}}>
-                  <div style={{fontFamily:'Outfit,sans-serif',fontSize:28,fontWeight:800,color:'var(--text)'}}><span style={{fontSize:13,color:'var(--text-3)',fontWeight:400,textDecoration:'line-through',marginRight:6}}>$375</span>$345<span style={{fontSize:13,color:'var(--text-3)',fontWeight:400}}>/mo</span></div>
-                </div>
-                <p style={{fontSize:12,color:'var(--text-2)',marginBottom:14,lineHeight:1.6}}>All 5 Wovo AI plans bundled. Does not include WOVO OS (separate product with its own setup). The complete AI content stack.</p>
-                <div style={{display:'flex',flexDirection:'column',gap:6,marginBottom:16}}>
-                  {[['Starter','$29/mo'],['Growth','$49/mo'],['Pro AI','$79/mo'],['Website Builder','$99/mo'],['Cinematic Ads','$149/mo']].map(([a,b])=>(
-                    <div key={a} style={{display:'flex',justifyContent:'space-between',fontSize:12,padding:'5px 0',borderTop:'0.5px solid var(--border)'}}>
-                      <span style={{color:'var(--text-2)'}}>✓ {a}</span>
-                      <span style={{color:'var(--text-3)'}}>{b}</span>
+        {/* Mobile sidebar overlay */}
+        {sidebarOpen && (
+          <div onClick={() => setSidebarOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 50 }} className="mobile-overlay"/>
+        )}
+
+        {/* ── CHAT AREA ───────────────────── */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+
+          {/* Messages */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '24px 20px 0' }}>
+            <div style={{ maxWidth: 680, margin: '0 auto' }}>
+
+              {msgs.length === 0 && (
+                <div style={{ textAlign: 'center', paddingTop: 40 }}>
+                  {/* Hero image behind greeting */}
+                  <div style={{ position: 'relative', borderRadius: 20, overflow: 'hidden', marginBottom: 28, height: 200 }}>
+                    <img src={IMGS.hero} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 40%' }}/>
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(8,8,8,0.3), rgba(8,8,8,0.8))' }}/>
+                    <div style={{ position: 'absolute', bottom: 20, left: 0, right: 0, textAlign: 'center' }}>
+                      <div style={{ width: 52, height: 52, borderRadius: '50%', overflow: 'hidden', margin: '0 auto 10px', border: '2px solid var(--accent)', boxShadow: '0 0 20px rgba(0,229,200,0.3)' }}>
+                        <img src={AVATAR} alt="Wovo AI" style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
+                      </div>
+                      <h1 style={{ fontFamily: 'Outfit,sans-serif', fontSize: 22, fontWeight: 800, color: '#fff', margin: '0 0 4px', letterSpacing: '-0.02em' }}>Wovo AI</h1>
+                      <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: 13, margin: 0 }}>
+                        {userId ? 'What can I help you with today?' : '3 free messages · Sign up for more'}
+                      </p>
                     </div>
-                  ))}
-                  <div style={{display:'flex',justifyContent:'space-between',fontSize:13,padding:'8px 0',borderTop:'1px solid rgba(139,92,246,0.3)',fontWeight:700}}>
-                    <span style={{color:'#a78bfa'}}>You pay</span>
-                    <span style={{color:'#a78bfa'}}>$345/mo (save $30)</span>
+                  </div>
+
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
+                    {SUGGESTIONS.map(s => (
+                      <button key={s} onClick={() => send(s)} style={{
+                        padding: '9px 16px', borderRadius: 20, fontSize: 13,
+                        background: 'var(--bg-2)', border: '1px solid var(--border)',
+                        color: 'var(--text-2)', cursor: 'pointer', fontFamily: 'inherit',
+                      }}>
+                        {s}
+                      </button>
+                    ))}
                   </div>
                 </div>
-                <a href="https://pay.wovomedia.com/b/00w9AT1vJbzZguo2owcIE1i" target="_blank" rel="noreferrer" style={{textDecoration:'none'}}>
-                  <button style={{width:'100%',padding:10,fontSize:13,background:'rgba(139,92,246,0.15)',border:'1px solid rgba(139,92,246,0.4)',color:'#a78bfa',borderRadius:8,cursor:'pointer',fontFamily:'inherit',fontWeight:700}}>Get All-In Bundle — Save $30/mo →</button>
-                </a>
-              </div>
+              )}
 
+              {msgs.map((m, i) => (
+                <div key={i} style={{ marginBottom: 20, display: 'flex', gap: 10, flexDirection: m.role === 'user' ? 'row-reverse' : 'row', alignItems: 'flex-start' }}>
+                  {m.role === 'ai' && (
+                    <div style={{ width: 30, height: 30, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, border: '1.5px solid var(--accent)', marginTop: 2 }}>
+                      <img src={AVATAR} alt="AI" style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
+                    </div>
+                  )}
+                  <div style={{ maxWidth: '80%' }}>
+                    {m.imageUrl && (
+                      <div style={{ marginBottom: 6, borderRadius: 14, overflow: 'hidden', border: '1px solid var(--border)' }}>
+                        <img src={m.imageUrl} alt="Generated" style={{ width: '100%', display: 'block' }}/>
+                        <a href={m.imageUrl} download target="_blank" rel="noreferrer">
+                          <button style={{ width: '100%', padding: '8px', background: 'var(--bg-2)', border: 'none', borderTop: '1px solid var(--border)', color: 'var(--text-2)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>⬇ Download</button>
+                        </a>
+                      </div>
+                    )}
+                    {m.content && (
+                      <div style={{
+                        padding: '11px 15px', borderRadius: 14, fontSize: 14, lineHeight: 1.7, whiteSpace: 'pre-wrap',
+                        background: m.role === 'user' ? 'var(--accent)' : 'var(--bg-2)',
+                        color: m.role === 'user' ? '#080808' : 'var(--text)',
+                        fontWeight: m.role === 'user' ? 600 : 400,
+                        borderBottomRightRadius: m.role === 'user' ? 4 : 14,
+                        borderBottomLeftRadius: m.role === 'ai' ? 4 : 14,
+                      }}>
+                        {m.content}
+                        {(m.content.includes('paid feature') || m.content.includes('paid plans')) && (
+                          <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                            <Link href="/wovo-ai" style={{ textDecoration: 'none' }}>
+                              <button style={{ padding: '8px 16px', background: 'var(--accent)', border: 'none', borderRadius: 8, color: '#080808', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>See plans from $29/mo →</button>
+                            </Link>
+                            <Link href="/meet-nova" style={{ textDecoration: 'none' }}>
+                              <button style={{ padding: '8px 14px', background: 'transparent', border: '1px solid rgba(0,229,200,0.3)', borderRadius: 8, color: 'var(--accent)', fontWeight: 600, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>Talk to Nova</button>
+                            </Link>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              {loading && (
+                <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 20 }}>
+                  <div style={{ width: 30, height: 30, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, border: '1.5px solid var(--accent)', marginTop: 2 }}>
+                    <img src={AVATAR} alt="AI" style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
+                  </div>
+                  <div style={{ padding: '14px 18px', background: 'var(--bg-2)', borderRadius: 14, borderBottomLeftRadius: 4 }}>
+                    <div style={{ display: 'flex', gap: 5 }}>
+                      {[0,1,2].map(i => <div key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)', animation: `bounce 1.1s ${i*0.18}s infinite ease-in-out` }}/>)}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {showAuthWall && (
+                <div className="card" style={{ textAlign: 'center', padding: '20px 24px', marginBottom: 20, border: '1px solid rgba(0,229,200,0.2)' }}>
+                  <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>Free messages used up</p>
+                  <p style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 14 }}>Sign up free for 10 messages/day. No credit card.</p>
+                  <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                    <Link href="/login?tab=signup"><button className="btn btn-primary btn-sm">Create free account</button></Link>
+                    <Link href="/wovo-ai"><button className="btn btn-outline btn-sm">See paid plans</button></Link>
+                  </div>
+                </div>
+              )}
+
+              <div ref={bottomRef} style={{ height: 16 }}/>
             </div>
           </div>
 
-          <div className="card" style={{marginTop:14,textAlign:'center',padding:'14px 20px'}}>
-            <p style={{fontSize:13,color:'var(--text-2)',margin:0}}>
-              Already have an account? <a href="/login" style={{color:'var(--accent)',fontWeight:600}}>Log in →</a>
-              &nbsp;·&nbsp; Questions? <a href="mailto:support@wovomedia.com" style={{color:'var(--accent)'}}>support@wovomedia.com</a>
-            </p>
+          {/* Input */}
+          <div style={{ padding: '12px 20px 20px', borderTop: '0.5px solid var(--border)', background: 'rgba(8,8,8,0.98)', flexShrink: 0 }}>
+            <div style={{ maxWidth: 680, margin: '0 auto' }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', background: 'var(--bg-2)', border: '1px solid var(--border-2)', borderRadius: 16, padding: '10px 10px 10px 16px' }}>
+                <textarea
+                  ref={inputRef}
+                  value={input}
+                  onChange={e => {
+                    setInput(e.target.value)
+                    e.target.style.height = 'auto'
+                    e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'
+                  }}
+                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
+                  placeholder="Ask anything or say 'make me a photo of...'"
+                  rows={1}
+                  style={{ flex: 1, background: 'transparent', border: 'none', color: 'var(--text)', fontSize: 14, fontFamily: 'inherit', resize: 'none', outline: 'none', lineHeight: 1.55, maxHeight: 120, padding: 0 }}
+                />
+                <button
+                  onClick={() => send()}
+                  disabled={loading || !input.trim()}
+                  style={{ width: 36, height: 36, borderRadius: 10, background: input.trim() && !loading ? 'var(--accent)' : 'var(--bg-3)', border: 'none', color: input.trim() && !loading ? '#080808' : 'var(--text-3)', cursor: input.trim() && !loading ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 16, transition: 'all 0.15s', fontWeight: 800 }}
+                >↑</button>
+              </div>
+              <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-3)', marginTop: 7 }}>
+                💬 Chat · 🎨 "Make me a photo of..." · 🔒 Videos, websites & more need a plan
+              </p>
+            </div>
           </div>
         </div>
-      </section>
+      </div>
 
-      {/* ── NOVA FLOATING HELP BUTTON ─────────── */}
-      <a href="/meet-nova" style={{position:'fixed',bottom:24,right:24,zIndex:999,display:'flex',alignItems:'center',gap:10,background:'var(--accent)',borderRadius:40,padding:'12px 20px 12px 14px',boxShadow:'0 4px 24px rgba(0,229,200,0.35)',textDecoration:'none',animation:'pulse-nova 2.5s ease-in-out infinite'}}>
-        <div style={{width:36,height:36,borderRadius:'50%',overflow:'hidden',border:'2px solid rgba(0,0,0,0.15)',flexShrink:0}}>
-          <img src="https://v3b.fal.media/files/b/0a9dc045/i1MJb4Rv11UqEM1NlCVX8.jpg" alt="Nova" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
-        </div>
-        <div>
-          <div style={{fontSize:12,fontWeight:800,color:'#080808',lineHeight:1}}>Nova</div>
-          <div style={{fontSize:11,color:'rgba(0,0,0,0.6)',lineHeight:1.3,marginTop:2}}>Help me find a plan</div>
-        </div>
-      </a>
-      <style>{`@keyframes pulse-nova{0%,100%{box-shadow:0 4px 24px rgba(0,229,200,0.35);transform:scale(1)}50%{box-shadow:0 4px 32px rgba(0,229,200,0.6);transform:scale(1.03)}}`}</style>
-
-      {/* ── FOOTER ──────────────────────────────── */}
-      <footer style={{borderTop:'1px solid var(--border)',padding:'28px 24px',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:14}}>
-        <Link href="/" style={{fontFamily:'Outfit,sans-serif',fontSize:16,fontWeight:800,color:'var(--text)',textDecoration:'none',letterSpacing:'-0.04em'}}>
-          wovo<span style={{color:'var(--accent)'}}>media</span>
-        </Link>
-        <div style={{display:'flex',gap:20,flexWrap:'wrap'}}>
-          {[['WOVO OS','/wovo-os'],['Wovo AI','/wovo-ai'],['About','/about'],['Privacy','/privacy'],['Terms','/terms'],['Contact','mailto:support@wovomedia.com']].map(([l,h])=>(
-            <a key={l} href={h} style={{fontSize:12,color:'var(--text-3)',textDecoration:'none',fontWeight:500}}>{l}</a>
-          ))}
-        </div>
-        <div style={{fontSize:12,color:'var(--text-3)'}}>© {new Date().getFullYear()} Wovo Media LLC</div>
-      </footer>
+      <style>{`
+        @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+        @media(max-width:640px){
+          .sidebar{position:fixed;left:0;top:52px;bottom:0;z-index:55;transform:${sidebarOpen ? 'translateX(0)' : 'translateX(-100%)'};box-shadow:4px 0 24px rgba(0,0,0,0.5)}
+          .mobile-only{display:flex!important}
+        }
+        @media(min-width:641px){
+          .mobile-only{display:none!important}
+          .mobile-overlay{display:none!important}
+        }
+      `}</style>
     </div>
   )
 }
