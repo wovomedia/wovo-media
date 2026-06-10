@@ -27,13 +27,13 @@ export default function MeetNova() {
     setVideoState('generating') // will be overridden immediately if cached
 
     // Request video generation
-    const res = await fetch('/api/nova-video', {
+    const res = await fetch('/api/heygen/nova-flow', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nodeId: id })
     })
     const data = await res.json()
-    if (!res.ok || (!data.requestId && !data.videoUrl)) { setVideoState('error'); return }
+    if (!res.ok || (!data.videoId && !data.videoUrl)) { setVideoState('error'); return }
     // If already cached with URL, play immediately - no loading screen at all
     if (data.videoUrl) {
       setVideoUrl(data.videoUrl)
@@ -49,7 +49,7 @@ export default function MeetNova() {
 
     // Poll for completion
     const poll = setInterval(async () => {
-      const s = await fetch(`/api/nova-video?id=${data.requestId}&node=${id}`)
+      const s = await fetch(`/api/heygen/nova-flow?id=${data.videoId}&node=${id}`)
       const sd = await s.json()
       if (sd.status === 'completed' && sd.videoUrl) {
         clearInterval(poll)

@@ -113,10 +113,7 @@ export default function Home() {
             <div className="card" style={{padding:0,overflow:'hidden',display:'flex',flexDirection:'column',position:'relative'}}>
               <div style={{position:'absolute',top:12,right:12,zIndex:3,background:'var(--accent)',color:'#080808',fontSize:9,fontWeight:800,padding:'3px 10px',borderRadius:20,textTransform:'uppercase',letterSpacing:'0.08em'}}>New</div>
               <div style={{position:'relative',height:220,overflow:'hidden'}}>
-                <video autoPlay muted loop playsInline style={{width:'100%',height:'100%',objectFit:'cover'}}>
-                  <source src="https://export-download.canva.com/3pNz8/DAHMIF3pNz8/-1/0-7949359258120738989.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUH5AO7UJ26%2F20260609%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260609T081410Z&X-Amz-Expires=65070&X-Amz-Signature=174a9ae7209c09b28b43dc1515ac9cc9340af306ce2d8a5760130971d866b67f&X-Amz-SignedHeaders=host%3Bx-amz-expected-bucket-owner&response-expires=Wed%2C%2010%20Jun%202026%2002%3A18%3A40%20GMT" type="video/mp4"/>
-                  <img src={IMGS.ai} alt="WOVO OS" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
-                </video>
+                <img src={IMGS.ai} alt="WOVO OS" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
                 <div style={{position:'absolute',inset:0,background:'linear-gradient(to top,rgba(8,8,8,0.9) 0%,rgba(8,8,8,0.2) 60%,transparent 100%)'}}/>
                 <div style={{position:'absolute',bottom:16,left:16}}>
                   <span style={{background:'rgba(0,229,200,0.15)',border:'1px solid rgba(0,229,200,0.4)',color:'var(--accent)',fontSize:10,fontWeight:800,padding:'3px 10px',borderRadius:20,textTransform:'uppercase',letterSpacing:'0.06em'}}>WOVO OS</span>
