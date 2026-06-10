@@ -258,8 +258,8 @@ export default function Home() {
               {msgs.map((m, i) => (
                 <div key={i} style={{ marginBottom: 20, display: 'flex', gap: 10, flexDirection: m.role === 'user' ? 'row-reverse' : 'row', alignItems: 'flex-start' }}>
                   {m.role === 'ai' && (
-                    <div style={{ width: 30, height: 30, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, border: '1.5px solid var(--accent)', marginTop: 2 }}>
-                      <img src={AVATAR} alt="AI" style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
+                    <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,#00E5C8,#00b89c)', flexShrink: 0, border: '1.5px solid var(--accent)', marginTop: 2, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                      <span style={{ fontFamily:'Outfit,sans-serif', fontWeight:900, fontSize:13, color:'#080808' }}>W</span>
                     </div>
                   )}
                   <div style={{ maxWidth: '80%' }}>
