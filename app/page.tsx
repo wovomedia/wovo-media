@@ -296,6 +296,18 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── NOVA FLOATING HELP BUTTON ─────────── */}
+      <a href="/meet-nova" style={{position:'fixed',bottom:24,right:24,zIndex:999,display:'flex',alignItems:'center',gap:10,background:'var(--accent)',borderRadius:40,padding:'12px 20px 12px 14px',boxShadow:'0 4px 24px rgba(0,229,200,0.35)',textDecoration:'none',animation:'pulse-nova 2.5s ease-in-out infinite'}}>
+        <div style={{width:36,height:36,borderRadius:'50%',overflow:'hidden',border:'2px solid rgba(0,0,0,0.15)',flexShrink:0}}>
+          <img src="https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&q=80" alt="Nova" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+        </div>
+        <div>
+          <div style={{fontSize:12,fontWeight:800,color:'#080808',lineHeight:1}}>Nova</div>
+          <div style={{fontSize:11,color:'rgba(0,0,0,0.6)',lineHeight:1.3,marginTop:2}}>Help me find a plan</div>
+        </div>
+      </a>
+      <style>{`@keyframes pulse-nova{0%,100%{box-shadow:0 4px 24px rgba(0,229,200,0.35);transform:scale(1)}50%{box-shadow:0 4px 32px rgba(0,229,200,0.6);transform:scale(1.03)}}`}</style>
+
       {/* ── FOOTER ──────────────────────────────── */}
       <footer style={{borderTop:'1px solid var(--border)',padding:'28px 24px',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:14}}>
         <Link href="/" style={{fontFamily:'Outfit,sans-serif',fontSize:16,fontWeight:800,color:'var(--text)',textDecoration:'none',letterSpacing:'-0.04em'}}>
