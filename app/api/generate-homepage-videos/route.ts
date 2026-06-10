@@ -5,9 +5,9 @@ const FAL_KEY = process.env.FAL_API_KEY!
 const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
 const IMAGES = {
-  hero: 'https://v3b.fal.media/files/b/0a9dbfe1/O1INKqRoIQAgUfHQv4kJ5.jpg',
-  ai: 'https://v3b.fal.media/files/b/0a9dbfe2/dYb9XqiI45UdQ4bTyviSw.jpg',
-  drone: 'https://v3b.fal.media/files/b/0a9dbfe1/KcYIG3LwJ0OlSZdYMfDmG.jpg',
+  hero: 'https://v3b.fal.media/files/b/0a9dc82f/qSFW82dOEK5PMHb--MQvl.jpg',
+  ai: 'https://v3b.fal.media/files/b/0a9dc82f/88gQU_rbqHUneOexDyfHO.jpg',
+  drone: 'https://v3b.fal.media/files/b/0a9dc82f/tjT9L2NkpUNYPNnkQ-8gY.jpg',
 }
 
 async function startJob(prompt: string, imageUrl: string): Promise<string> {
