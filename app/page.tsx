@@ -1,53 +1,53 @@
 'use client'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
-type Msg = { role: 'user' | 'ai'; content: string; imageUrl?: string }
+const HERO_IMG = 'https://v3b.fal.media/files/b/0a9dc82f/qSFW82dOEK5PMHb--MQvl.jpg'
 
+type Msg = { role: 'user' | 'ai'; content: string; imageUrl?: string; uploadedImg?: string }
+type Chat = { id: string; title: string; msgs: Msg[]; createdAt: number }
 
-const IMGS = {
-  hero: 'https://v3b.fal.media/files/b/0a9dc82f/qSFW82dOEK5PMHb--MQvl.jpg',
-  social: 'https://v3b.fal.media/files/b/0a9dc82f/e43qNXw5XXtLdWq6XTQWQ.jpg',
-  ai: 'https://v3b.fal.media/files/b/0a9dc82f/88gQU_rbqHUneOexDyfHO.jpg',
-  drone: 'https://v3b.fal.media/files/b/0a9dc82f/tjT9L2NkpUNYPNnkQ-8gY.jpg',
-  cinAd: 'https://v3b.fal.media/files/b/0a9dc82f/B6tH2UjRVW9J90tvdjJF9.jpg',
-}
-
-const NAV_ITEMS = [
-  { id: 'chat', icon: '✦', label: 'Wovo AI', sub: 'Chat + Image gen' },
-  { id: 'wovo-ai', icon: '⚡', label: 'AI Content Plans', sub: 'From $29/mo', href: '/wovo-ai' },
-  { id: 'cinematic', icon: '🎬', label: 'Cinematic Ads', sub: '$149/mo', href: '/wovo-ai?tab=cinematic' },
-  { id: 'websites', icon: '🌐', label: 'Website Builder', sub: '$99/mo', href: '/wovo-ai?tab=website' },
-  { id: 'wovo-os', icon: '🤖', label: 'WOVO OS', sub: 'AI Employee', href: '/wovo-os' },
-  { id: 'premium', icon: '🎥', label: 'Premium', sub: 'Full-service', href: '#premium-section' },
-]
+const WLogo = ({ size = 28 }: { size?: number }) => (
+  <div style={{ width: size, height: size, borderRadius: '50%', background: 'linear-gradient(135deg,#00E5C8,#00b89c)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+    <span style={{ fontFamily: 'Outfit,sans-serif', fontWeight: 900, fontSize: size * 0.46, color: '#080808', letterSpacing: '-0.04em' }}>W</span>
+  </div>
+)
 
 const SUGGESTIONS = [
-  'Write a caption for a restaurant special',
-  'How do I get more Instagram followers?',
-  'Make me a photo of a modern coffee shop',
-  'What content works best for restaurants?',
+  '✍️ Write a caption for a lunch special',
+  '📈 How do I grow on Instagram?',
+  '🎨 Make me a photo of a cozy coffee shop',
+  '📅 Best time to post on TikTok?',
+]
+
+const PAID_SIDEBAR = [
+  { icon: '⚡', label: 'AI Content Plans', sub: 'AI characters, posts, videos', href: '/wovo-ai', badge: 'From $29', color: '#00E5C8' },
+  { icon: '🎬', label: 'Cinematic Ads', sub: '30–45 sec product ads', href: '/wovo-ai', badge: '$149/mo', color: '#a78bfa' },
+  { icon: '🌐', label: 'Website Builder', sub: 'Full Next.js deploy-ready site', href: '/wovo-ai', badge: '$99/mo', color: '#60a5fa' },
+  { icon: '🤖', label: 'WOVO OS', sub: 'AI employee on your computer', href: '/wovo-os', badge: '$350/mo', color: '#f59e0b' },
+  { icon: '🎥', label: 'Premium Production', sub: 'Real filming, drone, photography', href: '/wovo-ai', badge: 'Custom', color: '#f97316' },
 ]
 
 export default function Home() {
-  const [msgs, setMsgs] = useState<Msg[]>([])
+  const [chats, setChats] = useState<Chat[]>([{ id: '1', title: 'New chat', msgs: [], createdAt: Date.now() }])
+  const [activeChatId, setActiveChatId] = useState('1')
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
+  const [uploadedImg, setUploadedImg] = useState<string | null>(null)
+  const [uploadedImgUrl, setUploadedImgUrl] = useState<string | null>(null)
+  const [showAuthWall, setShowAuthWall] = useState(false)
   const [sessionId] = useState(() => {
     if (typeof window === 'undefined') return 'anon'
-    return localStorage.getItem('wovo_sid') || (() => {
-      const id = Math.random().toString(36).slice(2)
-      localStorage.setItem('wovo_sid', id)
-      return id
-    })()
+    return localStorage.getItem('wovo_sid') || (() => { const id = Math.random().toString(36).slice(2); localStorage.setItem('wovo_sid', id); return id })()
   })
-  const [showAuthWall, setShowAuthWall] = useState(false)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [activeNav, setActiveNav] = useState('chat')
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const activeChat = chats.find(c => c.id === activeChatId)!
+  const msgs = activeChat?.msgs || []
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -59,6 +59,31 @@ export default function Home() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [msgs, loading])
 
+  const newChat = () => {
+    const id = Date.now().toString()
+    setChats(c => [...c, { id, title: 'New chat', msgs: [], createdAt: Date.now() }])
+    setActiveChatId(id)
+    setUploadedImg(null)
+    setUploadedImgUrl(null)
+    setShowAuthWall(false)
+  }
+
+  const updateChat = (id: string, msgs: Msg[]) => {
+    setChats(c => c.map(chat => chat.id === id ? {
+      ...chat, msgs,
+      title: msgs.find(m => m.role === 'user')?.content.slice(0, 32) || 'New chat'
+    } : chat))
+  }
+
+  const handleFile = (file: File) => {
+    const reader = new FileReader()
+    reader.onload = e => {
+      const base64 = e.target?.result as string
+      setUploadedImg(base64)
+    }
+    reader.readAsDataURL(file)
+  }
+
   const send = async (promptOverride?: string) => {
     const prompt = (promptOverride || input).trim()
     if (!prompt || loading) return
@@ -66,22 +91,33 @@ export default function Home() {
     setShowAuthWall(false)
 
     const lower = prompt.toLowerCase()
-    const wantsImage = /make.*(image|photo|picture|poster|logo)|generate.*(image|photo|picture)|create.*(image|photo|picture)|draw|photo of|picture of/i.test(lower)
-    const wantsPaid = /make.*(video|ad|website|series)|generate.*video|cinematic|wovo os|clone|avatar|website/i.test(lower)
+    const hasImage = !!uploadedImg
+    const wantsEdit = hasImage && /edit|change|remove|add|make.*look|background|color|replace|swap/i.test(lower)
+    const wantsImage = !hasImage && /make.*(image|photo|picture|poster|logo)|generate.*(image|photo|picture)|photo of|picture of|image of/i.test(lower)
+    const wantsPaid = /make.*(video|ad|website|series)|generate.*video|cinematic|wovo os|clone|avatar/i.test(lower)
 
-    setMsgs(m => [...m, { role: 'user', content: prompt }])
+    const imgPreview = uploadedImg
+    const newMsgs: Msg[] = [...msgs, { role: 'user', content: prompt, uploadedImg: imgPreview || undefined }]
+    updateChat(activeChatId, newMsgs)
+    setUploadedImg(null)
+    setUploadedImgUrl(null)
     setLoading(true)
 
     if (wantsPaid) {
       setLoading(false)
-      setMsgs(m => [...m, { role: 'ai', content: `That's a paid feature — video generation, cinematic ads, website building, and WOVO OS are available on paid plans.\n\nCheck out the services on the left to find the right plan for you.` }])
+      const reply = `That's a paid feature. Use the sidebar to find the right plan — videos, cinematic ads, websites, and WOVO OS all have dedicated pages with pricing.`
+      updateChat(activeChatId, [...newMsgs, { role: 'ai', content: reply }])
       return
     }
+
+    let action = 'chat'
+    if (wantsEdit && imgPreview) action = 'edit_image'
+    else if (wantsImage) action = 'image'
 
     const res = await fetch('/api/wovo-free', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: wantsImage ? 'image' : 'chat', prompt, userId, sessionId })
+      body: JSON.stringify({ action, prompt, userId, sessionId, imageBase64: imgPreview || undefined })
     })
     const data = await res.json()
     setLoading(false)
@@ -89,284 +125,240 @@ export default function Home() {
     if (!res.ok) {
       if (data.requiresAuth) {
         setShowAuthWall(true)
-        setMsgs(m => [...m, { role: 'ai', content: `You've used your 3 free messages for today. Create a free account to get 10 per day — no credit card needed.` }])
+        updateChat(activeChatId, [...newMsgs, { role: 'ai', content: `You've used your free messages for today. Sign up free for 10/day — no credit card.` }])
       } else {
-        setMsgs(m => [...m, { role: 'ai', content: data.error || 'Something went wrong. Try again.' }])
+        updateChat(activeChatId, [...newMsgs, { role: 'ai', content: data.error || 'Something went wrong. Try again.' }])
       }
       return
     }
 
-    if (wantsImage && data.imageUrl) {
-      setMsgs(m => [...m, { role: 'ai', content: 'Here you go:', imageUrl: data.imageUrl }])
+    if ((action === 'image' || action === 'edit_image') && data.imageUrl) {
+      updateChat(activeChatId, [...newMsgs, { role: 'ai', content: action === 'edit_image' ? 'Here\'s your edited image:' : 'Here you go:', imageUrl: data.imageUrl }])
     } else {
-      setMsgs(m => [...m, { role: 'ai', content: data.reply }])
+      updateChat(activeChatId, [...newMsgs, { role: 'ai', content: data.reply }])
     }
   }
 
   return (
-    <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--bg)', overflow: 'hidden' }}>
+    <div style={{ height: '100dvh', display: 'flex', overflow: 'hidden', background: 'var(--bg)' }}>
 
-      {/* ── TOP NAV ─────────────────────────── */}
-      <nav style={{ height: 52, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', borderBottom: '0.5px solid var(--border)', background: 'rgba(8,8,8,0.98)', zIndex: 60 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button onClick={() => setSidebarOpen(o => !o)} style={{ background: 'none', border: 'none', color: 'var(--text)', cursor: 'pointer', fontSize: 18, padding: '4px 6px', borderRadius: 6 }} className="mobile-only">
-            ☰
-          </button>
-          <Link href="/" style={{ fontFamily: 'Outfit,sans-serif', fontSize: 18, fontWeight: 800, color: 'var(--text)', textDecoration: 'none', letterSpacing: '-0.04em' }}>
-            wovo<span style={{ color: 'var(--accent)' }}>media</span>
-          </Link>
-        </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {userId
-            ? <Link href="/home"><button className="btn btn-outline btn-sm">Dashboard</button></Link>
-            : <>
-                <Link href="/login"><button className="btn btn-ghost btn-sm" style={{ fontSize: 13 }}>Sign in</button></Link>
-                <Link href="/login?tab=signup"><button className="btn btn-primary btn-sm" style={{ fontSize: 13 }}>Sign up free</button></Link>
-              </>
-          }
-        </div>
-      </nav>
+      {/* ── SIDEBAR ─────────────────────────── */}
+      <div style={{ width: 240, flexShrink: 0, borderRight: '0.5px solid var(--border)', display: 'flex', flexDirection: 'column', background: 'var(--bg)', overflow: 'hidden' }}>
 
-      {/* ── MAIN LAYOUT ─────────────────────── */}
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden', position: 'relative' }}>
-
-        {/* ── SIDEBAR ─────────────────────── */}
-        <div style={{
-          width: 220, flexShrink: 0, borderRight: '0.5px solid var(--border)',
-          background: 'var(--bg)', display: 'flex', flexDirection: 'column',
-          overflowY: 'auto', transition: 'transform 0.2s',
-        }} className="sidebar">
-
-          {/* Wovo AI section */}
-          <div style={{ padding: '14px 10px 8px' }}>
-            <div style={{ fontSize: 9, color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', padding: '0 8px', marginBottom: 4 }}>Wovo AI — Free</div>
-            <button
-              onClick={() => setActiveNav('chat')}
-              style={{
-                width: '100%', padding: '9px 10px', borderRadius: 10, border: 'none', cursor: 'pointer',
-                background: activeNav === 'chat' ? 'rgba(0,229,200,0.1)' : 'transparent',
-                display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left',
-                borderLeft: activeNav === 'chat' ? '2px solid var(--accent)' : '2px solid transparent',
-              }}
-            >
-              <span style={{ fontSize: 15 }}>✦</span>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: activeNav === 'chat' ? 'var(--accent)' : 'var(--text)', fontFamily: 'inherit' }}>Wovo AI</div>
-                <div style={{ fontSize: 10, color: 'var(--text-3)', fontFamily: 'inherit' }}>Chat · Images · Free tier</div>
-              </div>
-            </button>
-          </div>
-
-          <div style={{ height: '0.5px', background: 'var(--border)', margin: '4px 10px' }}/>
-
-          {/* Paid products */}
-          <div style={{ padding: '8px 10px', flex: 1 }}>
-            <div style={{ fontSize: 9, color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', padding: '0 8px', marginBottom: 4 }}>Paid Plans</div>
-            {[
-              { id: 'wovo-ai', icon: '⚡', label: 'AI Content', sub: 'Posts, captions, characters', href: '/wovo-ai', badge: 'From $29' },
-              { id: 'cinematic', icon: '🎬', label: 'Cinematic Ads', sub: '30–45 sec product ads', href: '/wovo-ai', badge: '$149/mo' },
-              { id: 'websites', icon: '🌐', label: 'Website Builder', sub: 'Full Next.js site', href: '/wovo-ai', badge: '$99/mo' },
-              { id: 'wovo-os', icon: '🤖', label: 'WOVO OS', sub: 'AI employee on your PC', href: '/wovo-os', badge: '$350/mo' },
-              { id: 'premium', icon: '🎥', label: 'Premium', sub: 'Real filming & drone', href: '#premium-section', badge: 'Custom' },
-            ].map(item => (
-              <a key={item.id} href={item.href} style={{ textDecoration: 'none', display: 'block' }}
-                onClick={() => setActiveNav(item.id)}>
-                <div style={{
-                  padding: '9px 10px', borderRadius: 10, marginBottom: 2, cursor: 'pointer',
-                  background: activeNav === item.id ? 'var(--bg-2)' : 'transparent',
-                  borderLeft: activeNav === item.id ? '2px solid var(--border-2)' : '2px solid transparent',
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  transition: 'background 0.1s',
-                }}>
-                  <span style={{ fontSize: 14 }}>{item.icon}</span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', fontFamily: 'inherit' }}>{item.label}</div>
-                    <div style={{ fontSize: 10, color: 'var(--text-3)', fontFamily: 'inherit', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.sub}</div>
-                  </div>
-                  <span style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 700, flexShrink: 0, fontFamily: 'inherit' }}>{item.badge}</span>
-                </div>
-              </a>
-            ))}
-          </div>
-
-          {/* Bottom CTA */}
-          <div style={{ padding: '10px', borderTop: '0.5px solid var(--border)' }}>
-            {!userId ? (
-              <Link href="/login?tab=signup" style={{ textDecoration: 'none' }}>
-                <button className="btn btn-primary" style={{ width: '100%', fontSize: 13, padding: '10px' }}>
-                  Sign up free →
-                </button>
-              </Link>
-            ) : (
-              <Link href="/home" style={{ textDecoration: 'none' }}>
-                <button className="btn btn-outline" style={{ width: '100%', fontSize: 13, padding: '10px' }}>
-                  Go to dashboard →
-                </button>
-              </Link>
-            )}
-            <Link href="/meet-nova" style={{ textDecoration: 'none', display: 'block', marginTop: 6 }}>
-              <button style={{ width: '100%', padding: '8px', background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-3)', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
-                ✦ Meet Wovo — find your plan
-              </button>
+        {/* Logo + new chat */}
+        <div style={{ padding: '14px 14px 10px', borderBottom: '0.5px solid var(--border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <Link href="/" style={{ fontFamily: 'Outfit,sans-serif', fontSize: 18, fontWeight: 800, color: 'var(--text)', textDecoration: 'none', letterSpacing: '-0.04em' }}>
+              wovo<span style={{ color: 'var(--accent)' }}>media</span>
             </Link>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {userId
+                ? <Link href="/home"><button style={{ padding: '4px 10px', borderRadius: 7, fontSize: 11, background: 'var(--bg-2)', border: '1px solid var(--border)', color: 'var(--text-2)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>App</button></Link>
+                : <Link href="/login"><button style={{ padding: '4px 10px', borderRadius: 7, fontSize: 11, background: 'var(--accent)', border: 'none', color: '#080808', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700 }}>Sign in</button></Link>
+              }
+            </div>
           </div>
+          <button onClick={newChat} style={{ width: '100%', padding: '8px 12px', borderRadius: 9, background: 'var(--bg-2)', border: '1px solid var(--border)', color: 'var(--text-2)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8, fontWeight: 500 }}>
+            <span style={{ fontSize: 15 }}>✦</span> New chat
+          </button>
         </div>
 
-        {/* Mobile sidebar overlay */}
-        {sidebarOpen && (
-          <div onClick={() => setSidebarOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 50 }} className="mobile-overlay"/>
+        {/* Chat history */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '8px 8px 4px' }}>
+          {chats.length > 0 && (
+            <>
+              <div style={{ fontSize: 10, color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '4px 8px 6px' }}>Chats</div>
+              {[...chats].reverse().map(chat => (
+                <button key={chat.id} onClick={() => setActiveChatId(chat.id)} style={{
+                  width: '100%', padding: '8px 10px', borderRadius: 8, border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', marginBottom: 2,
+                  background: chat.id === activeChatId ? 'var(--bg-2)' : 'transparent',
+                  borderLeft: chat.id === activeChatId ? '2px solid var(--accent)' : '2px solid transparent',
+                }}>
+                  <div style={{ fontSize: 12, color: chat.id === activeChatId ? 'var(--text)' : 'var(--text-2)', fontWeight: chat.id === activeChatId ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{chat.title}</div>
+                </button>
+              ))}
+            </>
+          )}
+        </div>
+
+        <div style={{ height: '0.5px', background: 'var(--border)', margin: '0 10px' }}/>
+
+        {/* Paid products */}
+        <div style={{ padding: '10px 8px', overflowY: 'auto' }}>
+          <div style={{ fontSize: 10, color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '0 8px 8px' }}>Upgrade</div>
+          {PAID_SIDEBAR.map(item => (
+            <a key={item.label} href={item.href} style={{ textDecoration: 'none', display: 'block', marginBottom: 2 }}>
+              <div style={{ padding: '8px 10px', borderRadius: 9, display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer', transition: 'background 0.1s' }}
+                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--bg-2)'}
+                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}>
+                <span style={{ fontSize: 14, flexShrink: 0 }}>{item.icon}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</div>
+                  <div style={{ fontSize: 10, color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.sub}</div>
+                </div>
+                <span style={{ fontSize: 10, fontWeight: 700, color: item.color, flexShrink: 0 }}>{item.badge}</span>
+              </div>
+            </a>
+          ))}
+        </div>
+
+        {/* Sign up CTA */}
+        {!userId && (
+          <div style={{ padding: '10px', borderTop: '0.5px solid var(--border)' }}>
+            <Link href="/login?tab=signup" style={{ textDecoration: 'none' }}>
+              <button className="btn btn-primary" style={{ width: '100%', fontSize: 13, padding: '9px' }}>Sign up free →</button>
+            </Link>
+            <div style={{ fontSize: 10, color: 'var(--text-3)', textAlign: 'center', marginTop: 5 }}>3 free · Sign up for 10/day</div>
+          </div>
         )}
+      </div>
 
-        {/* ── CHAT AREA ───────────────────── */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+      {/* ── CHAT AREA ───────────────────────── */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
 
-          {/* Messages */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '24px 20px 0' }}>
-            <div style={{ maxWidth: 680, margin: '0 auto' }}>
+        {/* Messages */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 20px 0' }}>
+          <div style={{ maxWidth: 700, margin: '0 auto' }}>
 
-              {msgs.length === 0 && (
-                <div style={{ textAlign: 'center', paddingTop: 40 }}>
-                  {/* Hero image behind greeting */}
-                  <div style={{ position: 'relative', borderRadius: 16, overflow: 'hidden', marginBottom: 28, height: 180 }}>
-                    <img src={IMGS.hero} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 40%' }}/>
-                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(8,8,8,0.3), rgba(8,8,8,0.8))' }}/>
-                    <div style={{ position: 'absolute', bottom: 20, left: 0, right: 0, textAlign: 'center' }}>
-                      <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'linear-gradient(135deg,#00E5C8,#00b89c)', margin: '0 auto 10px', border: '2px solid var(--accent)', boxShadow: '0 0 20px rgba(0,229,200,0.3)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                        <span style={{ fontFamily:'Outfit,sans-serif', fontWeight:900, fontSize:22, color:'#080808', letterSpacing:'-0.04em' }}>W</span>
-                      </div>
-                      <h1 style={{ fontFamily: 'Outfit,sans-serif', fontSize: 22, fontWeight: 800, color: '#fff', margin: '0 0 4px', letterSpacing: '-0.02em' }}>Wovo AI</h1>
-                      <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: 13, margin: 0 }}>
-                        {userId ? 'What can I help you with today?' : '3 free messages · Sign up for more'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
-                    {SUGGESTIONS.map(s => (
-                      <button key={s} onClick={() => send(s)} style={{
-                        padding: '9px 16px', borderRadius: 20, fontSize: 13,
-                        background: 'var(--bg-2)', border: '1px solid var(--border)',
-                        color: 'var(--text-2)', cursor: 'pointer', fontFamily: 'inherit',
-                      }}>
-                        {s}
-                      </button>
-                    ))}
+            {msgs.length === 0 && (
+              <div style={{ textAlign: 'center', paddingTop: 32 }}>
+                <div style={{ position: 'relative', borderRadius: 18, overflow: 'hidden', marginBottom: 24, height: 160 }}>
+                  <img src={HERO_IMG} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 30%' }}/>
+                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom,rgba(8,8,8,0.2),rgba(8,8,8,0.75))' }}/>
+                  <div style={{ position: 'absolute', bottom: 18, left: 0, right: 0 }}>
+                    <div style={{ margin: '0 auto 8px', display: 'flex', justifyContent: 'center' }}><WLogo size={44}/></div>
+                    <h1 style={{ fontFamily: 'Outfit,sans-serif', fontSize: 20, fontWeight: 800, color: '#fff', margin: '0 0 3px', letterSpacing: '-0.02em' }}>Wovo AI</h1>
+                    <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, margin: 0 }}>Ask · Generate images · Edit photos</p>
                   </div>
                 </div>
-              )}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, justifyContent: 'center' }}>
+                  {SUGGESTIONS.map(s => (
+                    <button key={s} onClick={() => send(s.replace(/^[^\s]+\s/,''))} style={{ padding: '8px 14px', borderRadius: 20, fontSize: 13, background: 'var(--bg-2)', border: '1px solid var(--border)', color: 'var(--text-2)', cursor: 'pointer', fontFamily: 'inherit' }}>{s}</button>
+                  ))}
+                </div>
+                <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 16 }}>
+                  {userId ? '10 free messages/day · Upgrade for unlimited' : '3 free messages · Sign up for 10/day · No credit card'}
+                </p>
+              </div>
+            )}
 
-              {msgs.map((m, i) => (
-                <div key={i} style={{ marginBottom: 20, display: 'flex', gap: 10, flexDirection: m.role === 'user' ? 'row-reverse' : 'row', alignItems: 'flex-start' }}>
-                  {m.role === 'ai' && (
-                    <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,#00E5C8,#00b89c)', flexShrink: 0, border: '1.5px solid var(--accent)', marginTop: 2, display:'flex', alignItems:'center', justifyContent:'center' }}>
-                      <span style={{ fontFamily:'Outfit,sans-serif', fontWeight:900, fontSize:13, color:'#080808' }}>W</span>
+            {msgs.map((m, i) => (
+              <div key={i} style={{ marginBottom: 18, display: 'flex', gap: 10, flexDirection: m.role === 'user' ? 'row-reverse' : 'row', alignItems: 'flex-start' }}>
+                {m.role === 'ai' && <WLogo size={28}/>}
+                <div style={{ maxWidth: '82%' }}>
+                  {m.uploadedImg && (
+                    <div style={{ marginBottom: 6, borderRadius: 12, overflow: 'hidden', maxWidth: 200 }}>
+                      <img src={m.uploadedImg} alt="Uploaded" style={{ width: '100%', display: 'block' }}/>
                     </div>
                   )}
-                  <div style={{ maxWidth: '80%' }}>
-                    {m.imageUrl && (
-                      <div style={{ marginBottom: 6, borderRadius: 14, overflow: 'hidden', border: '1px solid var(--border)' }}>
-                        <img src={m.imageUrl} alt="Generated" style={{ width: '100%', display: 'block' }}/>
-                        <a href={m.imageUrl} download target="_blank" rel="noreferrer">
-                          <button style={{ width: '100%', padding: '8px', background: 'var(--bg-2)', border: 'none', borderTop: '1px solid var(--border)', color: 'var(--text-2)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>⬇ Download</button>
-                        </a>
-                      </div>
-                    )}
-                    {m.content && (
-                      <div style={{
-                        padding: '11px 15px', borderRadius: 14, fontSize: 14, lineHeight: 1.7, whiteSpace: 'pre-wrap',
-                        background: m.role === 'user' ? 'var(--accent)' : 'var(--bg-2)',
-                        color: m.role === 'user' ? '#080808' : 'var(--text)',
-                        fontWeight: m.role === 'user' ? 600 : 400,
-                        borderBottomRightRadius: m.role === 'user' ? 4 : 14,
-                        borderBottomLeftRadius: m.role === 'ai' ? 4 : 14,
-                      }}>
-                        {m.content}
-                        {(m.content.includes('paid feature') || m.content.includes('paid plans')) && (
-                          <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                            <Link href="/wovo-ai" style={{ textDecoration: 'none' }}>
-                              <button style={{ padding: '8px 16px', background: 'var(--accent)', border: 'none', borderRadius: 8, color: '#080808', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>See plans from $29/mo →</button>
-                            </Link>
-                            <Link href="/meet-nova" style={{ textDecoration: 'none' }}>
-                              <button style={{ padding: '8px 14px', background: 'transparent', border: '1px solid rgba(0,229,200,0.3)', borderRadius: 8, color: 'var(--accent)', fontWeight: 600, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>Talk to Nova</button>
-                            </Link>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-
-              {loading && (
-                <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 20 }}>
-                  <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg,#00E5C8,#00b89c)', flexShrink: 0, border: '1.5px solid var(--accent)', marginTop: 2, display:'flex', alignItems:'center', justifyContent:'center' }}>
-                    <span style={{ fontFamily:'Outfit,sans-serif', fontWeight:900, fontSize:13, color:'#080808' }}>W</span>
-                  </div>
-                  <div style={{ padding: '14px 18px', background: 'var(--bg-2)', borderRadius: 14, borderBottomLeftRadius: 4 }}>
-                    <div style={{ display: 'flex', gap: 5 }}>
-                      {[0,1,2].map(i => <div key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)', animation: `bounce 1.1s ${i*0.18}s infinite ease-in-out` }}/>)}
+                  {m.imageUrl && (
+                    <div style={{ marginBottom: 6, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border)' }}>
+                      <img src={m.imageUrl} alt="Generated" style={{ width: '100%', display: 'block' }}/>
+                      <a href={m.imageUrl} download target="_blank" rel="noreferrer">
+                        <button style={{ width: '100%', padding: '7px', background: 'var(--bg-2)', border: 'none', borderTop: '1px solid var(--border)', color: 'var(--text-2)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>⬇ Download</button>
+                      </a>
                     </div>
+                  )}
+                  {m.content && (
+                    <div style={{
+                      padding: '10px 14px', borderRadius: 13, fontSize: 14, lineHeight: 1.7, whiteSpace: 'pre-wrap',
+                      background: m.role === 'user' ? 'var(--accent)' : 'var(--bg-2)',
+                      color: m.role === 'user' ? '#080808' : 'var(--text)',
+                      fontWeight: m.role === 'user' ? 600 : 400,
+                      borderBottomRightRadius: m.role === 'user' ? 3 : 13,
+                      borderBottomLeftRadius: m.role === 'ai' ? 3 : 13,
+                    }}>
+                      {m.content}
+                      {m.content.includes('sidebar') && (
+                        <div style={{ marginTop: 10, display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+                          <Link href="/wovo-ai" style={{ textDecoration: 'none' }}><button style={{ padding: '7px 14px', background: 'var(--accent)', border: 'none', borderRadius: 7, color: '#080808', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>See all plans →</button></Link>
+                          <Link href="/meet-nova" style={{ textDecoration: 'none' }}><button style={{ padding: '7px 12px', background: 'transparent', border: '1px solid rgba(0,229,200,0.3)', borderRadius: 7, color: 'var(--accent)', fontWeight: 600, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>Talk to Wovo</button></Link>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+
+            {loading && (
+              <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 18 }}>
+                <WLogo size={28}/>
+                <div style={{ padding: '13px 16px', background: 'var(--bg-2)', borderRadius: 13, borderBottomLeftRadius: 3 }}>
+                  <div style={{ display: 'flex', gap: 5 }}>
+                    {[0,1,2].map(i => <div key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)', animation: `bounce 1.1s ${i*0.18}s infinite ease-in-out` }}/>)}
                   </div>
                 </div>
-              )}
+              </div>
+            )}
 
-              {showAuthWall && (
-                <div className="card" style={{ textAlign: 'center', padding: '20px 24px', marginBottom: 20, border: '1px solid rgba(0,229,200,0.2)' }}>
-                  <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>Free messages used up</p>
-                  <p style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 14 }}>Sign up free for 10 messages/day. No credit card.</p>
-                  <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-                    <Link href="/login?tab=signup"><button className="btn btn-primary btn-sm">Create free account</button></Link>
-                    <Link href="/wovo-ai"><button className="btn btn-outline btn-sm">See paid plans</button></Link>
-                  </div>
+            {showAuthWall && (
+              <div className="card" style={{ textAlign: 'center', padding: '18px 20px', marginBottom: 18, border: '1px solid rgba(0,229,200,0.2)' }}>
+                <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 5 }}>Free messages used up</p>
+                <p style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 12 }}>Create a free account for 10 messages/day.</p>
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                  <Link href="/login?tab=signup"><button className="btn btn-primary btn-sm">Create free account</button></Link>
+                  <Link href="/wovo-ai"><button className="btn btn-outline btn-sm">See paid plans</button></Link>
                 </div>
-              )}
+              </div>
+            )}
 
-              <div ref={bottomRef} style={{ height: 16 }}/>
+            <div ref={bottomRef} style={{ height: 16 }}/>
+          </div>
+        </div>
+
+        {/* Image preview if uploaded */}
+        {uploadedImg && (
+          <div style={{ padding: '8px 20px 0', maxWidth: 700, margin: '0 auto', width: '100%' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 10, padding: '6px 10px' }}>
+              <img src={uploadedImg} alt="To edit" style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'cover' }}/>
+              <span style={{ fontSize: 12, color: 'var(--text-2)' }}>Image attached — tell Wovo what to do with it</span>
+              <button onClick={() => setUploadedImg(null)} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: 16, padding: '0 2px' }}>×</button>
             </div>
           </div>
+        )}
 
-          {/* Input */}
-          <div style={{ padding: '12px 20px 20px', borderTop: '0.5px solid var(--border)', background: 'rgba(8,8,8,0.98)', flexShrink: 0 }}>
-            <div style={{ maxWidth: 680, margin: '0 auto' }}>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', background: 'var(--bg-2)', border: '1px solid var(--border-2)', borderRadius: 16, padding: '10px 10px 10px 16px' }}>
-                <textarea
-                  ref={inputRef}
-                  value={input}
-                  onChange={e => {
-                    setInput(e.target.value)
-                    e.target.style.height = 'auto'
-                    e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'
-                  }}
-                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
-                  placeholder="Ask anything or say 'make me a photo of...'"
-                  rows={1}
-                  style={{ flex: 1, background: 'transparent', border: 'none', color: 'var(--text)', fontSize: 14, fontFamily: 'inherit', resize: 'none', outline: 'none', lineHeight: 1.55, maxHeight: 120, padding: 0 }}
-                />
-                <button
-                  onClick={() => send()}
-                  disabled={loading || !input.trim()}
-                  style={{ width: 36, height: 36, borderRadius: 10, background: input.trim() && !loading ? 'var(--accent)' : 'var(--bg-3)', border: 'none', color: input.trim() && !loading ? '#080808' : 'var(--text-3)', cursor: input.trim() && !loading ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 16, transition: 'all 0.15s', fontWeight: 800 }}
-                >↑</button>
-              </div>
-              <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-3)', marginTop: 7 }}>
-                💬 Chat · 🎨 "Make me a photo of..." · 🔒 Videos, websites & more need a plan
-              </p>
+        {/* Input */}
+        <div style={{ padding: '10px 20px 18px', borderTop: '0.5px solid var(--border)', background: 'rgba(8,8,8,0.97)', flexShrink: 0 }}>
+          <div style={{ maxWidth: 700, margin: '0 auto' }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', background: 'var(--bg-2)', border: '1px solid var(--border-2)', borderRadius: 14, padding: '8px 8px 8px 14px' }}>
+              {/* Image upload button */}
+              <button onClick={() => fileRef.current?.click()} title="Upload image to edit" style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--bg-3)', border: '1px solid var(--border)', color: 'var(--text-3)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 15 }}>
+                🖼️
+              </button>
+              <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = '' }}/>
+
+              <textarea
+                ref={inputRef}
+                value={input}
+                onChange={e => {
+                  setInput(e.target.value)
+                  e.target.style.height = 'auto'
+                  e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'
+                }}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
+                onPaste={e => {
+                  const item = Array.from(e.clipboardData.items).find(i => i.type.includes('image'))
+                  if (item) { const f = item.getAsFile(); if (f) handleFile(f) }
+                }}
+                placeholder={uploadedImg ? 'Tell Wovo what to do with your image...' : 'Ask anything or say "make me a photo of..."'}
+                rows={1}
+                style={{ flex: 1, background: 'transparent', border: 'none', color: 'var(--text)', fontSize: 14, fontFamily: 'inherit', resize: 'none', outline: 'none', lineHeight: 1.55, maxHeight: 120, padding: 0 }}
+              />
+              <button
+                onClick={() => send()}
+                disabled={loading || !input.trim()}
+                style={{ width: 34, height: 34, borderRadius: 9, background: input.trim() && !loading ? 'var(--accent)' : 'var(--bg-3)', border: 'none', color: input.trim() && !loading ? '#080808' : 'var(--text-3)', cursor: input.trim() && !loading ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 16, fontWeight: 800, transition: 'all 0.15s' }}
+              >↑</button>
             </div>
+            <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-3)', marginTop: 6 }}>
+              Chat · Generate images · Upload photo to edit · Drag & drop images
+            </p>
           </div>
         </div>
       </div>
 
-      <style>{`
-        @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
-        @media(max-width:640px){
-          .sidebar{position:fixed;left:0;top:52px;bottom:0;z-index:55;transform:${sidebarOpen ? 'translateX(0)' : 'translateX(-100%)'};box-shadow:4px 0 24px rgba(0,0,0,0.5)}
-          .mobile-only{display:flex!important}
-        }
-        @media(min-width:641px){
-          .mobile-only{display:none!important}
-          .mobile-overlay{display:none!important}
-        }
-      `}</style>
+      <style>{`@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}`}</style>
     </div>
   )
 }

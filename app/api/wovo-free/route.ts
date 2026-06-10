@@ -14,6 +14,7 @@ const LIMITS = {
 
 // Paid-only features
 const PAID_FEATURES = ['video', 'series', 'website', 'cinematic_ad', 'wovo_os', 'avatar_clone']
+const IMAGE_ACTIONS = ['image', 'edit_image']
 
 async function checkLimit(userId: string | null, action: string, sessionId: string) {
   if (PAID_FEATURES.includes(action)) {
@@ -72,7 +73,8 @@ async function checkLimit(userId: string | null, action: string, sessionId: stri
 }
 
 export async function POST(req: NextRequest) {
-  const { action, prompt, userId, sessionId } = await req.json()
+  const body = await req.json()
+  const { action, prompt, userId, sessionId } = body
 
   const check = await checkLimit(userId || null, action, sessionId || 'anon')
   if (!check.allowed) {
@@ -106,6 +108,29 @@ export async function POST(req: NextRequest) {
     const data = await imgRes.json()
     const imageUrl = data.images?.[0]?.url
     if (!imageUrl) return NextResponse.json({ error: 'Image generation failed' }, { status: 500 })
+    return NextResponse.json({ imageUrl, remaining: check.remaining })
+  }
+
+  // Handle image editing (user uploads image + gives instruction)
+  if (action === 'edit_image') {
+    const imageBase64 = body.imageBase64
+    if (!imageBase64) return NextResponse.json({ error: 'No image provided' }, { status: 400 })
+    // Use fal.ai flux with image-to-image editing
+    const imgRes = await fetch('https://fal.run/fal-ai/flux/dev/image-to-image', {
+      method: 'POST',
+      headers: { 'Authorization': `Key ${process.env.FAL_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt,
+        image_url: imageBase64,
+        strength: 0.75,
+        num_inference_steps: 28,
+        guidance_scale: 3.5,
+        num_images: 1
+      })
+    })
+    const data = await imgRes.json()
+    const imageUrl = data.images?.[0]?.url
+    if (!imageUrl) return NextResponse.json({ error: 'Image editing failed' }, { status: 500 })
     return NextResponse.json({ imageUrl, remaining: check.remaining })
   }
 
