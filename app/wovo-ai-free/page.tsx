@@ -48,7 +48,7 @@ export default function WovoAIFree() {
     const prompt = promptOverride || input.trim()
     if (!prompt || loading) return
     setInput('')
-    setMsgs(m => [...m, { role: 'user', content: prompt, type: mode }])
+    setMsgs(m => [...m, { role: 'user', content: prompt, type: mode === 'image' ? 'image' : 'text' }])
     setLoading(true)
 
     // Check if paid request - show upsell before even hitting API
