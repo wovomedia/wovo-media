@@ -41,12 +41,14 @@ export async function POST(req: NextRequest) {
   // Save to DB
   if (clientId) {
     for (const url of images) {
-      await sb.from('client_images').insert({
-        client_id: clientId,
-        prompt,
-        image_url: url,
-        model: 'flux-schnell'
-      }).catch(() => {})
+      try {
+        await sb.from('client_images').insert({
+          client_id: clientId,
+          prompt,
+          image_url: url,
+          model: 'flux-schnell'
+        })
+      } catch {}
     }
   }
 
