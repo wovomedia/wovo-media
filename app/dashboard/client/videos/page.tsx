@@ -92,7 +92,7 @@ export default function ClientVideos() {
     let voiceId = 'f4ae3907c6e5446ea1daeab0c2f82bd5' // default voice
 
     if (charType === 'clone' && charFile) {
-      // Upload to HeyGen Instant Avatar
+      // Upload to Wovo AI Avatar Creator
       const form = new FormData()
       form.append('video', charFile)
       form.append('name', charName)
@@ -250,7 +250,7 @@ export default function ClientVideos() {
                 <>
                   <div style={{background:'var(--bg-3)',borderRadius:10,padding:14}}>
                     <div style={{fontSize:14,fontWeight:600,color:'var(--text)',marginBottom:6}}>📹 Face Video</div>
-                    <p style={{fontSize:13,color:'var(--text-2)',marginBottom:12,lineHeight:1.6}}>Upload a 30–60 second video of yourself looking at the camera, speaking clearly. Good lighting, no hats or sunglasses. HeyGen will clone your likeness.</p>
+                    <p style={{fontSize:13,color:'var(--text-2)',marginBottom:12,lineHeight:1.6}}>Upload a 30–60 second video of yourself looking at the camera, speaking clearly. Good lighting, no hats or sunglasses. Wovo AI will clone your likeness.</p>
                     <input ref={fileRef} type="file" accept="video/*" style={{display:'none'}} onChange={e=>setCharFile(e.target.files?.[0]||null)}/>
                     <button className="btn btn-ghost btn-sm" onClick={()=>fileRef.current?.click()}>
                       {charFile ? `✓ ${charFile.name}` : '+ Upload face video'}
@@ -385,7 +385,7 @@ export default function ClientVideos() {
                       <button key={n} onClick={()=>setSeriesForm(f=>({...f,episodes:n}))} style={{padding:'10px 18px',borderRadius:9,fontSize:14,cursor:'pointer',border:'1px solid',borderColor:seriesForm.episodes===n?'var(--accent)':'var(--border-2)',background:seriesForm.episodes===n?'var(--accent-dim)':'transparent',color:seriesForm.episodes===n?'var(--accent)':'var(--text-2)',fontFamily:'inherit',fontWeight:600}}>{n}</button>
                     ))}
                   </div>
-                  <p style={{fontSize:12,color:'var(--text-3)',marginTop:6}}>Each episode = 1 HeyGen credit from your balance.</p>
+                  <p style={{fontSize:12,color:'var(--text-3)',marginTop:6}}>Each episode = 1 Wovo AI credit from your balance.</p>
                 </div>
                 <div style={{display:'flex',gap:8}}>
                   <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setSeriesStep(2)}>← Back</button>

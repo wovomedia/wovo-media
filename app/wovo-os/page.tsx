@@ -11,7 +11,7 @@ export default function WovoOS() {
     ['Does it post to social media automatically?', 'Never without your approval. WOVO OS will draft content, suggest captions, and queue posts — but it always asks you to approve before anything goes live. You get a push notification on your phone to approve with one tap.'],
     ['What happens if I cancel my subscription?', 'You have a 30-day grace period after canceling. After 30 days the system locks and goes into read-only mode. To reactivate you\'ll need to pay the $850 setup fee again plus restart your subscription.'],
     ['Does it work on Mac and Windows?', 'Yes — WOVO OS works on both Mac (macOS 13+) and Windows (10 and 11). It installs as a background app and runs silently unless you talk to it.'],
-    ['Is my data secure?', 'WOVO OS only processes what\'s on your screen and in your connected accounts. All AI processing goes through Anthropic\'s Claude API (the same models that power Claude.ai). Nothing is sold or shared.'],
+    ['Is my data secure?', 'WOVO OS only processes what\'s on your screen and in your connected accounts. All processing happens through Wovo\'s secure AI infrastructure. Nothing is sold or shared.'],
   ]
 
   return (

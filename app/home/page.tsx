@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase'
 import AppShell from '@/components/AppShell'
 import Link from 'next/link'
 
-const TYLER = 'https://files2.heygen.ai/avatar/v3/79b245561ad448e796b7e77cd2773d0b_14263/preview_talk_11.webp'
+const TYLER = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80'
 
 export default function Home() {
   const [client, setClient] = useState<any>(null)

@@ -254,7 +254,7 @@ export default function Studio() {
                 ) : (
                   <div style={{background:'var(--bg-3)',borderRadius:10,aspectRatio:'1',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:14,flexDirection:'column',gap:8}}>
                     <div style={{fontSize:32}}>🖼️</div>
-                    <p style={{fontSize:13,color:'var(--text-3)',textAlign:'center',padding:'0 20px'}}>Add a FAL API key (fal.ai) to your Vercel env vars to enable image generation.<br/>The caption below is ready.</p>
+                    <p style={{fontSize:13,color:'var(--text-3)',textAlign:'center',padding:'0 20px'}}>Image generation will be enabled shortly.<br/>The caption below is ready.</p>
                   </div>
                 )}
                 {imgResult.caption && (

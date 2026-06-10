@@ -52,7 +52,10 @@ export default function Home() {
 
       {/* ── HERO — full bleed image ──────────────── */}
       <section style={{position:'relative',height:'92vh',minHeight:520,display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
-        <img src={IMGS.hero} alt="Wovo Media" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',objectPosition:'center'}}/>
+        <video autoPlay muted loop playsInline style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',objectPosition:'center'}}>
+          <source src="https://export-download.canva.com/xSqN8/DAHMIGxSqN8/-1/0-187405300476265060.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUH5AO7UJ26%2F20260609%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260609T234234Z&X-Amz-Expires=8115&X-Amz-Signature=2ecc9954b9d242b0448ad71f5c835fdddbad12ecd35ae9633211329b91860c7f&X-Amz-SignedHeaders=host%3Bx-amz-expected-bucket-owner&response-expires=Wed%2C%2010%20Jun%202026%2001%3A57%3A49%20GMT" type="video/mp4"/>
+          <img src={IMGS.hero} alt="Wovo Media" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover'}}/>
+        </video>
         <div style={{position:'absolute',inset:0,background:'linear-gradient(to bottom, rgba(8,8,8,0.55) 0%, rgba(8,8,8,0.3) 50%, rgba(8,8,8,0.85) 100%)'}}/>
         <div style={{position:'relative',zIndex:2,textAlign:'center',padding:'0 24px',maxWidth:700}}>
           <div style={{display:'inline-flex',alignItems:'center',gap:10,background:'rgba(0,229,200,0.1)',border:'1px solid rgba(0,229,200,0.3)',borderRadius:40,padding:'6px 18px',marginBottom:24}}>
@@ -112,7 +115,10 @@ export default function Home() {
             <div className="card" style={{padding:0,overflow:'hidden',display:'flex',flexDirection:'column',position:'relative'}}>
               <div style={{position:'absolute',top:12,right:12,zIndex:3,background:'var(--accent)',color:'#080808',fontSize:9,fontWeight:800,padding:'3px 10px',borderRadius:20,textTransform:'uppercase',letterSpacing:'0.08em'}}>New</div>
               <div style={{position:'relative',height:220,overflow:'hidden'}}>
-                <img src={IMGS.ai} alt="WOVO OS AI Employee" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                <video autoPlay muted loop playsInline style={{width:'100%',height:'100%',objectFit:'cover'}}>
+                  <source src="https://export-download.canva.com/3pNz8/DAHMIF3pNz8/-1/0-7949359258120738989.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUH5AO7UJ26%2F20260609%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260609T081410Z&X-Amz-Expires=65070&X-Amz-Signature=174a9ae7209c09b28b43dc1515ac9cc9340af306ce2d8a5760130971d866b67f&X-Amz-SignedHeaders=host%3Bx-amz-expected-bucket-owner&response-expires=Wed%2C%2010%20Jun%202026%2002%3A18%3A40%20GMT" type="video/mp4"/>
+                  <img src={IMGS.ai} alt="WOVO OS" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                </video>
                 <div style={{position:'absolute',inset:0,background:'linear-gradient(to top,rgba(8,8,8,0.9) 0%,rgba(8,8,8,0.2) 60%,transparent 100%)'}}/>
                 <div style={{position:'absolute',bottom:16,left:16}}>
                   <span style={{background:'rgba(0,229,200,0.15)',border:'1px solid rgba(0,229,200,0.4)',color:'var(--accent)',fontSize:10,fontWeight:800,padding:'3px 10px',borderRadius:20,textTransform:'uppercase',letterSpacing:'0.06em'}}>WOVO OS</span>
@@ -158,7 +164,10 @@ export default function Home() {
             {/* Premium Full Service */}
             <div id="premium" className="card" style={{padding:0,overflow:'hidden',display:'flex',flexDirection:'column'}}>
               <div style={{position:'relative',height:220,overflow:'hidden'}}>
-                <img src={IMGS.drone} alt="Wovo Media Premium Production" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                <video autoPlay muted loop playsInline style={{width:'100%',height:'100%',objectFit:'cover'}}>
+                  <source src="https://export-download.canva.com/5YCPA/DAHMID5YCPA/-1/0-2974007567750190567.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUH5AO7UJ26%2F20260609%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260609T031129Z&X-Amz-Expires=81875&X-Amz-Signature=4d800439678e3505677cd752a1c03ed800c3c5abdd707090f80f492bba0509f0&X-Amz-SignedHeaders=host%3Bx-amz-expected-bucket-owner&response-expires=Wed%2C%2010%20Jun%202026%2001%3A56%3A04%20GMT" type="video/mp4"/>
+                  <img src={IMGS.drone} alt="Premium Production" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                </video>
                 <div style={{position:'absolute',inset:0,background:'linear-gradient(to top,rgba(8,8,8,0.9) 0%,rgba(8,8,8,0.2) 60%,transparent 100%)'}}/>
                 <div style={{position:'absolute',bottom:16,left:16}}>
                   <span style={{background:'rgba(245,158,11,0.15)',border:'1px solid rgba(245,158,11,0.35)',color:'#f59e0b',fontSize:10,fontWeight:800,padding:'3px 10px',borderRadius:20,textTransform:'uppercase',letterSpacing:'0.06em'}}>Premium</span>
@@ -199,7 +208,7 @@ export default function Home() {
           <div style={{textAlign:'center',marginBottom:48}}>
             <div style={{fontSize:11,color:'var(--text-3)',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.12em',marginBottom:10}}>Wovo AI Plans</div>
             <h2 style={{fontFamily:'Outfit,sans-serif',fontSize:'clamp(24px,4vw,36px)',fontWeight:800,color:'var(--text)',letterSpacing:'-0.03em',marginBottom:10}}>Start at $29/mo. Cancel anytime.</h2>
-            <p style={{color:'var(--text-2)',fontSize:14}}>Pay on Stripe. Account created instantly. Premium clients get Wovo AI at 50% off.</p>
+            <p style={{color:'var(--text-2)',fontSize:14}}>Pay securely. Account created instantly. Premium clients get Wovo AI at 50% off.</p>
           </div>
           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:12}}>
             {[

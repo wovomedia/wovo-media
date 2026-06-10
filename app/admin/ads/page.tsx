@@ -234,7 +234,7 @@ export default function AdStudio() {
                     {status==='polling' || status==='generating' ? (
                       <>
                         <div style={{width:40,height:40,border:'3px solid var(--accent)',borderTopColor:'transparent',borderRadius:'50%',margin:'0 auto 14px',animation:'spin 0.8s linear infinite'}}/>
-                        <p style={{color:'rgba(255,255,255,0.5)',fontSize:13,margin:0}}>{status==='generating'?'Submitting to HeyGen...':'Generating video · ~3-5 min'}</p>
+                        <p style={{color:'rgba(255,255,255,0.5)',fontSize:13,margin:0}}>{status==='generating'?'Generating with Wovo AI...':'Generating video · ~3-5 min'}</p>
                       </>
                     ) : status==='error' ? (
                       <><div style={{fontSize:36,marginBottom:10}}>⚠️</div><p style={{color:'rgba(255,255,255,0.4)',fontSize:13}}>Generation failed — try again</p></>
@@ -259,7 +259,7 @@ export default function AdStudio() {
                   </button>
                 )}
                 <p style={{fontSize:11,color:'var(--text-3)',textAlign:'center',marginTop:8}}>
-                  {status==='done'?'Ready to download and post':'Takes 3–5 minutes · Landscape 1920×1080 · Uses 1 HeyGen credit'}
+                  {status==='done'?'Ready to download and post':'Takes 3–5 minutes · Landscape 1920×1080 · Uses 1 Wovo AI credit'}
                 </p>
               </div>
             </div>

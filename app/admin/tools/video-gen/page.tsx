@@ -30,7 +30,7 @@ export default function AdminVideoGen() {
         setClients(c.data||[])
         setHistory(v.data||[])
       })
-      // Load avatars from HeyGen
+      // Load avatars
       fetch('/api/heygen/avatars').then(r=>r.json()).then(d=>setAvatars(d.avatars||[]))
     })
   }, [])
@@ -71,7 +71,7 @@ export default function AdminVideoGen() {
         <h1 style={{fontFamily:'Outfit,sans-serif',fontSize:26,fontWeight:800,color:'var(--text)',marginBottom:4,letterSpacing:'-0.03em'}}>
           AI Video <span style={{color:'var(--accent)'}}>Generator</span>
         </h1>
-        <p style={{color:'var(--text-3)',fontSize:14,marginBottom:24}}>Generate AI avatar videos for any client using HeyGen</p>
+        <p style={{color:'var(--text-3)',fontSize:14,marginBottom:24}}>Generate AI avatar videos for any client using Wovo AI</p>
 
         <div style={{display:'grid',gridTemplateColumns:'400px 1fr',gap:20}}>
           {/* Controls */}
@@ -123,7 +123,7 @@ export default function AdminVideoGen() {
                 ) : 'Generate Video ✨'}
               </button>
               <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-              {generating && <p style={{fontSize:11,color:'var(--text-3)',textAlign:'center'}}>HeyGen renders in 2–5 minutes. Stay on this page.</p>}
+              {generating && <p style={{fontSize:11,color:'var(--text-3)',textAlign:'center'}}>Wovo AI renders in 2–5 minutes. Stay on this page.</p>}
             </div>
           </div>
 
