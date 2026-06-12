@@ -143,13 +143,31 @@ Never say you can't do something visual. Just do it. Be conversational and fun. 
       if (imgCheck.allowed) {
         const FAL_KEY = process.env.FAL_API_KEY
         if (FAL_KEY) {
-          const imgRes = await fetch('https://fal.run/fal-ai/flux/schnell', {
+          // Step 1: Generate the scene with Flux Dev for quality
+          const imgRes = await fetch('https://fal.run/fal-ai/flux/dev', {
             method: 'POST',
             headers: { 'Authorization': `Key ${FAL_KEY}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt: imgPrompt, image_size: 'square_hd', num_inference_steps: 4, num_images: 1 })
+            body: JSON.stringify({ prompt: imgPrompt, image_size: 'portrait_4_3', num_inference_steps: 20, guidance_scale: 3.5, num_images: 1 })
           })
           const imgData = await imgRes.json()
-          const imageUrl = imgData.images?.[0]?.url
+          let imageUrl = imgData.images?.[0]?.url
+
+          // Step 2: If user uploaded a photo, face-swap their face onto the generated image
+          if (imageUrl && body.imageBase64) {
+            try {
+              const faceRes = await fetch('https://fal.run/fal-ai/face-swap', {
+                method: 'POST',
+                headers: { 'Authorization': `Key ${FAL_KEY}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  source_image_url: body.imageBase64,
+                  target_image_url: imageUrl,
+                })
+              })
+              const faceData = await faceRes.json()
+              if (faceData.image?.url) imageUrl = faceData.image.url
+            } catch {}
+          }
+
           if (imageUrl) {
             return NextResponse.json({ reply: reply || 'Here you go!', imageUrl, remaining: check.remaining })
           }

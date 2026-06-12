@@ -39,6 +39,7 @@ export default function Home() {
   const [showAuthWall, setShowAuthWall] = useState(false)
   const [chatLoading, setChatLoading] = useState(true)
   const [editingChatId, setEditingChatId] = useState<string | null>(null)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sessionId] = useState(() => {
     if (typeof window === 'undefined') return 'anon'
     return localStorage.getItem('wovo_sid') || (() => {
@@ -240,7 +241,9 @@ export default function Home() {
     <div style={{ height: '100dvh', display: 'flex', overflow: 'hidden', background: 'var(--bg)' }}>
 
       {/* ── SIDEBAR ─────────────────────────── */}
-      <div style={{ width: 240, flexShrink: 0, borderRight: '0.5px solid var(--border)', display: 'flex', flexDirection: 'column', background: 'var(--bg)', overflow: 'hidden' }}>
+      {/* Mobile overlay */}
+      {sidebarOpen && <div onClick={() => setSidebarOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 40 }} className="mob-overlay"/>}
+      <div className="sidebar-panel" style={{ width: 240, flexShrink: 0, borderRight: '0.5px solid var(--border)', display: 'flex', flexDirection: 'column', background: 'var(--bg)', overflow: 'hidden' }}>
 
         {/* Logo + auth */}
         <div style={{ padding: '14px 14px 10px', borderBottom: '0.5px solid var(--border)', flexShrink: 0 }}>
@@ -340,6 +343,16 @@ export default function Home() {
 
       {/* ── CHAT AREA ───────────────────────── */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+
+        {/* Mobile top bar */}
+        <div className="mob-topbar" style={{ display: 'none', alignItems: 'center', justifyContent: 'space-between', padding: '0 14px', height: 48, borderBottom: '0.5px solid var(--border)', flexShrink: 0 }}>
+          <button onClick={() => setSidebarOpen(o => !o)} style={{ background: 'none', border: 'none', color: 'var(--text)', cursor: 'pointer', fontSize: 20, padding: 4 }}>☰</button>
+          <span style={{ fontFamily: 'Outfit,sans-serif', fontWeight: 800, fontSize: 16, color: 'var(--text)', letterSpacing: '-0.03em' }}>wovo<span style={{ color: 'var(--accent)' }}>media</span></span>
+          {userId
+            ? <Link href="/home"><button style={{ padding: '4px 10px', borderRadius: 7, fontSize: 11, background: 'var(--bg-2)', border: '1px solid var(--border)', color: 'var(--text-2)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>App</button></Link>
+            : <Link href="/login?tab=signup"><button style={{ padding: '4px 10px', borderRadius: 7, fontSize: 11, background: 'var(--accent)', border: 'none', color: '#080808', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700 }}>Sign up</button></Link>
+          }
+        </div>
 
         {/* Messages */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px 20px 0' }}>
@@ -467,6 +480,21 @@ export default function Home() {
         @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
         .chat-row:hover .del-chat{opacity:1!important}
         .msg-row:hover .del-msg{opacity:1!important}
+        @media(max-width:640px){
+          .sidebar-panel{
+            position:fixed;left:0;top:0;bottom:0;z-index:50;
+            transform:${sidebarOpen ? 'translateX(0)' : 'translateX(-100%)'};
+            transition:transform 0.22s ease;
+            box-shadow:4px 0 32px rgba(0,0,0,0.6);
+          }
+          .mob-topbar{display:flex!important}
+          .mob-overlay{display:block!important}
+        }
+        @media(min-width:641px){
+          .sidebar-panel{transform:none!important;position:relative;}
+          .mob-topbar{display:none!important}
+          .mob-overlay{display:none!important}
+        }
       `}</style>
     </div>
   )
