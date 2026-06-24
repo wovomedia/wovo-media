@@ -1,18 +1,12 @@
 'use client'
-import Link from 'next/link'
-import { useState } from 'react'
-
-const NAV_LINKS = [
-  { href: '#work', label: 'Work' },
-  { href: '#pricing', label: 'Pricing' },
-  { href: '#contact', label: 'Contact' },
-]
+import { useState, useEffect, useRef } from 'react'
 
 const TIERS = [
   {
     id: 'NP', name: 'Nonprofit', price: 150,
     cadence: '2–3x/week (~10/mo)',
     badge: '501(c)(3) only',
+    badgeColor: '#7c3aed',
     features: [
       { label: '2 platforms managed', on: true },
       { label: 'Graphics & captions', on: true },
@@ -116,23 +110,69 @@ const TIERS = [
   },
 ]
 
-const STATS = [
-  { value: '9+', label: 'Active clients' },
-  { value: '100M+', label: 'Views generated' },
-  { value: '30+', label: 'Posts per client/mo' },
-  { value: '3', label: 'States served' },
+const SERVICES = [
+  { icon: '📱', title: 'Social Media Management', desc: 'Daily posts, captions, and engagement across all platforms — handled completely.' },
+  { icon: '🎬', title: 'Video Production', desc: 'In-person filming, cinematic edits, and short-form reels that stop the scroll.' },
+  { icon: '🚁', title: 'Drone Footage', desc: 'Aerial shots that make your business look like a million dollars.' },
+  { icon: '🤖', title: 'UGC AI Creator Videos', desc: 'AI-powered spokesperson videos that feel authentic and convert like crazy.' },
+  { icon: '👥', title: 'Group Review Videos', desc: 'TikTok-style street interview and reaction content for your brand.' },
+  { icon: '🌐', title: 'Website Design & Builds', desc: 'Fast, clean, conversion-focused websites from 1-page to full multi-page.' },
+  { icon: '📍', title: 'Google Business Profile', desc: 'Full GBP management, posts, and optimization so you show up first locally.' },
+  { icon: '📸', title: 'Photography', desc: 'Professional product, brand, and lifestyle photography for any industry.' },
 ]
 
-const LOGOS = ['Shopify', 'Google', 'Meta', 'TikTok', 'Instagram', 'YouTube', 'Facebook', 'Pinterest']
+const STATS = [
+  { value: 9, suffix: '+', label: 'Active Clients' },
+  { value: 100, suffix: 'M+', label: 'Views Generated' },
+  { value: 30, suffix: '+', label: 'Posts Per Client/Mo' },
+  { value: 100, suffix: '%', label: 'US Coverage' },
+]
+
+const WHY = [
+  { title: 'We do everything', body: 'Social, video, drone, web, GBP — one team, one invoice, zero coordination headache.' },
+  { title: 'No contracts', body: 'Month-to-month on every tier. Stay because the results are good, not because you\'re locked in.' },
+  { title: 'Remote or in-person', body: 'We serve businesses anywhere in the US. Need us there in person? We show up.' },
+  { title: 'Built for results', body: 'We\'ve generated over 100M views for our clients. Content that performs, not just content that exists.' },
+]
+
+const PLATFORMS = ['TikTok', 'Instagram', 'Facebook', 'YouTube', 'Google', 'Pinterest', 'Shopify', 'Meta']
+
+function useCountUp(target: number, duration = 1800, start = false) {
+  const [count, setCount] = useState(0)
+  useEffect(() => {
+    if (!start) return
+    let startTime: number
+    const step = (timestamp: number) => {
+      if (!startTime) startTime = timestamp
+      const progress = Math.min((timestamp - startTime) / duration, 1)
+      setCount(Math.floor(progress * target))
+      if (progress < 1) requestAnimationFrame(step)
+    }
+    requestAnimationFrame(step)
+  }, [target, duration, start])
+  return count
+}
+
+function StatCard({ value, suffix, label, animate }: { value: number, suffix: string, label: string, animate: boolean }) {
+  const count = useCountUp(value, 1600, animate)
+  return (
+    <div style={{ textAlign: 'center', padding: '48px 24px' }}>
+      <div style={{ fontFamily: 'Outfit,sans-serif', fontSize: 'clamp(52px,6vw,80px)', fontWeight: 800, letterSpacing: '-0.04em', color: '#00E5C8', lineHeight: 1 }}>
+        {animate ? count : 0}{suffix}
+      </div>
+      <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', marginTop: 10, fontWeight: 500, letterSpacing: '0.02em' }}>{label}</div>
+    </div>
+  )
+}
 
 function CheckIcon({ on }: { on: boolean }) {
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-      width: 16, height: 16, borderRadius: '50%', flexShrink: 0,
-      background: on ? 'rgba(0,229,200,0.12)' : 'rgba(255,255,255,0.04)',
+      width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
+      background: on ? 'rgba(0,229,200,0.15)' : 'rgba(255,255,255,0.04)',
       color: on ? '#00E5C8' : 'rgba(255,255,255,0.2)',
-      fontSize: 10, fontWeight: 700,
+      fontSize: 10, fontWeight: 800,
     }}>
       {on ? '✓' : '–'}
     </span>
@@ -143,16 +183,20 @@ export default function Home() {
   const [form, setForm] = useState({ name: '', business: '', email: '', phone: '', service: '', message: '' })
   const [sent, setSent] = useState(false)
   const [sending, setSending] = useState(false)
+  const [statsVisible, setStatsVisible] = useState(false)
+  const statsRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setStatsVisible(true) }, { threshold: 0.3 })
+    if (statsRef.current) obs.observe(statsRef.current)
+    return () => obs.disconnect()
+  }, [])
 
   const handleSubmit = async () => {
     if (!form.name || !form.email || !form.business) return
     setSending(true)
     try {
-      await fetch('/api/book', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      })
+      await fetch('/api/book', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
     } catch {}
     setSent(true)
     setSending(false)
@@ -161,305 +205,365 @@ export default function Home() {
   return (
     <div style={{ background: '#080808', color: '#f2f2f2', fontFamily: "'Plus Jakarta Sans', sans-serif", minHeight: '100vh' }}>
 
-      {/* NAV */}
+      {/* ── NAV ── */}
       <nav style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
-        background: 'rgba(8,8,8,0.92)', backdropFilter: 'blur(12px)',
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
-        padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60,
+        background: 'rgba(8,8,8,0.95)', backdropFilter: 'blur(16px)',
+        borderBottom: '1px solid rgba(255,255,255,0.07)',
+        padding: '0 48px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 68,
       }}>
-        <a href="/" style={{ fontFamily: 'Outfit,sans-serif', fontWeight: 800, fontSize: 20, letterSpacing: '-0.04em', color: '#f2f2f2', textDecoration: 'none' }}>
+        <a href="/" style={{ fontFamily: 'Outfit,sans-serif', fontWeight: 800, fontSize: 22, letterSpacing: '-0.04em', color: '#f2f2f2', textDecoration: 'none' }}>
           wovo<span style={{ color: '#00E5C8' }}>media</span>
         </a>
-        <div style={{ display: 'flex', gap: 28, alignItems: 'center' }}>
-          {NAV_LINKS.map(l => (
-            <a key={l.href} href={l.href} style={{ color: 'rgba(255,255,255,0.55)', fontSize: 14, textDecoration: 'none', fontWeight: 500, transition: 'color 0.15s' }}
+        <div style={{ display: 'flex', gap: 36, alignItems: 'center' }}>
+          {[['#services','Services'],['#why','Why Us'],['#pricing','Pricing'],['#contact','Contact']].map(([href, label]) => (
+            <a key={href} href={href} style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, textDecoration: 'none', fontWeight: 500 }}
               onMouseEnter={e => (e.currentTarget.style.color = '#f2f2f2')}
-              onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.55)')}>
-              {l.label}
+              onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.5)')}>
+              {label}
             </a>
           ))}
           <a href="#contact" style={{
-            background: '#00E5C8', color: '#080808', padding: '8px 18px', borderRadius: 8,
-            fontSize: 13, fontWeight: 700, textDecoration: 'none', letterSpacing: '-0.01em',
-          }}>
-            Get Started
-          </a>
+            background: '#00E5C8', color: '#080808', padding: '10px 22px', borderRadius: 8,
+            fontSize: 13, fontWeight: 700, textDecoration: 'none', letterSpacing: '0.01em',
+          }}>Get Started</a>
         </div>
       </nav>
 
-      {/* HERO */}
-      <section style={{ position: 'relative', minHeight: '100vh', display: 'flex', alignItems: 'center', overflow: 'hidden', paddingTop: 60 }}>
-        <video
-          autoPlay muted loop playsInline
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.5 }}
-        >
+      {/* ── HERO ── */}
+      <section style={{ position: 'relative', minHeight: '100vh', display: 'flex', alignItems: 'center', overflow: 'hidden', paddingTop: 68 }}>
+        <video autoPlay muted loop playsInline style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.45 }}>
           <source src="https://assets.mixkit.co/videos/3348/3348-720.mp4" type="video/mp4" />
         </video>
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(8,8,8,0.3) 0%, rgba(8,8,8,0.7) 60%, #080808 100%)' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(8,8,8,0.85) 0%, rgba(8,8,8,0.5) 50%, rgba(8,8,8,0.9) 100%)' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 50%, #080808 100%)' }} />
 
-        <div style={{ position: 'relative', zIndex: 2, maxWidth: 900, margin: '0 auto', padding: '0 24px', textAlign: 'center' }}>
+        <div style={{ position: 'relative', zIndex: 2, maxWidth: 1100, margin: '0 auto', padding: '0 48px', width: '100%' }}>
           <div style={{
-            display: 'inline-block', background: 'rgba(0,229,200,0.1)', border: '1px solid rgba(0,229,200,0.2)',
-            borderRadius: 100, padding: '5px 16px', marginBottom: 28,
-            fontSize: 12, fontWeight: 600, color: '#00E5C8', letterSpacing: '0.06em', textTransform: 'uppercase',
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            background: 'rgba(0,229,200,0.08)', border: '1px solid rgba(0,229,200,0.2)',
+            borderRadius: 100, padding: '6px 18px', marginBottom: 32,
           }}>
-            Serving businesses anywhere in the US
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#00E5C8', display: 'inline-block' }} />
+            <span style={{ fontSize: 12, fontWeight: 600, color: '#00E5C8', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Serving businesses anywhere in the US</span>
           </div>
           <h1 style={{
-            fontFamily: 'Outfit,sans-serif', fontSize: 'clamp(40px, 7vw, 82px)',
-            fontWeight: 800, letterSpacing: '-0.04em', lineHeight: 1.05,
-            color: '#f2f2f2', marginBottom: 24,
+            fontFamily: 'Outfit,sans-serif', fontSize: 'clamp(48px, 7.5vw, 96px)',
+            fontWeight: 800, letterSpacing: '-0.04em', lineHeight: 1.0,
+            color: '#f2f2f2', marginBottom: 28, maxWidth: 800,
           }}>
             Content that makes<br />
-            <span style={{ color: '#00E5C8' }}>businesses</span> go viral
+            <span style={{ color: '#00E5C8' }}>businesses</span><br />
+            go viral.
           </h1>
-          <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.55)', maxWidth: 560, margin: '0 auto 40px', lineHeight: 1.6 }}>
-            Social media management, video production, drone footage, and web — all handled by Wovo Media so you can focus on running your business. We work with businesses anywhere in the US, fully remote or in-person.
+          <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.5)', maxWidth: 500, lineHeight: 1.7, marginBottom: 44 }}>
+            Social media, video production, drone, and web — all under one roof. Fully remote or in-person, anywhere in the US.
           </p>
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
             <a href="#contact" style={{
-              background: '#00E5C8', color: '#080808', padding: '14px 32px', borderRadius: 10,
+              background: '#00E5C8', color: '#080808', padding: '16px 36px', borderRadius: 10,
               fontWeight: 700, fontSize: 15, textDecoration: 'none', letterSpacing: '-0.01em',
-            }}>
-              Start a conversation
-            </a>
+            }}>Start a conversation →</a>
             <a href="#pricing" style={{
-              background: 'rgba(255,255,255,0.06)', color: '#f2f2f2', padding: '14px 32px', borderRadius: 10,
-              fontWeight: 600, fontSize: 15, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.1)',
-            }}>
-              See pricing
-            </a>
+              background: 'transparent', color: '#f2f2f2', padding: '16px 36px', borderRadius: 10,
+              fontWeight: 600, fontSize: 15, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.15)',
+            }}>See pricing</a>
           </div>
         </div>
       </section>
 
-      {/* SERVICES STRIP */}
-      <section style={{ borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '20px 24px', overflowX: 'auto' }}>
-        <div style={{ display: 'flex', gap: 40, justifyContent: 'center', flexWrap: 'wrap', maxWidth: 900, margin: '0 auto' }}>
-          {['Daily Social Media', 'Video Production', 'Drone Footage', 'Short-Form Reels', 'UGC AI Videos', 'Group Review Videos', 'Website Builds', 'Google Business Profile'].map(s => (
-            <span key={s} style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.4)', whiteSpace: 'nowrap' }}>
-              <span style={{ color: '#00E5C8', marginRight: 6 }}>✦</span>{s}
-            </span>
+      {/* ── PLATFORM STRIP ── */}
+      <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '18px 48px', background: 'rgba(255,255,255,0.01)' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginRight: 12, whiteSpace: 'nowrap' }}>We post on</span>
+          {PLATFORMS.map((p, i) => (
+            <span key={p} style={{ fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.45)', fontFamily: 'Outfit,sans-serif', paddingRight: i < PLATFORMS.length - 1 ? 12 : 0, borderRight: i < PLATFORMS.length - 1 ? '1px solid rgba(255,255,255,0.08)' : 'none' }}>{p}</span>
           ))}
         </div>
-      </section>
+      </div>
 
-      {/* SOCIAL PROOF */}
-      <section id="work" style={{ maxWidth: 1100, margin: '0 auto', padding: '100px 24px' }}>
-        <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#00E5C8', marginBottom: 12 }}>Results</p>
-        <h2 style={{ fontFamily: 'Outfit,sans-serif', fontSize: 'clamp(28px, 4vw, 46px)', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 56 }}>
-          Trusted by businesses<br />across the US
-        </h2>
-
-        {/* Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 72 }}>
-          {STATS.map(s => (
-            <div key={s.label} style={{
-              background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
-              borderRadius: 12, padding: '28px 20px',
-            }}>
-              <div style={{ fontFamily: 'Outfit,sans-serif', fontSize: 42, fontWeight: 800, letterSpacing: '-0.04em', color: '#00E5C8', lineHeight: 1 }}>{s.value}</div>
-              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', marginTop: 8, fontWeight: 500 }}>{s.label}</div>
+      {/* ── STATS ── */}
+      <div ref={statsRef} style={{ background: '#0c0c0c', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', padding: '0 48px' }}>
+          {STATS.map((s, i) => (
+            <div key={s.label} style={{ borderRight: i < 3 ? '1px solid rgba(255,255,255,0.06)' : 'none', padding: '0 24px' }}>
+              <StatCard value={s.value} suffix={s.suffix} label={s.label} animate={statsVisible} />
             </div>
           ))}
         </div>
+      </div>
 
-        {/* Platform logos */}
-        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)', marginBottom: 28, letterSpacing: '0.05em', textTransform: 'uppercase', fontWeight: 600 }}>
-          We work across every major platform
-        </p>
-        <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap', alignItems: 'center' }}>
-          {LOGOS.map(l => (
-            <span key={l} style={{
-              fontSize: 15, fontWeight: 700, color: 'rgba(255,255,255,0.55)',
-              letterSpacing: '-0.02em', fontFamily: 'Outfit,sans-serif',
-            }}>{l}</span>
+      {/* ── SERVICES ── */}
+      <section id="services" style={{ padding: '120px 48px', maxWidth: 1100, margin: '0 auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 64, flexWrap: 'wrap', gap: 24 }}>
+          <div>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#00E5C8', marginBottom: 14 }}>What we do</p>
+            <h2 style={{ fontFamily: 'Outfit,sans-serif', fontSize: 'clamp(32px,4vw,54px)', fontWeight: 800, letterSpacing: '-0.035em', lineHeight: 1.1, margin: 0 }}>
+              Everything your<br />business needs online
+            </h2>
+          </div>
+          <a href="#contact" style={{ color: '#00E5C8', fontSize: 14, fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap', borderBottom: '1px solid rgba(0,229,200,0.3)', paddingBottom: 2 }}>
+            Get a free consultation →
+          </a>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 2 }}>
+          {SERVICES.map((s, i) => (
+            <div key={s.title} style={{
+              padding: '36px 32px',
+              borderTop: '1px solid rgba(255,255,255,0.07)',
+              borderLeft: i % 4 === 0 ? 'none' : 'none',
+              transition: 'background 0.2s',
+            }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,229,200,0.03)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+              <div style={{ fontSize: 32, marginBottom: 16 }}>{s.icon}</div>
+              <h3 style={{ fontFamily: 'Outfit,sans-serif', fontSize: 17, fontWeight: 700, marginBottom: 10, letterSpacing: '-0.02em' }}>{s.title}</h3>
+              <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.45)', lineHeight: 1.7, margin: 0 }}>{s.desc}</p>
+            </div>
           ))}
         </div>
       </section>
 
-      {/* PRICING */}
-      <section id="pricing" style={{ padding: '80px 24px', borderTop: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.01)' }}>
-        <div style={{ maxWidth: 1400, margin: '0 auto' }}>
-          <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#00E5C8', marginBottom: 12 }}>Pricing</p>
-          <h2 style={{ fontFamily: 'Outfit,sans-serif', fontSize: 'clamp(28px, 4vw, 46px)', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 8 }}>
-            Simple, transparent tiers
-          </h2>
-          <p style={{ color: 'rgba(255,255,255,0.45)', marginBottom: 52, fontSize: 15 }}>No hidden fees. No long-term contracts. Cancel anytime.</p>
+      {/* ── WHY WOVO ── */}
+      <section id="why" style={{ background: 'rgba(0,229,200,0.03)', borderTop: '1px solid rgba(0,229,200,0.08)', borderBottom: '1px solid rgba(0,229,200,0.08)', padding: '120px 48px' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }}>
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#00E5C8', marginBottom: 14 }}>Why Wovo Media</p>
+              <h2 style={{ fontFamily: 'Outfit,sans-serif', fontSize: 'clamp(32px,4vw,52px)', fontWeight: 800, letterSpacing: '-0.035em', lineHeight: 1.1, marginBottom: 24 }}>
+                One team.<br />Every platform.<br />Real results.
+              </h2>
+              <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.5)', lineHeight: 1.8, marginBottom: 36 }}>
+                Most agencies specialize in one thing. Wovo Media handles your entire digital presence — from the content shot on location to the website visitors land on.
+              </p>
+              <a href="#contact" style={{
+                display: 'inline-block', background: '#00E5C8', color: '#080808', padding: '14px 32px', borderRadius: 9,
+                fontWeight: 700, fontSize: 14, textDecoration: 'none',
+              }}>Work with us →</a>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              {WHY.map((w, i) => (
+                <div key={w.title} style={{
+                  padding: '28px 0', borderBottom: i < WHY.length - 1 ? '1px solid rgba(255,255,255,0.07)' : 'none',
+                  display: 'flex', gap: 20, alignItems: 'flex-start',
+                }}>
+                  <div style={{
+                    width: 36, height: 36, borderRadius: 8, background: 'rgba(0,229,200,0.1)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 14, fontWeight: 800, color: '#00E5C8', flexShrink: 0, fontFamily: 'Outfit,sans-serif',
+                  }}>{String(i + 1).padStart(2, '0')}</div>
+                  <div>
+                    <div style={{ fontFamily: 'Outfit,sans-serif', fontWeight: 700, fontSize: 16, marginBottom: 6 }}>{w.title}</div>
+                    <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.45)', lineHeight: 1.7 }}>{w.body}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── PRICING ── */}
+      <section id="pricing" style={{ padding: '120px 48px' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <div style={{ marginBottom: 64 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#00E5C8', marginBottom: 14 }}>Pricing</p>
+            <h2 style={{ fontFamily: 'Outfit,sans-serif', fontSize: 'clamp(32px,4vw,54px)', fontWeight: 800, letterSpacing: '-0.035em', lineHeight: 1.1, marginBottom: 14 }}>
+              Simple, transparent tiers
+            </h2>
+            <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 16 }}>No hidden fees. No long-term contracts. Cancel anytime.</p>
+          </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
             {TIERS.map(t => (
               <div key={t.id} style={{
-                background: t.highlight ? 'rgba(0,229,200,0.05)' : 'rgba(255,255,255,0.02)',
-                border: t.highlight ? '1.5px solid rgba(0,229,200,0.35)' : '1px solid rgba(255,255,255,0.07)',
-                borderRadius: 14, padding: '28px 22px',
-                display: 'flex', flexDirection: 'column', gap: 12, position: 'relative',
+                background: t.highlight ? 'rgba(0,229,200,0.04)' : '#0f0f0f',
+                border: t.highlight ? '1.5px solid rgba(0,229,200,0.4)' : '1px solid rgba(255,255,255,0.08)',
+                borderRadius: 16, padding: '32px 28px',
+                display: 'flex', flexDirection: 'column', gap: 16, position: 'relative',
               }}>
                 {t.highlight && (
                   <div style={{
-                    position: 'absolute', top: -11, left: '50%', transform: 'translateX(-50%)',
+                    position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)',
                     background: '#00E5C8', color: '#080808', fontSize: 10, fontWeight: 800,
-                    padding: '3px 12px', borderRadius: 100, whiteSpace: 'nowrap', letterSpacing: '0.04em',
+                    padding: '4px 14px', borderRadius: 100, whiteSpace: 'nowrap', letterSpacing: '0.06em',
                   }}>MOST POPULAR</div>
                 )}
                 {(t as any).badge && (
                   <div style={{
-                    position: 'absolute', top: -11, left: '50%', transform: 'translateX(-50%)',
+                    position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)',
                     background: '#7c3aed', color: '#fff', fontSize: 10, fontWeight: 800,
-                    padding: '3px 12px', borderRadius: 100, whiteSpace: 'nowrap', letterSpacing: '0.04em',
+                    padding: '4px 14px', borderRadius: 100, whiteSpace: 'nowrap', letterSpacing: '0.06em',
                   }}>{(t as any).badge}</div>
                 )}
                 <div>
-                  <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', marginBottom: 4 }}>
-                    {t.id === 'NP' ? 'Nonprofit' : 'Tier ' + t.id}
+                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', marginBottom: 6 }}>
+                    {t.id === 'NP' ? 'Nonprofit' : `Tier ${t.id}`}
                   </div>
-                  <div style={{ fontFamily: 'Outfit,sans-serif', fontWeight: 700, fontSize: 15, color: '#f2f2f2' }}>{t.name}</div>
+                  <div style={{ fontFamily: 'Outfit,sans-serif', fontWeight: 700, fontSize: 18, color: '#f2f2f2' }}>{t.name}</div>
                 </div>
-                <div style={{ fontSize: t.price ? 24 : 19, fontFamily: 'Outfit,sans-serif', fontWeight: 800, color: t.highlight ? '#00E5C8' : '#f2f2f2', letterSpacing: '-0.03em' }}>
-                  {t.price ? `$${t.price.toLocaleString()}` : 'Custom'}
-                  {t.price && <span style={{ fontSize: 12, fontWeight: 400, color: 'rgba(255,255,255,0.35)' }}>/mo</span>}
+                <div>
+                  <span style={{ fontFamily: 'Outfit,sans-serif', fontSize: 38, fontWeight: 800, letterSpacing: '-0.04em', color: t.highlight ? '#00E5C8' : '#f2f2f2' }}>
+                    {t.price ? `$${t.price.toLocaleString()}` : 'Custom'}
+                  </span>
+                  {t.price && <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.3)', marginLeft: 4 }}>/mo</span>}
                 </div>
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.04)', borderRadius: 6, padding: '5px 8px' }}>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.04)', borderRadius: 7, padding: '7px 12px', display: 'inline-block', width: 'fit-content' }}>
                   {t.cadence}
                 </div>
-                <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 7 }}>
+                <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 16, display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
                   {t.features.map(f => (
-                    <div key={f.label} style={{ display: 'flex', alignItems: 'flex-start', gap: 7, opacity: f.on ? 1 : 0.35 }}>
+                    <div key={f.label} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                       <CheckIcon on={f.on} />
-                      <span style={{ fontSize: 11.5, color: f.on ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.35)', lineHeight: 1.4 }}>{f.label}</span>
+                      <span style={{ fontSize: 13, color: f.on ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.25)', lineHeight: 1.5 }}>{f.label}</span>
                     </div>
                   ))}
                 </div>
                 <a href="#contact" style={{
-                  marginTop: 'auto', paddingTop: 12, display: 'block', textAlign: 'center',
+                  display: 'block', textAlign: 'center',
                   background: t.highlight ? '#00E5C8' : 'rgba(255,255,255,0.06)',
-                  color: t.highlight ? '#080808' : 'rgba(255,255,255,0.7)',
-                  padding: '9px 0', borderRadius: 7, fontSize: 12, fontWeight: 700,
-                  textDecoration: 'none', border: t.highlight ? 'none' : '1px solid rgba(255,255,255,0.09)',
-                }}>
-                  Get started
-                </a>
+                  color: t.highlight ? '#080808' : 'rgba(255,255,255,0.75)',
+                  padding: '13px 0', borderRadius: 9, fontSize: 13, fontWeight: 700,
+                  textDecoration: 'none', border: t.highlight ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                  marginTop: 'auto',
+                }}>Get started</a>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* CONTACT */}
-      <section id="contact" style={{ maxWidth: 640, margin: '0 auto', padding: '100px 24px' }}>
-        <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#00E5C8', marginBottom: 12 }}>Contact</p>
-        <h2 style={{ fontFamily: 'Outfit,sans-serif', fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 8 }}>
-          Let's work together
-        </h2>
-        <p style={{ color: 'rgba(255,255,255,0.45)', marginBottom: 40, fontSize: 15 }}>
-          Fill out the form and our team will reach out within 24 hours.
-        </p>
-
-        {sent ? (
-          <div style={{ background: 'rgba(0,229,200,0.08)', border: '1px solid rgba(0,229,200,0.2)', borderRadius: 12, padding: 32, textAlign: 'center' }}>
-            <div style={{ fontSize: 32, marginBottom: 12 }}>✓</div>
-            <div style={{ fontFamily: 'Outfit,sans-serif', fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Message received</div>
-            <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14 }}>We'll be in touch within 24 hours.</div>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {[
-              { key: 'name', label: 'Your name', placeholder: 'John Smith' },
-              { key: 'business', label: 'Business name', placeholder: 'Smith\'s BBQ' },
-              { key: 'email', label: 'Email', placeholder: 'john@smithsbbq.com' },
-              { key: 'phone', label: 'Phone (optional)', placeholder: '(931) 000-0000' },
-            ].map(f => (
-              <div key={f.key}>
-                <label style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.75)', display: 'block', marginBottom: 8, letterSpacing: '0.01em' }}>{f.label}</label>
-                <input
-                  type="text"
-                  placeholder={f.placeholder}
-                  value={form[f.key as keyof typeof form]}
-                  onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
-                  style={{
-                    width: '100%', background: '#141414', border: '1px solid rgba(255,255,255,0.15)',
-                    borderRadius: 10, padding: '13px 16px', color: '#f2f2f2', fontSize: 15, outline: 'none',
-                    fontFamily: "'Plus Jakarta Sans', sans-serif",
-                  }}
-                />
-              </div>
-            ))}
-            <div>
-              <label style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.75)', display: 'block', marginBottom: 8 }}>What are you interested in?</label>
-              <select
-                value={form.service}
-                onChange={e => setForm(p => ({ ...p, service: e.target.value }))}
-                style={{
-                  width: '100%', background: '#141414', border: '1px solid rgba(255,255,255,0.15)',
-                  borderRadius: 10, padding: '13px 16px', color: '#f2f2f2',
-                  fontSize: 15, outline: 'none', fontFamily: "'Plus Jakarta Sans', sans-serif", cursor: 'pointer',
-                }}
-              >
-                <option value="" disabled>Select a tier or service</option>
-                <option value="nonprofit">Nonprofit — $150/mo (501c3 required)</option>
-                <option value="tier-a">Tier A — Starter ($300/mo)</option>
-                <option value="tier-b">Tier B — Essential ($500/mo)</option>
-                <option value="tier-c">Tier C — Growth ($750/mo)</option>
-                <option value="tier-d">Tier D — Pro ($1,100/mo)</option>
-                <option value="tier-e">Tier E — Pro + Drone ($1,500/mo)</option>
-                <option value="tier-f">Tier F — Elite ($2,000/mo)</option>
-                <option value="tier-g">Tier G — Full Partner (Custom)</option>
-                <option value="not-sure">Not sure yet</option>
-              </select>
-            </div>
-            <div>
-              <label style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.75)', display: 'block', marginBottom: 8 }}>Tell us about your business</label>
-              <textarea
-                placeholder="What do you do, where are you located, what's your goal?"
-                value={form.message}
-                onChange={e => setForm(p => ({ ...p, message: e.target.value }))}
-                rows={4}
-                style={{
-                  width: '100%', background: '#141414', border: '1px solid rgba(255,255,255,0.15)',
-                  borderRadius: 10, padding: '13px 16px', color: '#f2f2f2', fontSize: 15, outline: 'none',
-                  fontFamily: "'Plus Jakarta Sans', sans-serif", resize: 'vertical',
-                }}
-              />
-            </div>
-            <button
-              onClick={handleSubmit}
-              disabled={sending || !form.name || !form.email || !form.business}
-              style={{
-                background: '#00E5C8', color: '#080808', border: 'none',
-                padding: '14px 0', borderRadius: 9, fontSize: 15, fontWeight: 700,
-                cursor: sending ? 'wait' : 'pointer', width: '100%', letterSpacing: '-0.01em',
-                opacity: (!form.name || !form.email || !form.business) ? 0.5 : 1,
-                fontFamily: "'Plus Jakarta Sans', sans-serif",
-              }}
-            >
-              {sending ? 'Sending…' : 'Send message'}
-            </button>
-            <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', textAlign: 'center', lineHeight: 1.6, marginTop: 4 }}>
-              By submitting this form you agree to our{' '}
-              <a href="/terms" style={{ color: 'rgba(255,255,255,0.4)', textDecoration: 'underline' }}>Terms of Service</a>
-              {' '}and{' '}
-              <a href="/cancellation-policy" style={{ color: 'rgba(255,255,255,0.4)', textDecoration: 'underline' }}>Cancellation Policy</a>.
-              Services renew monthly until cancelled in writing via email or phone call to Wovo Media.
+      {/* ── CONTACT ── */}
+      <section id="contact" style={{ background: '#0a0a0a', borderTop: '1px solid rgba(255,255,255,0.06)', padding: '120px 48px' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 100, alignItems: 'start' }}>
+          <div>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#00E5C8', marginBottom: 14 }}>Contact</p>
+            <h2 style={{ fontFamily: 'Outfit,sans-serif', fontSize: 'clamp(32px,4vw,52px)', fontWeight: 800, letterSpacing: '-0.035em', lineHeight: 1.1, marginBottom: 24 }}>
+              Let's build<br />something together
+            </h2>
+            <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.45)', lineHeight: 1.8, marginBottom: 48 }}>
+              Fill out the form and our team will reach out within 24 hours to go over your goals and find the right plan.
             </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+              {[
+                { label: 'Email', value: 'support@wovomedia.com', href: 'mailto:support@wovomedia.com' },
+                { label: 'Coverage', value: 'Anywhere in the US' },
+                { label: 'Response time', value: 'Within 24 hours' },
+              ].map(item => (
+                <div key={item.label} style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+                  <div style={{ width: 1, background: 'rgba(0,229,200,0.3)', alignSelf: 'stretch', flexShrink: 0 }} />
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 4 }}>{item.label}</div>
+                    {item.href
+                      ? <a href={item.href} style={{ fontSize: 15, color: '#00E5C8', textDecoration: 'none', fontWeight: 500 }}>{item.value}</a>
+                      : <div style={{ fontSize: 15, color: 'rgba(255,255,255,0.65)', fontWeight: 500 }}>{item.value}</div>}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-        )}
+
+          <div>
+            {sent ? (
+              <div style={{ background: 'rgba(0,229,200,0.06)', border: '1px solid rgba(0,229,200,0.2)', borderRadius: 16, padding: '48px 32px', textAlign: 'center' }}>
+                <div style={{ fontSize: 40, marginBottom: 16 }}>✓</div>
+                <div style={{ fontFamily: 'Outfit,sans-serif', fontSize: 22, fontWeight: 800, marginBottom: 10 }}>Message received</div>
+                <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: 15 }}>We'll be in touch within 24 hours.</div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {[
+                  { key: 'name', label: 'Your name', placeholder: 'John Smith' },
+                  { key: 'business', label: 'Business name', placeholder: "Smith's BBQ" },
+                  { key: 'email', label: 'Email address', placeholder: 'john@smithsbbq.com' },
+                  { key: 'phone', label: 'Phone (optional)', placeholder: '(555) 000-0000' },
+                ].map(f => (
+                  <div key={f.key}>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.6)', display: 'block', marginBottom: 8, letterSpacing: '0.02em' }}>{f.label}</label>
+                    <input type="text" placeholder={f.placeholder}
+                      value={form[f.key as keyof typeof form]}
+                      onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
+                      style={{
+                        width: '100%', background: '#161616', border: '1px solid rgba(255,255,255,0.12)',
+                        borderRadius: 10, padding: '14px 18px', color: '#f2f2f2', fontSize: 15, outline: 'none',
+                        fontFamily: "'Plus Jakarta Sans',sans-serif", boxSizing: 'border-box',
+                      }}
+                      onFocus={e => (e.currentTarget.style.borderColor = 'rgba(0,229,200,0.4)')}
+                      onBlur={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)')}
+                    />
+                  </div>
+                ))}
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.6)', display: 'block', marginBottom: 8, letterSpacing: '0.02em' }}>What are you interested in?</label>
+                  <select value={form.service} onChange={e => setForm(p => ({ ...p, service: e.target.value }))}
+                    style={{
+                      width: '100%', background: '#161616', border: '1px solid rgba(255,255,255,0.12)',
+                      borderRadius: 10, padding: '14px 18px', color: '#f2f2f2',
+                      fontSize: 15, outline: 'none', fontFamily: "'Plus Jakarta Sans',sans-serif", cursor: 'pointer',
+                    }}>
+                    <option value="" disabled>Select a tier or service</option>
+                    <option value="nonprofit">Nonprofit — $150/mo (501c3 required)</option>
+                    <option value="tier-a">Tier A — Starter ($300/mo)</option>
+                    <option value="tier-b">Tier B — Essential ($500/mo)</option>
+                    <option value="tier-c">Tier C — Growth ($750/mo)</option>
+                    <option value="tier-d">Tier D — Pro ($1,100/mo)</option>
+                    <option value="tier-e">Tier E — Pro + Drone ($1,500/mo)</option>
+                    <option value="tier-f">Tier F — Elite ($2,000/mo)</option>
+                    <option value="tier-g">Tier G — Full Partner (Custom)</option>
+                    <option value="not-sure">Not sure yet</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.6)', display: 'block', marginBottom: 8, letterSpacing: '0.02em' }}>Tell us about your business</label>
+                  <textarea placeholder="What do you do, where are you located, what's your goal?"
+                    value={form.message}
+                    onChange={e => setForm(p => ({ ...p, message: e.target.value }))}
+                    rows={4}
+                    style={{
+                      width: '100%', background: '#161616', border: '1px solid rgba(255,255,255,0.12)',
+                      borderRadius: 10, padding: '14px 18px', color: '#f2f2f2', fontSize: 15, outline: 'none',
+                      fontFamily: "'Plus Jakarta Sans',sans-serif", resize: 'vertical', boxSizing: 'border-box',
+                    }}
+                    onFocus={e => (e.currentTarget.style.borderColor = 'rgba(0,229,200,0.4)')}
+                    onBlur={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)')}
+                  />
+                </div>
+                <button onClick={handleSubmit} disabled={sending || !form.name || !form.email || !form.business}
+                  style={{
+                    background: '#00E5C8', color: '#080808', border: 'none',
+                    padding: '16px 0', borderRadius: 10, fontSize: 15, fontWeight: 700,
+                    cursor: sending ? 'wait' : 'pointer', width: '100%', letterSpacing: '-0.01em',
+                    opacity: (!form.name || !form.email || !form.business) ? 0.45 : 1,
+                    fontFamily: "'Plus Jakarta Sans',sans-serif", transition: 'opacity 0.15s',
+                  }}>
+                  {sending ? 'Sending…' : 'Send message →'}
+                </button>
+                <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)', textAlign: 'center', lineHeight: 1.7 }}>
+                  By submitting you agree to our{' '}
+                  <a href="/terms" style={{ color: 'rgba(255,255,255,0.35)', textDecoration: 'underline' }}>Terms</a> and{' '}
+                  <a href="/cancellation-policy" style={{ color: 'rgba(255,255,255,0.35)', textDecoration: 'underline' }}>Cancellation Policy</a>.
+                  {' '}Services renew monthly until cancelled in writing.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
       </section>
 
-      {/* FOOTER */}
-      <footer style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '32px 24px', display: 'flex', flexWrap: 'wrap', gap: 16, justifyContent: 'space-between', alignItems: 'center', maxWidth: 1100, margin: '0 auto' }}>
-        <div style={{ fontFamily: 'Outfit,sans-serif', fontWeight: 800, fontSize: 16, letterSpacing: '-0.03em' }}>
-          wovo<span style={{ color: '#00E5C8' }}>media</span>
-        </div>
-        <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
-          <a href="mailto:support@wovomedia.com" style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, textDecoration: 'none' }}>support@wovomedia.com</a>
-<span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 13 }}>US-wide · Est. 2024</span>
-        </div>
-        <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-          <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 12 }}>© 2025 Wovo Media</span>
-          <a href="/terms" style={{ color: 'rgba(255,255,255,0.25)', fontSize: 12, textDecoration: 'none' }}>Terms</a>
-          <a href="/privacy" style={{ color: 'rgba(255,255,255,0.25)', fontSize: 12, textDecoration: 'none' }}>Privacy</a>
-          <a href="/cancellation-policy" style={{ color: 'rgba(255,255,255,0.25)', fontSize: 12, textDecoration: 'none' }}>Cancellation Policy</a>
+      {/* ── FOOTER ── */}
+      <footer style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '40px 48px' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 20 }}>
+          <div style={{ fontFamily: 'Outfit,sans-serif', fontWeight: 800, fontSize: 18, letterSpacing: '-0.04em' }}>
+            wovo<span style={{ color: '#00E5C8' }}>media</span>
+            <span style={{ fontSize: 12, fontWeight: 400, color: 'rgba(255,255,255,0.2)', marginLeft: 16 }}>© 2025</span>
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <a href="mailto:support@wovomedia.com" style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, textDecoration: 'none' }}>support@wovomedia.com</a>
+            <span style={{ color: 'rgba(255,255,255,0.1)' }}>·</span>
+            <a href="/terms" style={{ color: 'rgba(255,255,255,0.25)', fontSize: 12, textDecoration: 'none' }}>Terms</a>
+            <a href="/privacy" style={{ color: 'rgba(255,255,255,0.25)', fontSize: 12, textDecoration: 'none' }}>Privacy</a>
+            <a href="/cancellation-policy" style={{ color: 'rgba(255,255,255,0.25)', fontSize: 12, textDecoration: 'none' }}>Cancellation</a>
+          </div>
         </div>
       </footer>
     </div>
