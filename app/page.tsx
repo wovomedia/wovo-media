@@ -283,8 +283,8 @@ export default function Home() {
       </div>
 
       {/* ── STATS ── */}
-      <div ref={statsRef} style={ background: '#0c0c0c', borderBottom: '1px solid rgba(255,255,255,0.06)', position: 'relative', overflow: 'hidden' }>
-        <video autoPlay muted loop playsInline style={ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.08 }>
+      <div ref={statsRef} style={{ background: '#0c0c0c', borderBottom: '1px solid rgba(255,255,255,0.06)', position: 'relative', overflow: 'hidden' }}>
+        <video autoPlay muted loop playsInline style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.08 }}>
           <source src="https://d8j0ntlcm91z4.cloudfront.net/user_3FMbCNaesGPRIrH56UM1e3O0NX0/hf_20260624_184654_29693bb5-ea77-413d-b672-1a3ed4d6efe1.mp4" type="video/mp4" />
         </video>
         <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', padding: '0 48px' }}>
@@ -328,16 +328,16 @@ export default function Home() {
       </section>
 
       {/* ── BROLL DIVIDER ── */}
-      <div style={ position: 'relative', height: 320, overflow: 'hidden' }>
-        <video autoPlay muted loop playsInline style={ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.5 }>
+      <div style={{ position: 'relative', height: 320, overflow: 'hidden' }}>
+        <video autoPlay muted loop playsInline style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.5 }}>
           <source src="https://d8j0ntlcm91z4.cloudfront.net/user_3FMbCNaesGPRIrH56UM1e3O0NX0/hf_20260624_184658_b904134b-e5f1-4554-a488-36aa326a0865.mp4" type="video/mp4" />
         </video>
-        <div style={ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, #080808 0%, transparent 25%, transparent 75%, #080808 100%)' } />
-        <div style={ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12 }>
-          <p style={ fontFamily: 'Outfit,sans-serif', fontSize: 'clamp(24px,4vw,48px)', fontWeight: 800, letterSpacing: '-0.04em', color: '#f2f2f2', textAlign: 'center' }>
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, #080808 0%, transparent 25%, transparent 75%, #080808 100%)' }} />
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12 }}>
+          <p style={{ fontFamily: 'Outfit,sans-serif', fontSize: 'clamp(24px,4vw,48px)', fontWeight: 800, letterSpacing: '-0.04em', color: '#f2f2f2', textAlign: 'center' }}>
             Real content. Real results.
           </p>
-          <a href="#contact" style={ background: '#00E5C8', color: '#080808', padding: '12px 28px', borderRadius: 8, fontWeight: 700, fontSize: 14, textDecoration: 'none' }>Start today →</a>
+          <a href="#contact" style={{ background: '#00E5C8', color: '#080808', padding: '12px 28px', borderRadius: 8, fontWeight: 700, fontSize: 14, textDecoration: 'none' }}>Start today →</a>
         </div>
       </div>
 
@@ -358,12 +358,12 @@ export default function Home() {
                 fontWeight: 700, fontSize: 14, textDecoration: 'none',
               }}>Work with us →</a>
             </div>
-            <div style={ display: 'flex', flexDirection: 'column', gap: 0 }>
-              <div style={ borderRadius: 12, overflow: 'hidden', marginBottom: 24, position: 'relative' }>
-                <video autoPlay muted loop playsInline style={ width: '100%', borderRadius: 12, display: 'block', maxHeight: 180, objectFit: 'cover' }>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }>
+              <div style={{ borderRadius: 12, overflow: 'hidden', marginBottom: 24, position: 'relative' }}>
+                <video autoPlay muted loop playsInline style={{ width: '100%', borderRadius: 12, display: 'block', maxHeight: 180, objectFit: 'cover' }}>
                   <source src="https://d8j0ntlcm91z4.cloudfront.net/user_3FMbCNaesGPRIrH56UM1e3O0NX0/hf_20260624_184650_587a75b7-3ac7-46d4-8cca-d349e1ff243c.mp4" type="video/mp4" />
                 </video>
-                <div style={ position: 'absolute', inset: 0, borderRadius: 12, border: '1px solid rgba(0,229,200,0.2)' } />
+                <div style={{ position: 'absolute', inset: 0, borderRadius: 12, border: '1px solid rgba(0,229,200,0.2)' }} />
               </div>
               {WHY.map((w, i) => (
                 <div key={w.title} style={{
