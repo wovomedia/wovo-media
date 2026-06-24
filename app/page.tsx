@@ -10,6 +10,20 @@ const NAV_LINKS = [
 
 const TIERS = [
   {
+    id: 'NP', name: 'Nonprofit', price: 150,
+    cadence: '2–3x/week (~10/mo)',
+    badge: '501(c)(3) only',
+    features: [
+      { label: '2 platforms managed', on: true },
+      { label: 'Graphics & captions', on: true },
+      { label: 'Awareness & event posts', on: true },
+      { label: 'No reels or video', on: false },
+      { label: 'Remote content only', on: false },
+      { label: 'No website or GBP', on: false },
+    ],
+    highlight: false,
+  },
+  {
     id: 'A', name: 'Starter', price: 300,
     cadence: 'Every other day (~15/mo)',
     features: [
@@ -275,8 +289,17 @@ export default function Home() {
                     padding: '3px 12px', borderRadius: 100, whiteSpace: 'nowrap', letterSpacing: '0.04em',
                   }}>MOST POPULAR</div>
                 )}
+                {(t as any).badge && (
+                  <div style={{
+                    position: 'absolute', top: -11, left: '50%', transform: 'translateX(-50%)',
+                    background: '#7c3aed', color: '#fff', fontSize: 10, fontWeight: 800,
+                    padding: '3px 12px', borderRadius: 100, whiteSpace: 'nowrap', letterSpacing: '0.04em',
+                  }}>{(t as any).badge}</div>
+                )}
                 <div>
-                  <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', marginBottom: 4 }}>Tier {t.id}</div>
+                  <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', marginBottom: 4 }}>
+                    {t.id === 'NP' ? 'Nonprofit' : 'Tier ' + t.id}
+                  </div>
                   <div style={{ fontFamily: 'Outfit,sans-serif', fontWeight: 700, fontSize: 15, color: '#f2f2f2' }}>{t.name}</div>
                 </div>
                 <div style={{ fontSize: t.price ? 24 : 19, fontFamily: 'Outfit,sans-serif', fontWeight: 800, color: t.highlight ? '#00E5C8' : '#f2f2f2', letterSpacing: '-0.03em' }}>
@@ -360,6 +383,7 @@ export default function Home() {
                 }}
               >
                 <option value="" disabled>Select a tier or service</option>
+                <option value="nonprofit">Nonprofit — $150/mo (501c3 required)</option>
                 <option value="tier-a">Tier A — Starter ($300/mo)</option>
                 <option value="tier-b">Tier B — Essential ($500/mo)</option>
                 <option value="tier-c">Tier C — Growth ($750/mo)</option>
