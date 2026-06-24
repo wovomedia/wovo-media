@@ -358,7 +358,7 @@ export default function Home() {
                 fontWeight: 700, fontSize: 14, textDecoration: 'none',
               }}>Work with us →</a>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
               <div style={{ borderRadius: 12, overflow: 'hidden', marginBottom: 24, position: 'relative' }}>
                 <video autoPlay muted loop playsInline style={{ width: '100%', borderRadius: 12, display: 'block', maxHeight: 180, objectFit: 'cover' }}>
                   <source src="https://d8j0ntlcm91z4.cloudfront.net/user_3FMbCNaesGPRIrH56UM1e3O0NX0/hf_20260624_184650_587a75b7-3ac7-46d4-8cca-d349e1ff243c.mp4" type="video/mp4" />
