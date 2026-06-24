@@ -233,7 +233,7 @@ export default function Home() {
       {/* ── HERO ── */}
       <section style={{ position: 'relative', minHeight: '100vh', display: 'flex', alignItems: 'center', overflow: 'hidden', paddingTop: 68 }}>
         <video autoPlay muted loop playsInline style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.45 }}>
-          <source src="https://assets.mixkit.co/videos/3348/3348-720.mp4" type="video/mp4" />
+          <source src="https://d8j0ntlcm91z4.cloudfront.net/user_3FMbCNaesGPRIrH56UM1e3O0NX0/hf_20260624_184640_0b07dca7-2d08-4530-819b-507d958fd3b1.mp4" type="video/mp4" />
         </video>
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(8,8,8,0.85) 0%, rgba(8,8,8,0.5) 50%, rgba(8,8,8,0.9) 100%)' }} />
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 50%, #080808 100%)' }} />
@@ -283,7 +283,10 @@ export default function Home() {
       </div>
 
       {/* ── STATS ── */}
-      <div ref={statsRef} style={{ background: '#0c0c0c', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+      <div ref={statsRef} style={ background: '#0c0c0c', borderBottom: '1px solid rgba(255,255,255,0.06)', position: 'relative', overflow: 'hidden' }>
+        <video autoPlay muted loop playsInline style={ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.08 }>
+          <source src="https://d8j0ntlcm91z4.cloudfront.net/user_3FMbCNaesGPRIrH56UM1e3O0NX0/hf_20260624_184654_29693bb5-ea77-413d-b672-1a3ed4d6efe1.mp4" type="video/mp4" />
+        </video>
         <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', padding: '0 48px' }}>
           {STATS.map((s, i) => (
             <div key={s.label} style={{ borderRight: i < 3 ? '1px solid rgba(255,255,255,0.06)' : 'none', padding: '0 24px' }}>
@@ -324,6 +327,20 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── BROLL DIVIDER ── */}
+      <div style={ position: 'relative', height: 320, overflow: 'hidden' }>
+        <video autoPlay muted loop playsInline style={ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.5 }>
+          <source src="https://d8j0ntlcm91z4.cloudfront.net/user_3FMbCNaesGPRIrH56UM1e3O0NX0/hf_20260624_184658_b904134b-e5f1-4554-a488-36aa326a0865.mp4" type="video/mp4" />
+        </video>
+        <div style={ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, #080808 0%, transparent 25%, transparent 75%, #080808 100%)' } />
+        <div style={ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12 }>
+          <p style={ fontFamily: 'Outfit,sans-serif', fontSize: 'clamp(24px,4vw,48px)', fontWeight: 800, letterSpacing: '-0.04em', color: '#f2f2f2', textAlign: 'center' }>
+            Real content. Real results.
+          </p>
+          <a href="#contact" style={ background: '#00E5C8', color: '#080808', padding: '12px 28px', borderRadius: 8, fontWeight: 700, fontSize: 14, textDecoration: 'none' }>Start today →</a>
+        </div>
+      </div>
+
       {/* ── WHY WOVO ── */}
       <section id="why" style={{ background: 'rgba(0,229,200,0.03)', borderTop: '1px solid rgba(0,229,200,0.08)', borderBottom: '1px solid rgba(0,229,200,0.08)', padding: '120px 48px' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
@@ -341,7 +358,13 @@ export default function Home() {
                 fontWeight: 700, fontSize: 14, textDecoration: 'none',
               }}>Work with us →</a>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            <div style={ display: 'flex', flexDirection: 'column', gap: 0 }>
+              <div style={ borderRadius: 12, overflow: 'hidden', marginBottom: 24, position: 'relative' }>
+                <video autoPlay muted loop playsInline style={ width: '100%', borderRadius: 12, display: 'block', maxHeight: 180, objectFit: 'cover' }>
+                  <source src="https://d8j0ntlcm91z4.cloudfront.net/user_3FMbCNaesGPRIrH56UM1e3O0NX0/hf_20260624_184650_587a75b7-3ac7-46d4-8cca-d349e1ff243c.mp4" type="video/mp4" />
+                </video>
+                <div style={ position: 'absolute', inset: 0, borderRadius: 12, border: '1px solid rgba(0,229,200,0.2)' } />
+              </div>
               {WHY.map((w, i) => (
                 <div key={w.title} style={{
                   padding: '28px 0', borderBottom: i < WHY.length - 1 ? '1px solid rgba(255,255,255,0.07)' : 'none',
