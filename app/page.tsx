@@ -192,9 +192,9 @@ export default function Home() {
       <section style={{ position: 'relative', minHeight: '100vh', display: 'flex', alignItems: 'center', overflow: 'hidden', paddingTop: 60 }}>
         <video
           autoPlay muted loop playsInline
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.35 }}
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.5 }}
         >
-          <source src="https://assets.mixkit.co/videos/4820/4820-720.mp4" type="video/mp4" />
+          <source src="https://assets.mixkit.co/videos/3348/3348-720.mp4" type="video/mp4" />
         </video>
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(8,8,8,0.3) 0%, rgba(8,8,8,0.7) 60%, #080808 100%)' }} />
 
@@ -288,13 +288,13 @@ export default function Home() {
           </h2>
           <p style={{ color: 'rgba(255,255,255,0.45)', marginBottom: 52, fontSize: 15 }}>No hidden fees. No long-term contracts. Cancel anytime.</p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(175px, 1fr))', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
             {TIERS.map(t => (
               <div key={t.id} style={{
                 background: t.highlight ? 'rgba(0,229,200,0.05)' : 'rgba(255,255,255,0.02)',
                 border: t.highlight ? '1.5px solid rgba(0,229,200,0.35)' : '1px solid rgba(255,255,255,0.07)',
-                borderRadius: 12, padding: '20px 16px',
-                display: 'flex', flexDirection: 'column', gap: 10, position: 'relative',
+                borderRadius: 14, padding: '28px 22px',
+                display: 'flex', flexDirection: 'column', gap: 12, position: 'relative',
               }}>
                 {t.highlight && (
                   <div style={{
@@ -371,29 +371,29 @@ export default function Home() {
               { key: 'phone', label: 'Phone (optional)', placeholder: '(931) 000-0000' },
             ].map(f => (
               <div key={f.key}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.4)', display: 'block', marginBottom: 6, letterSpacing: '0.02em' }}>{f.label}</label>
+                <label style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.75)', display: 'block', marginBottom: 8, letterSpacing: '0.01em' }}>{f.label}</label>
                 <input
                   type="text"
                   placeholder={f.placeholder}
                   value={form[f.key as keyof typeof form]}
                   onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
                   style={{
-                    width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: 8, padding: '12px 14px', color: '#f2f2f2', fontSize: 14, outline: 'none',
+                    width: '100%', background: '#141414', border: '1px solid rgba(255,255,255,0.15)',
+                    borderRadius: 10, padding: '13px 16px', color: '#f2f2f2', fontSize: 15, outline: 'none',
                     fontFamily: "'Plus Jakarta Sans', sans-serif",
                   }}
                 />
               </div>
             ))}
             <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.4)', display: 'block', marginBottom: 6 }}>What are you interested in?</label>
+              <label style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.75)', display: 'block', marginBottom: 8 }}>What are you interested in?</label>
               <select
                 value={form.service}
                 onChange={e => setForm(p => ({ ...p, service: e.target.value }))}
                 style={{
-                  width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: 8, padding: '12px 14px', color: form.service ? '#f2f2f2' : 'rgba(255,255,255,0.3)',
-                  fontSize: 14, outline: 'none', fontFamily: "'Plus Jakarta Sans', sans-serif",
+                  width: '100%', background: '#141414', border: '1px solid rgba(255,255,255,0.15)',
+                  borderRadius: 10, padding: '13px 16px', color: '#f2f2f2',
+                  fontSize: 15, outline: 'none', fontFamily: "'Plus Jakarta Sans', sans-serif", cursor: 'pointer',
                 }}
               >
                 <option value="" disabled>Select a tier or service</option>
@@ -409,15 +409,15 @@ export default function Home() {
               </select>
             </div>
             <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.4)', display: 'block', marginBottom: 6 }}>Tell us about your business</label>
+              <label style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.75)', display: 'block', marginBottom: 8 }}>Tell us about your business</label>
               <textarea
                 placeholder="What do you do, where are you located, what's your goal?"
                 value={form.message}
                 onChange={e => setForm(p => ({ ...p, message: e.target.value }))}
                 rows={4}
                 style={{
-                  width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: 8, padding: '12px 14px', color: '#f2f2f2', fontSize: 14, outline: 'none',
+                  width: '100%', background: '#141414', border: '1px solid rgba(255,255,255,0.15)',
+                  borderRadius: 10, padding: '13px 16px', color: '#f2f2f2', fontSize: 15, outline: 'none',
                   fontFamily: "'Plus Jakarta Sans', sans-serif", resize: 'vertical',
                 }}
               />
@@ -435,6 +435,13 @@ export default function Home() {
             >
               {sending ? 'Sending…' : 'Send message'}
             </button>
+            <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', textAlign: 'center', lineHeight: 1.6, marginTop: 4 }}>
+              By submitting this form you agree to our{' '}
+              <a href="/terms" style={{ color: 'rgba(255,255,255,0.4)', textDecoration: 'underline' }}>Terms of Service</a>
+              {' '}and{' '}
+              <a href="/cancellation-policy" style={{ color: 'rgba(255,255,255,0.4)', textDecoration: 'underline' }}>Cancellation Policy</a>.
+              Services renew monthly until cancelled in writing via email or phone call to Wovo Media.
+            </p>
           </div>
         )}
       </section>
@@ -448,7 +455,12 @@ export default function Home() {
           <a href="mailto:support@wovomedia.com" style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, textDecoration: 'none' }}>support@wovomedia.com</a>
 <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 13 }}>US-wide · Est. 2024</span>
         </div>
-        <div style={{ color: 'rgba(255,255,255,0.2)', fontSize: 12 }}>© 2025 Wovo Media</div>
+        <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+          <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 12 }}>© 2025 Wovo Media</span>
+          <a href="/terms" style={{ color: 'rgba(255,255,255,0.25)', fontSize: 12, textDecoration: 'none' }}>Terms</a>
+          <a href="/privacy" style={{ color: 'rgba(255,255,255,0.25)', fontSize: 12, textDecoration: 'none' }}>Privacy</a>
+          <a href="/cancellation-policy" style={{ color: 'rgba(255,255,255,0.25)', fontSize: 12, textDecoration: 'none' }}>Cancellation Policy</a>
+        </div>
       </footer>
     </div>
   )

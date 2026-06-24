@@ -1,33 +1,44 @@
-import Link from 'next/link'
-
 export default function Privacy() {
   return (
-    <div style={{minHeight:'100vh',background:'var(--bg)',position:'relative'}}>
-      <div className="grid-bg"/><div className="grid-fade"/>
-      <nav style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'16px 40px',borderBottom:'1px solid var(--border)',background:'var(--nav-bg)',backdropFilter:'blur(14px)',position:'sticky',top:0,zIndex:100}}>
-        <Link href="/" style={{fontFamily:'Outfit,sans-serif',fontSize:19,fontWeight:800,color:'var(--text)',textDecoration:'none',letterSpacing:'-0.04em'}}>wovo<span style={{color:'var(--accent)'}}>media</span></Link>
-        <Link href="/login"><button className="btn btn-ghost btn-sm">Log In</button></Link>
-      </nav>
-      <div style={{maxWidth:720,margin:'0 auto',padding:'60px 40px',position:'relative',zIndex:2}}>
-        <Link href="/" style={{fontSize:13,color:'var(--accent)',textDecoration:'none',fontWeight:600,display:'inline-flex',alignItems:'center',gap:6,marginBottom:32}}>← Back to Wovo Media</Link>
-        <h1 style={{fontSize:36,fontWeight:800,marginBottom:6,letterSpacing:'-0.03em'}}>Privacy Policy</h1>
-        <p style={{color:'var(--text-3)',marginBottom:44,fontSize:14}}>Last updated: May 2025 · Questions? <a href="mailto:support@wovomedia.com" style={{color:'var(--accent)'}}>support@wovomedia.com</a></p>
+    <div style={{ background: '#080808', color: '#f2f2f2', fontFamily: "'Plus Jakarta Sans', sans-serif", minHeight: '100vh', padding: '80px 24px' }}>
+      <div style={{ maxWidth: 720, margin: '0 auto' }}>
+        <a href="/" style={{ fontSize: 13, color: '#00E5C8', textDecoration: 'none', display: 'inline-block', marginBottom: 40 }}>← Back to wovomedia.com</a>
+        <h1 style={{ fontFamily: 'Outfit,sans-serif', fontSize: 36, fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 8 }}>Privacy Policy</h1>
+        <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, marginBottom: 48 }}>Last updated: June 2025</p>
 
         {[
-          ['Information We Collect', 'We collect information you provide directly, including your name, email address, business name, and payment information. We also collect usage data such as pages visited, features used, and content generated through our platform. We do not collect sensitive personal information beyond what is necessary to provide our services.'],
-          ['How We Use Your Information', 'We use your information to: provide and improve our services, process payments, send account-related communications, send marketing communications (you can opt out at any time), generate AI content personalized to your business, and comply with legal obligations.'],
-          ['Information Sharing', 'We share your information only with trusted service providers necessary to operate our platform: Stripe (payment processing), Supabase (secure database storage), Resend (email delivery), and our secure AI video and content infrastructure. We do not sell your personal information to third parties. We do not share your information with advertisers.'],
-          ['Data Storage and Security', 'Your data is stored securely on servers provided by Supabase with industry-standard encryption. We implement appropriate technical and organizational measures to protect your information against unauthorized access, alteration, or destruction. However, no method of transmission over the internet is 100% secure.'],
-          ['Your Rights', 'You have the right to: access the personal information we hold about you, request correction of inaccurate data, request deletion of your data, opt out of marketing communications at any time, and data portability (receive your data in a machine-readable format). To exercise these rights, email support@wovomedia.com.'],
-          ['Cookies', 'We use cookies and similar technologies to maintain your login session and remember your preferences (such as light/dark mode). We do not use third-party advertising cookies or tracking pixels. You can control cookies through your browser settings.'],
-          ['Data Retention', 'We retain your account data for as long as your account is active. If you close your account, we will delete your personal data within 30 days, except where we are required to retain it for legal or financial compliance purposes.'],
-          ['Children\'s Privacy', 'Our services are not directed to individuals under the age of 18. We do not knowingly collect personal information from minors. If you believe we have inadvertently collected information from a minor, contact us immediately at support@wovomedia.com.'],
-          ['Changes to This Policy', 'We may update this privacy policy from time to time. We will notify you of significant changes via email or a prominent notice on our website. Your continued use of our services after changes take effect constitutes acceptance of the updated policy.'],
-          ['Contact Us', 'If you have questions about this privacy policy or how we handle your data, please contact our team at support@wovomedia.com. We aim to respond to all privacy inquiries within 48 hours.'],
-        ].map(([title, body]) => (
-          <div key={title} style={{marginBottom:36}}>
-            <h2 style={{fontSize:17,fontWeight:700,color:'var(--text)',marginBottom:10}}>{title}</h2>
-            <p style={{fontSize:15,color:'var(--text-2)',lineHeight:1.75,margin:0}}>{body}</p>
+          {
+            title: '1. Information We Collect',
+            body: `We collect information you provide directly to us, including your name, business name, email address, phone number, and any other information you submit through our inquiry form or service agreements. We also collect basic analytics data about how visitors interact with our website.`,
+          },
+          {
+            title: '2. How We Use Your Information',
+            body: `We use your information to:\n• Respond to your inquiries and provide our services\n• Send service-related communications and invoices\n• Improve our website and services\n• Comply with legal obligations\n\nWe do not sell, rent, or share your personal information with third parties for their marketing purposes.`,
+          },
+          {
+            title: '3. Data Security',
+            body: `We take reasonable measures to protect your information from unauthorized access, use, or disclosure. However, no internet transmission is completely secure, and we cannot guarantee the absolute security of your data.`,
+          },
+          {
+            title: '4. Cookies',
+            body: `Our website may use cookies and similar tracking technologies to improve your browsing experience and analyze site traffic. You can control cookie settings through your browser.`,
+          },
+          {
+            title: '5. Third-Party Services',
+            body: `We may use third-party services (such as payment processors, email providers, and analytics tools) that have their own privacy policies. We encourage you to review the privacy policies of any third-party services you interact with through our platform.`,
+          },
+          {
+            title: '6. Your Rights',
+            body: `You may request access to, correction of, or deletion of your personal information by contacting us at support@wovomedia.com. We will respond to your request within a reasonable timeframe.`,
+          },
+          {
+            title: '7. Contact',
+            body: `For privacy-related questions:\n\nEmail: support@wovomedia.com\nWovo Media — wovomedia.com`,
+          },
+        ].map(s => (
+          <div key={s.title} style={{ marginBottom: 36, paddingBottom: 36, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <h2 style={{ fontFamily: 'Outfit,sans-serif', fontSize: 18, fontWeight: 700, marginBottom: 12, color: '#f2f2f2' }}>{s.title}</h2>
+            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 15, lineHeight: 1.8, whiteSpace: 'pre-line' }}>{s.body}</p>
           </div>
         ))}
       </div>
