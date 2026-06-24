@@ -116,10 +116,20 @@ const TIERS = [
   },
 ]
 
-const WORK = [
-  { client: 'The Campbell Station', location: 'Culleoka, TN', type: 'Social Media + Video', img: '/social.jpg' },
-  { client: 'Mojo\'s Tacos', location: 'Multi-location, TN', type: 'Video Production', img: '/hero.jpg' },
-  { client: 'Boot Stompin BBQ', location: 'Tennessee', type: 'Social Media', img: '/drone.jpg' },
+const STATS = [
+  { value: '9+', label: 'Active clients' },
+  { value: '1M+', label: 'Views generated' },
+  { value: '30+', label: 'Posts per client/mo' },
+  { value: '3', label: 'States served' },
+]
+
+const LOGOS = [
+  { name: 'Shopify', svg: 'https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/shopify.svg' },
+  { name: 'Google', svg: 'https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/google.svg' },
+  { name: 'Meta', svg: 'https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/meta.svg' },
+  { name: 'TikTok', svg: 'https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/tiktok.svg' },
+  { name: 'Instagram', svg: 'https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/instagram.svg' },
+  { name: 'YouTube', svg: 'https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/youtube.svg' },
 ]
 
 function CheckIcon({ on }: { on: boolean }) {
@@ -201,7 +211,7 @@ export default function Home() {
             borderRadius: 100, padding: '5px 16px', marginBottom: 28,
             fontSize: 12, fontWeight: 600, color: '#00E5C8', letterSpacing: '0.06em', textTransform: 'uppercase',
           }}>
-            Franklin, TN · Florence, AL · Culleoka, TN
+            Serving businesses anywhere in the US
           </div>
           <h1 style={{
             fontFamily: 'Outfit,sans-serif', fontSize: 'clamp(40px, 7vw, 82px)',
@@ -209,10 +219,10 @@ export default function Home() {
             color: '#f2f2f2', marginBottom: 24,
           }}>
             Content that makes<br />
-            <span style={{ color: '#00E5C8' }}>local businesses</span> go viral
+            <span style={{ color: '#00E5C8' }}>businesses</span> go viral
           </h1>
           <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.55)', maxWidth: 560, margin: '0 auto 40px', lineHeight: 1.6 }}>
-            Social media management, video production, drone footage, and web — all handled by Wovo Media so you can focus on running your business.
+            Social media management, video production, drone footage, and web — all handled by Wovo Media so you can focus on running your business. We work with businesses anywhere in the US, fully remote or in-person.
           </p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
             <a href="#contact" style={{
@@ -242,24 +252,35 @@ export default function Home() {
         </div>
       </section>
 
-      {/* WORK */}
+      {/* SOCIAL PROOF */}
       <section id="work" style={{ maxWidth: 1100, margin: '0 auto', padding: '100px 24px' }}>
-        <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#00E5C8', marginBottom: 12 }}>Our work</p>
-        <h2 style={{ fontFamily: 'Outfit,sans-serif', fontSize: 'clamp(28px, 4vw, 46px)', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 48 }}>
-          Real clients. Real results.
+        <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#00E5C8', marginBottom: 12 }}>Results</p>
+        <h2 style={{ fontFamily: 'Outfit,sans-serif', fontSize: 'clamp(28px, 4vw, 46px)', fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 56 }}>
+          Trusted by businesses<br />across the US
         </h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
-          {WORK.map(w => (
-            <div key={w.client} style={{
-              borderRadius: 12, overflow: 'hidden', position: 'relative',
-              aspectRatio: '16/10', border: '1px solid rgba(255,255,255,0.07)',
+
+        {/* Stats */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 72 }}>
+          {STATS.map(s => (
+            <div key={s.label} style={{
+              background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
+              borderRadius: 12, padding: '28px 20px',
             }}>
-              <img src={w.img} alt={w.client} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(8,8,8,0.9) 0%, transparent 50%)' }} />
-              <div style={{ position: 'absolute', bottom: 0, left: 0, padding: 20 }}>
-                <div style={{ fontSize: 15, fontWeight: 700, fontFamily: 'Outfit,sans-serif' }}>{w.client}</div>
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>{w.location} · {w.type}</div>
-              </div>
+              <div style={{ fontFamily: 'Outfit,sans-serif', fontSize: 42, fontWeight: 800, letterSpacing: '-0.04em', color: '#00E5C8', lineHeight: 1 }}>{s.value}</div>
+              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', marginTop: 8, fontWeight: 500 }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Platform logos */}
+        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)', marginBottom: 28, letterSpacing: '0.05em', textTransform: 'uppercase', fontWeight: 600 }}>
+          We work across every major platform
+        </p>
+        <div style={{ display: 'flex', gap: 36, flexWrap: 'wrap', alignItems: 'center' }}>
+          {LOGOS.map(l => (
+            <div key={l.name} style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: 0.35, filter: 'invert(1)' }}>
+              <img src={l.svg} alt={l.name} width={22} height={22} style={{ display: 'block' }} />
+              <span style={{ fontSize: 14, fontWeight: 600, color: '#fff', letterSpacing: '-0.01em' }}>{l.name}</span>
             </div>
           ))}
         </div>
@@ -274,7 +295,7 @@ export default function Home() {
           </h2>
           <p style={{ color: 'rgba(255,255,255,0.45)', marginBottom: 52, fontSize: 15 }}>No hidden fees. No long-term contracts. Cancel anytime.</p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(155px, 1fr))', gap: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10, justifyContent: 'center' }}>
             {TIERS.map(t => (
               <div key={t.id} style={{
                 background: t.highlight ? 'rgba(0,229,200,0.05)' : 'rgba(255,255,255,0.02)',
@@ -313,7 +334,7 @@ export default function Home() {
                   {t.features.map(f => (
                     <div key={f.label} style={{ display: 'flex', alignItems: 'flex-start', gap: 7, opacity: f.on ? 1 : 0.35 }}>
                       <CheckIcon on={f.on} />
-                      <span style={{ fontSize: 11.5, color: f.on ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.4)', lineHeight: 1.4 }}>{f.label}</span>
+                      <span style={{ fontSize: 11.5, color: f.on ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.35)', lineHeight: 1.4 }}>{f.label}</span>
                     </div>
                   ))}
                 </div>
@@ -433,7 +454,7 @@ export default function Home() {
         <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
           <a href="mailto:Payton@wovomedia.com" style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, textDecoration: 'none' }}>Payton@wovomedia.com</a>
           <a href="tel:9314583255" style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, textDecoration: 'none' }}>931-458-3255</a>
-          <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 13 }}>Franklin, TN</span>
+          <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 13 }}>US-wide · Est. 2024</span>
         </div>
         <div style={{ color: 'rgba(255,255,255,0.2)', fontSize: 12 }}>© 2025 Wovo Media</div>
       </footer>
