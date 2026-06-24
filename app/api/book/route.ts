@@ -1,42 +1,80 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
-import { createClient } from '@supabase/supabase-js'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
-const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
 export async function POST(req: NextRequest) {
-  const { name, business, email, phone, type, budget, notes } = await req.json()
+  const { name, business, email, phone, service, message } = await req.json()
 
-  // Save lead
-  await sb.from('strategy_call_leads').insert({
-    name, business_name: business, email, phone,
-    business_type: type, budget, notes
-  })
+  if (!name || !email || !business) {
+    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+  }
 
-  // Notify Payton
-  resend.emails.send({
-    from: 'Wovo Media <support@wovomedia.com>',
-    to: 'Payton@wovomedia.com',
-    replyTo: 'support@wovomedia.com',
-    subject: `📅 Strategy call request — ${business}`,
-    html: `<div style="font-family:sans-serif;max-width:500px;background:#111;color:#f0f0f0;padding:28px;border-radius:12px"><h2 style="color:#00E5C8;margin:0 0 18px">New Strategy Call Request</h2>${[['Name',name],['Business',business],['Email',email],['Phone',phone||'—'],['Type',type],['Budget',budget],['Notes',notes||'—']].map(([l,v])=>`<div style="padding:8px 0;border-bottom:1px solid #222;display:flex;justify-content:space-between;font-size:14px"><span style="color:#666">${l}</span><span>${v}</span></div>`).join('')}<div style="margin-top:18px;padding:14px;background:#1a1a1a;border-radius:8px;border:1px solid rgba(0,229,200,0.2)"><a href="https://calendly.com/wovomedia/wovo-media-strategy-call" style="color:#00E5C8;font-size:14px;text-decoration:none">→ View Calendly to send booking link</a></div></div>`
-  })
+  const rows = [
+    ['Name', name],
+    ['Business', business],
+    ['Email', email],
+    ['Phone', phone || '—'],
+    ['Interested in', service || '—'],
+    ['Message', message || '—'],
+  ]
 
-  // Send confirmation to lead
-  resend.emails.send({
-    from: 'Wovo Media <support@wovomedia.com>',
-    to: email,
-    subject: `We got your request — Wovo Media`,
-    html: `<div style="font-family:sans-serif;max-width:540px;background:#111;color:#f0f0f0;padding:32px;border-radius:16px"><div style="font-size:20px;font-weight:800;margin-bottom:22px;letter-spacing:-0.04em">wovo<span style="color:#00E5C8">media</span></div><h2 style="margin:0 0 10px;font-size:22px">Hey ${name.split(' ')[0]}, we got it! 👋</h2><p style="color:#999;line-height:1.7;margin-bottom:20px">Thanks for reaching out about <strong style="color:#f0f0f0">${business}</strong>. A member of our team will reach out within 24 hours to confirm your strategy call and send a Google Meet link.</p><p style="color:#999;line-height:1.7;margin-bottom:24px">Want to pick a time right now?</p><div style="text-align:center;margin:24px 0"><a href="https://calendly.com/wovomedia/wovo-media-strategy-call" style="display:inline-block;background:#00E5C8;color:#080808;padding:13px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">Book on Calendly →</a></div><p style="color:#444;font-size:13px">Text support@wovomedia.com with any questions.</p></div>`
-  })
+  const rowsHtml = rows.map(([l, v]) => `
+    <div style="padding:10px 0;border-bottom:1px solid #1e1e1e;display:flex;gap:16px;font-size:14px;">
+      <span style="color:#666;min-width:110px;flex-shrink:0;">${l}</span>
+      <span style="color:#f0f0f0;">${v}</span>
+    </div>`).join('')
 
-  // Trigger post-booking conversion video (background, no await)
-  fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://wovomedia.com'}/api/heygen/conversion`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ type: 'post_booking', name, email, business })
-  }).catch(() => {})
+  const internalHtml = `
+    <div style="font-family:sans-serif;max-width:520px;background:#111;color:#f0f0f0;padding:28px;border-radius:12px;">
+      <div style="font-size:18px;font-weight:800;margin-bottom:20px;letter-spacing:-0.04em;">
+        wovo<span style="color:#00E5C8;">media</span>
+      </div>
+      <h2 style="color:#00E5C8;margin:0 0 6px;font-size:20px;">New Inquiry</h2>
+      <p style="color:#555;font-size:13px;margin:0 0 20px;">Submitted via wovomedia.com</p>
+      ${rowsHtml}
+      <div style="margin-top:20px;padding:14px;background:#1a1a1a;border-radius:8px;border:1px solid rgba(0,229,200,0.15);font-size:13px;color:#999;">
+        Reply directly to this email to respond to ${name.split(' ')[0]} — reply-to is set to their address.
+      </div>
+    </div>`
+
+  const confirmHtml = `
+    <div style="font-family:sans-serif;max-width:540px;background:#111;color:#f0f0f0;padding:32px;border-radius:16px;">
+      <div style="font-size:20px;font-weight:800;margin-bottom:24px;letter-spacing:-0.04em;">
+        wovo<span style="color:#00E5C8;">media</span>
+      </div>
+      <h2 style="margin:0 0 10px;font-size:22px;">Hey ${name.split(' ')[0]}, we got your message!</h2>
+      <p style="color:#999;line-height:1.7;margin-bottom:20px;">
+        Thanks for reaching out about <strong style="color:#f0f0f0;">${business}</strong>. 
+        Our team will be in touch within 24 hours to go over next steps.
+      </p>
+      <div style="padding:16px;background:#1a1a1a;border-radius:10px;border:1px solid rgba(0,229,200,0.15);margin-bottom:24px;">
+        <p style="margin:0;font-size:13px;color:#666;">What you submitted</p>
+        ${rowsHtml}
+      </div>
+      <p style="color:#444;font-size:13px;margin:0;">
+        Questions? Reply to this email or reach us at 
+        <a href="mailto:support@wovomedia.com" style="color:#00E5C8;">support@wovomedia.com</a>
+      </p>
+    </div>`
+
+  // Send to both internal addresses simultaneously
+  await Promise.all([
+    resend.emails.send({
+      from: 'Wovo Media <support@wovomedia.com>',
+      to: ['support@wovomedia.com', 'Payton@wovomedia.com'],
+      replyTo: email,
+      subject: `New inquiry — ${business} (${service || 'General'})`,
+      html: internalHtml,
+    }),
+    resend.emails.send({
+      from: 'Wovo Media <support@wovomedia.com>',
+      to: email,
+      replyTo: 'support@wovomedia.com',
+      subject: `We got your message — Wovo Media`,
+      html: confirmHtml,
+    }),
+  ])
 
   return NextResponse.json({ success: true })
 }
