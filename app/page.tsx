@@ -353,7 +353,7 @@ export default function Home() {
           Let's work together
         </h2>
         <p style={{ color: 'rgba(255,255,255,0.45)', marginBottom: 40, fontSize: 15 }}>
-          Fill out the form and Payton will reach out within 24 hours.
+          Fill out the form and our team will reach out within 24 hours.
         </p>
 
         {sent ? (
