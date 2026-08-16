@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import WovoLogo from "@/components/ui/wovo-logo";
 import AdamOperations from "@/app/portal/AdamOperations";
+import OwnerPublishingCenter from "@/app/portal/OwnerPublishingCenter";
 import type {
   PortalAccount,
   PortalPublicInquiry,
@@ -105,6 +106,7 @@ export default function OwnerOperations({
   onAction,
   onInspectWorkspace,
   onSignOut,
+  onRefresh,
 }: {
   snapshot: PortalSnapshot;
   busy: string;
@@ -113,6 +115,7 @@ export default function OwnerOperations({
   onAction: OwnerAction;
   onInspectWorkspace: (account: PortalAccount, tab?: "overview" | "queue" | "calendar" | "inbox" | "services") => void;
   onSignOut: () => Promise<void>;
+  onRefresh: () => Promise<void>;
 }) {
   const [section, setSection] = useState<OwnerSection>("adam");
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -423,26 +426,15 @@ export default function OwnerOperations({
 
           {section === "content" ? (
             <div className="space-y-6">
-              <SectionHeading eyebrow="Human-in-the-loop publishing" title="Content Calendar / Queue" copy="Approved scheduled content creates a durable posting task. Native publishing remains manual until official platform access and background delivery are proven." />
-              <div className="grid gap-4 xl:grid-cols-2">
-                {activeContent.map((item) => {
-                  const account = activeAccounts.find((candidate) => candidate.id === item.account_id);
-                  const task = snapshot.postingTasks.find((candidate) => candidate.content_item_id === item.id);
-                  return (
-                    <article key={item.id} className={`${surface} p-5`}>
-                      <div className="flex flex-wrap justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[.14em] text-[#d94326]">{account?.business_name ?? "Client workspace"} · {human(item.platform)}</p><h2 className="mt-2 text-xl font-semibold">{item.title}</h2></div><Status value={item.status} /></div>
-                      <p className="mt-3 line-clamp-3 whitespace-pre-wrap text-sm leading-6 text-[#655f56]">{item.caption}</p>
-                      <div className="mt-4 rounded-xl bg-[#f7f2e9] p-3 text-xs leading-5 text-[#655f56]"><p>Scheduled: {formatDate(item.scheduled_for)}</p><p>Posting task: {task ? `${human(task.status)} · ${human(task.assigned_role)}` : "Created when approved and scheduled"}</p></div>
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        {account ? <button className={secondary} onClick={() => onInspectWorkspace(account, "queue")}>Open client queue</button> : null}
-                        {task && task.status !== "completed" ? <button className={primary} onClick={() => void onAction({ action: "update_posting_task", taskId: task.id, status: "completed" }, `${item.title} marked posted.`)}>Mark manually posted</button> : null}
-                        <button className={danger} onClick={() => setConfirmState({ action: "archive_owner_item", targetType: "content", targetId: item.id, targetLabel: item.title, warning: "This removes the content item from active queues and cancels an unfinished posting task. It can be restored, and no native social action is taken." })}>Archive</button>
-                      </div>
-                    </article>
-                  );
-                })}
-                {!activeContent.length ? <Empty title="No content in the cross-client queue" copy="Client drafts and scheduled approvals will appear here with their workspace context." /> : null}
-              </div>
+              <SectionHeading eyebrow="Owner publishing control" title="Compose, approve, schedule, and verify" copy="One working surface for WOVO-owned posts and tenant-scoped client drafts. Every provider result remains evidence-based." />
+              <OwnerPublishingCenter
+                accounts={activeAccounts}
+                assets={activeAssets}
+                content={activeContent}
+                postingTasks={snapshot.postingTasks}
+                onPortalAction={onAction}
+                onRefresh={onRefresh}
+              />
             </div>
           ) : null}
 

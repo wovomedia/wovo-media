@@ -46,10 +46,10 @@ export async function POST(request: Request) {
     if (connection.kill_switch) return NextResponse.json({ error: "Turn off the Meta kill switch before the test post." }, { status: 409 });
     const caption = requiredString(body.caption, "Post text", 5000);
     const idempotencyKey = `meta-test-${connection.id}-${new Date().toISOString().slice(0, 13)}`;
-    const rows = await supabaseServiceRoleRequest<Array<{ id: string; connection_id: string; destination: string; caption: string; media_url: null; attempt_count: number }>>("/rest/v1/wovo_meta_publish_jobs?on_conflict=account_id,owner_scope,idempotency_key", { method: "POST", headers: { Prefer: "resolution=ignore-duplicates,return=representation" }, body: JSON.stringify({ account_id: ownerScope ? null : accountId, owner_scope: ownerScope, connection_id: connection.id, created_by: context.user.id, idempotency_key: idempotencyKey, destination: "facebook_page", status: "approved", caption, approved_at: new Date().toISOString() }) });
+    const rows = await supabaseServiceRoleRequest<Array<{ id: string; connection_id: string; destination: string; caption: string; media_url: null; attempt_count: number }>>("/rest/v1/wovo_meta_publish_jobs?on_conflict=account_id,owner_scope,idempotency_key", { method: "POST", headers: { Prefer: "resolution=ignore-duplicates,return=representation" }, body: JSON.stringify({ account_id: ownerScope ? null : accountId, owner_scope: ownerScope, connection_id: connection.id, created_by: context.user.id, idempotency_key: idempotencyKey, destination: "facebook_page", status: "approved", source: "manual", caption, approved_at: new Date().toISOString(), approved_by: context.user.id }) });
     const job = rows?.[0];
     if (!job) return NextResponse.json({ error: "This test post was already submitted. Check the Page before trying again." }, { status: 409 });
-    const result = await publishMetaJob(job);
+    const result = await publishMetaJob(job, { explicitApproval: true });
     return NextResponse.json({ published: true, providerPostId: result.providerPostId, correlationId: randomUUID() });
   } catch (error) {
     console.error("Meta publication failed", { message: error instanceof Error ? error.message.slice(0, 160) : "Unknown" });

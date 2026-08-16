@@ -17,7 +17,7 @@ export type MetaConnection = {
   auto_publish_opted_in_at: string | null;
 };
 
-type MetaPublishJob = {
+export type MetaPublishJob = {
   id: string; connection_id: string; destination: string; caption: string; media_url: string | null;
   attempt_count: number;
 };
@@ -38,10 +38,15 @@ async function waitForInstagramContainer(containerId: string, token: string) {
   throw new Error("META_CONTAINER_TIMEOUT");
 }
 
-export async function publishMetaJob(job: MetaPublishJob) {
+export async function publishMetaJob(job: MetaPublishJob, options: { explicitApproval?: boolean } = {}) {
   const rows = await supabaseServiceRoleRequest<MetaConnection[]>(`/rest/v1/wovo_meta_connections?select=*&id=eq.${encodeURIComponent(job.connection_id)}&status=eq.healthy&kill_switch=eq.false&limit=1`).catch(() => []);
   const connection = rows?.[0];
   if (!connection) throw new Error("META_CONNECTION_NOT_ACTIONABLE");
+  if (options.explicitApproval) {
+    if (connection.action_policy === "draft_only") throw new Error("META_POLICY_DRAFT_ONLY");
+  } else if (connection.action_policy !== "scheduled_auto_publish" || !connection.auto_publish_opted_in_at) {
+    throw new Error("META_AUTOMATION_NOT_AUTHORIZED");
+  }
   const token = decryptMetaToken(connection);
   const locked = await supabaseServiceRoleRequest<Array<{ id: string }>>(`/rest/v1/wovo_meta_publish_jobs?id=eq.${encodeURIComponent(job.id)}&status=in.(approved,queued)`, { method: "PATCH", headers: { Prefer: "return=representation" }, body: JSON.stringify({ status: "publishing", attempt_count: Math.min((job.attempt_count ?? 0) + 1, 5), updated_at: new Date().toISOString() }) });
   if (!locked?.[0]) throw new Error("META_JOB_ALREADY_CLAIMED");
@@ -84,7 +89,7 @@ export async function publishMetaJob(job: MetaPublishJob) {
 
 export async function processMetaPublishJobs(limit = 3) {
   const now = new Date().toISOString();
-  const jobs = await supabaseServiceRoleRequest<MetaPublishJob[]>(`/rest/v1/wovo_meta_publish_jobs?select=id,connection_id,destination,caption,media_url,attempt_count&status=in.(approved,queued)&or=(scheduled_for.is.null,scheduled_for.lte.${encodeURIComponent(now)})&order=created_at.asc&limit=${Math.max(1, Math.min(limit, 10))}`).catch(() => []);
+  const jobs = await supabaseServiceRoleRequest<MetaPublishJob[]>(`/rest/v1/wovo_meta_publish_jobs?select=id,connection_id,destination,caption,media_url,attempt_count&connection_id=not.is.null&status=in.(approved,queued)&or=(scheduled_for.is.null,scheduled_for.lte.${encodeURIComponent(now)})&order=created_at.asc&limit=${Math.max(1, Math.min(limit, 10))}`).catch(() => []);
   let published = 0;
   for (const job of jobs ?? []) { try { await publishMetaJob(job); published += 1; } catch { /* durable failed state is visible */ } }
   return { found: jobs?.length ?? 0, published };
@@ -150,6 +155,7 @@ export async function enqueueWovoDailyImagePost(options: { force?: boolean; now?
         idempotency_key: idempotencyKey,
         destination,
         status: "queued",
+        source: "scheduled_automation",
         caption: creative.caption,
         normalized_caption_hash: captionHash,
         topic_hash: topicHash,
@@ -161,6 +167,8 @@ export async function enqueueWovoDailyImagePost(options: { force?: boolean; now?
         creative_headline: creative.headline,
         creative_cta: creative.cta,
         approved_at: new Date().toISOString(),
+        approved_by: connection.connected_by,
+        rights_confirmed: true,
         scheduled_for: new Date().toISOString(),
       }),
     });

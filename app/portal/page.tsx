@@ -191,6 +191,7 @@ export default function PortalPage() {
         error={error}
         notice={notice}
         onAction={action}
+        onRefresh={load}
         onSignOut={signOut}
         onInspectWorkspace={(selected, selectedTab = "overview") => {
           setAccountId(selected.id);
