@@ -30,6 +30,6 @@ function Logo({ variant }: { variant: "full" | "icon" | "ai" }) {
 export default function WovoLogo({ variant = "full", className = "", href = "/", size }: WovoLogoProps) {
   const style = size ? { width: size } : undefined;
   const logo = <Logo variant={variant} />;
-  if (!href) return <span className={`inline-flex items-center ${className}`} style={style}>{logo}</span>;
-  return <Link href={href} className={`inline-flex items-center ${className}`} style={style} aria-label="WOVO Media home">{logo}</Link>;
+  if (!href) return <span className={`inline-flex min-h-11 items-center ${className}`} style={style}>{logo}</span>;
+  return <Link href={href} className={`inline-flex min-h-11 items-center ${className}`} style={style} aria-label="WOVO Media home">{logo}</Link>;
 }
