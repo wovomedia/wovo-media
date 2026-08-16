@@ -5,6 +5,8 @@ import { checkAiRateLimit } from "@/lib/wovo-ai/rate-limit";
 import { generateTextWithProviders } from "@/lib/wovo-ai/provider-router";
 import { getWovoAiRuntimeState } from "@/lib/wovo-ai/model-metering";
 import { getEnv } from "@/lib/env";
+import { startCreditCheckout } from "@/lib/portal/credit-checkout";
+import { getValidatedCreditPacks } from "@/lib/portal/credit-packs";
 import {
   getPortalPriceIdForFrequency,
   getValidatedPortalBillingOption,
@@ -354,7 +356,10 @@ async function loadSnapshot(context: PortalContext): Promise<PortalSnapshot> {
 
 async function setupStatus(): Promise<PortalSnapshot["setup"]> {
   const aiRuntime = getWovoAiRuntimeState();
-  const billingOptions = await getValidatedPortalBillingOptions();
+  const [billingOptions, creditPacks] = await Promise.all([
+    getValidatedPortalBillingOptions(),
+    getValidatedCreditPacks(),
+  ]);
   const monthlyPrice = billingOptions.find((option) => option.frequency === "monthly") ?? null;
   return {
     monthlyCheckoutConfigured: Boolean(monthlyPrice),
@@ -374,7 +379,7 @@ async function setupStatus(): Promise<PortalSnapshot["setup"]> {
     awardsReviewDate: getEnv("WOVO_AWARDS_REVIEW_DATE") || "2027-07-30",
     awardsRubricRequired: true,
     expansion: {
-      creditPurchaseReady: false,
+      creditPurchaseReady: creditPacks.length === 3,
       dmManagerCheckoutReady: false,
       websiteHostingCheckoutReady: false,
       personalAssistantCheckoutReady: false,
@@ -658,6 +663,8 @@ export async function POST(request: Request) {
         return NextResponse.json(await saveCommentContentWorkflow(context, body), { status: body.workflowId ? 200 : 201 });
       case "start_checkout":
         return NextResponse.json(await startCheckout(request, context, body));
+      case "start_credit_checkout":
+        return NextResponse.json(await startCreditCheckout(request, context, body));
       case "billing_portal":
         return NextResponse.json(await openBillingPortal(request, context, body));
       case "reply_public_inquiry":
@@ -1894,6 +1901,25 @@ async function createWorkflowDraft(context: PortalContext, body: ActionBody) {
   const peopleConsentConfirmed = body.peopleConsentConfirmed === true;
   const voiceConsentConfirmed = body.voiceConsentConfirmed === true;
   const sourceUrl = optionalString(body.sourceUrl, 1000);
+  const channel = optionalString(body.channel, 40);
+  const outputFormat = optionalString(body.outputFormat, 40);
+  const aspect = optionalString(body.aspect, 10);
+  const style = optionalString(body.style, 80);
+  const startFrameAssetId = optionalString(body.startFrameAssetId, 80);
+  const durationSeconds = body.durationSeconds === undefined || body.durationSeconds === null || body.durationSeconds === ""
+    ? null
+    : numberValue(body.durationSeconds, "Duration", 4, 12);
+
+  if (channel && ![...PLATFORM_VALUES, "website"].includes(channel)) throw new PortalHttpError(400, "Invalid creation channel.");
+  if (outputFormat && !["single_post", "carousel", "vertical_video", "landing_page"].includes(outputFormat)) throw new PortalHttpError(400, "Invalid output format.");
+  if (aspect && !["9:16", "16:9", "1:1"].includes(aspect)) throw new PortalHttpError(400, "Invalid output aspect.");
+  if (startFrameAssetId) {
+    if (!isUuid(startFrameAssetId)) throw new PortalHttpError(400, "Invalid private reference asset.");
+    const frameAssets = await supabaseServiceRoleRequest<Array<{ id: string }>>(
+      `/rest/v1/wovo_portal_assets?select=id&id=eq.${encodeURIComponent(startFrameAssetId)}&account_id=eq.${encodeURIComponent(accountId)}&rights_confirmed=eq.true&archived_at=is.null&limit=1`,
+    ).catch(() => []);
+    if (!frameAssets?.[0]) throw new PortalHttpError(400, "The selected reference frame is not available in this workspace.");
+  }
 
   if (sourceUrl) {
     let parsed: URL;
@@ -1933,6 +1959,12 @@ async function createWorkflowDraft(context: PortalContext, body: ActionBody) {
       input_data: {
         cadence: optionalString(body.cadence, 80),
         mode: optionalString(body.mode, 80),
+        channel,
+        output_format: outputFormat,
+        aspect,
+        style,
+        duration_seconds: durationSeconds,
+        start_frame_asset_id: startFrameAssetId,
       },
       provider_status: ["call_agent", "booking_request", "meeting"].includes(workflowType) ? "provider_required" : "not_started",
     }),

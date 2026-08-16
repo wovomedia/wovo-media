@@ -5,6 +5,7 @@ import { requireServerUser, supabaseServiceRoleRequest } from "@/lib/supabase/se
 import { asRecord, asString, extractVideoJobIdFromPath, isUuid } from "@/lib/wovo-ai/feed-utils";
 import { resolveUserEmail } from "@/lib/wovo-ai/admin";
 import { getSubscriptionStatus } from "@/lib/wovo-ai/subscription";
+import { getEnv } from "@/lib/env";
 
 type CreateVideoBody = {
   prompt?: string;
@@ -105,6 +106,13 @@ export async function POST(request: Request) {
       );
     }
 
+    if (getEnv("WOVO_VIDEO_GENERATION_ENABLED") !== "true") {
+      return NextResponse.json(
+        { error: "Video generation is not enabled because WOVO has not completed the current provider, metering, private-storage, and refund-path verification." },
+        { status: 503 },
+      );
+    }
+
     const guard = await guardAiRequest(request.headers.get("authorization"), "video");
     const body = (await request.json().catch(() => ({}))) as CreateVideoBody;
     const prompt = body.prompt?.trim() ?? "";
@@ -134,43 +142,22 @@ export async function POST(request: Request) {
 
     const sourceVideo = remixMode === "replace_dance" ? await resolveSourceVideo(guard.userId, sourceOutputId) : null;
 
-    let provider = "sora";
-    let providerJobId = "";
-    let providerStatus = "queued";
-    let providerResultUrl: string | null = null;
-    let providerPayload: Record<string, unknown> = {};
-    let warning: string | null = null;
-
-    try {
-      const soraJob =
-        remixMode === "replace_dance" && sourceVideo
-          ? await createSoraEditJob({
-              prompt,
-              sourceProviderVideoId: sourceVideo.sourceProviderVideoId,
-            })
-          : await createSoraJob({
-              prompt,
-              durationSeconds: body.durationSeconds,
-              inputReferenceImageUrl: remixMode === "animate_image" ? inputReferenceImage : undefined,
-            });
-      provider = "sora";
-      providerJobId = soraJob.providerJobId;
-      providerStatus = soraJob.status;
-      providerPayload = asRecord(soraJob.raw);
-    } catch (soraError) {
-      provider = "demo";
-      providerJobId = `demo_${crypto.randomUUID()}`;
-      providerStatus = "completed";
-      providerResultUrl = "/videos/wovo-product-demo.mp4";
-      warning =
-        soraError instanceof Error
-          ? `Live video is temporarily unavailable. Demo video returned: ${soraError.message}`
-          : "Live video is temporarily unavailable. Demo video returned instead.";
-      providerPayload = {
-        fallback: true,
-        reason: warning,
-      };
-    }
+    const soraJob =
+      remixMode === "replace_dance" && sourceVideo
+        ? await createSoraEditJob({
+            prompt,
+            sourceProviderVideoId: sourceVideo.sourceProviderVideoId,
+          })
+        : await createSoraJob({
+            prompt,
+            durationSeconds: body.durationSeconds,
+            inputReferenceImageUrl: remixMode === "animate_image" ? inputReferenceImage : undefined,
+          });
+    const provider = "sora";
+    const providerJobId = soraJob.providerJobId;
+    const providerStatus = soraJob.status;
+    const providerResultUrl: string | null = null;
+    const providerPayload = asRecord(soraJob.raw);
 
     const rows = await supabaseServiceRoleRequest<VideoJobRow[]>("/rest/v1/video_jobs?select=id,status,provider,provider_job_id,result_url,created_at", {
       method: "POST",
@@ -197,7 +184,7 @@ export async function POST(request: Request) {
       job: created ?? null,
       billing_source: guard.billingSource,
       trial_uses_remaining: guard.remainingTrialUses,
-      warning,
+      warning: null,
     });
   } catch (error) {
     const guardResponse = toAiGuardErrorResponse(error);

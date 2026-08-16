@@ -1,14 +1,16 @@
 import { supabaseServiceRoleRequest } from "@/lib/supabase/server";
-import type { StripeSubscription } from "@/lib/stripe";
+import { retrieveCheckoutLineItems, type StripeSubscription } from "@/lib/stripe";
 import { isAllowedPortalSubscriptionPriceId } from "@/lib/portal/billing-options";
 import { getAiOperatorPriceAllowlist } from "@/lib/portal/ai-operator";
 import { cartoonSeriesPriceAllowlist } from "@/lib/portal/cartoon-series";
+import { creditPackForPriceId, getValidatedCreditPack, isCreditPackKey } from "@/lib/portal/credit-packs";
 
 type PortalCheckoutSession = {
   id: string;
   customer?: string | null;
   subscription?: string | null;
   payment_intent?: string | null;
+  payment_status?: string | null;
   metadata?: {
     userId?: string;
     product?: string;
@@ -17,6 +19,8 @@ type PortalCheckoutSession = {
     portalPurchaseType?: string;
     portalBillingFrequency?: string;
     portalEntitlementKey?: string;
+    portalCreditPackKey?: string;
+    portalCreditUnits?: string;
   } | null;
 };
 
@@ -74,6 +78,33 @@ export async function handlePortalCheckoutCompleted(session: PortalCheckoutSessi
   ]);
   if (!members?.[0] && !staff?.[0]) {
     throw new Error("Portal checkout identity is not authorized for this workspace.");
+  }
+
+  if (session.metadata.portalPurchaseType === "credit_pack") {
+    if (session.payment_status !== "paid") return;
+    const lineItems = await retrieveCheckoutLineItems(session.id);
+    const priceIds = lineItems.map((item) => item.price?.id).filter((id): id is string => Boolean(id));
+    if (priceIds.length !== 1) throw new Error("Credit Checkout must contain exactly one allowlisted price.");
+    const configuredPack = creditPackForPriceId(priceIds[0]);
+    const metadataPack = session.metadata.portalCreditPackKey;
+    if (!configuredPack || !isCreditPackKey(metadataPack) || configuredPack.key !== metadataPack) {
+      throw new Error("Credit Checkout pack metadata does not match the server allowlist.");
+    }
+    const verifiedPack = await getValidatedCreditPack(configuredPack.key);
+    if (!verifiedPack || Number(session.metadata.portalCreditUnits) !== verifiedPack.units) {
+      throw new Error("Credit Checkout units or Stripe price validation failed.");
+    }
+    await supabaseServiceRoleRequest("/rest/v1/rpc/wovo_finalize_credit_purchase", {
+      method: "POST",
+      body: JSON.stringify({
+        p_account_id: accountId,
+        p_initiated_by: userId,
+        p_stripe_checkout_session_id: session.id,
+        p_stripe_price_id: priceIds[0],
+        p_stripe_payment_intent_id: session.payment_intent ?? null,
+      }),
+    });
+    return;
   }
 
   if (session.metadata.portalPurchaseType === "subscription" && session.subscription) {

@@ -30,10 +30,12 @@ export type StripePrice = {
   id: string;
   active: boolean;
   livemode?: boolean;
+  type?: "one_time" | "recurring";
   currency: string;
   unit_amount: number | null;
   product?: string | { id: string; name?: string };
   recurring?: { interval?: "day" | "week" | "month" | "year"; interval_count?: number } | null;
+  metadata?: Record<string, string>;
 };
 export type StripeSubscription = {
   id: string;
@@ -110,6 +112,15 @@ export async function retrievePrice(priceId: string): Promise<StripePrice> {
 
 export async function retrieveSubscription(subscriptionId: string): Promise<StripeSubscription> {
   return stripeRequest(`/subscriptions/${subscriptionId}`, undefined, "GET");
+}
+
+export async function retrieveCheckoutLineItems(sessionId: string): Promise<Array<{ price?: { id?: string | null } }>> {
+  const payload = await stripeRequest<{ data?: Array<{ price?: { id?: string | null } }> }>(
+    `/checkout/sessions/${encodeURIComponent(sessionId)}/line_items?limit=20`,
+    undefined,
+    "GET",
+  );
+  return payload.data ?? [];
 }
 
 /**

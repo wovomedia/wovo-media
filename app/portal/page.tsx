@@ -22,6 +22,12 @@ const tabs: Array<{ value: Tab; label: string }> = [
   { value: "services", label: "Profile" },
 ];
 
+const CLIENT_CREDIT_PACKS = [
+  { key: "small", units: 50, price: "$5" },
+  { key: "growth", units: 110, price: "$10" },
+  { key: "studio", units: 300, price: "$25" },
+] as const;
+
 const inputClass = "mt-1 min-h-12 w-full rounded-xl border border-[#191714]/10 bg-[#191714]/[.035] px-3.5 text-sm text-[#191714] outline-none transition focus:border-[#f05a3a]/60";
 const textareaClass = `${inputClass} min-h-28 py-3`;
 const cardClass = "rounded-2xl border border-[#191714]/10 bg-[#fffdf8] p-5 shadow-[0_20px_80px_rgba(0,0,0,.16)]";
@@ -363,7 +369,7 @@ export default function PortalPage() {
           ) : null}
           {!isPaid && account ? <BillingCard snapshot={snapshot} account={account} busy={busy} onAction={action} /> : null}
           {tab === "overview" && account ? <Overview snapshot={snapshot} account={account} content={content} orders={orders} assets={assets} subscriptionStatus={subscription?.status ?? "inactive"} activeGrant={activeGrant ?? null} busy={busy} onAction={action} onNavigate={setTab} authedFetch={authedFetch} reload={load} setError={setError} setNotice={setNotice} /> : null}
-          {tab === "queue" && account ? <Queue account={account} items={content} paid={isPaid} staff={snapshot.mode === "staff"} aiConfigured={snapshot.setup.aiConfigured} busy={busy} onAction={action} /> : null}
+          {tab === "queue" && account ? <Queue account={account} items={content} drafts={workflowDrafts} assets={assets} paid={isPaid} staff={snapshot.mode === "staff"} aiConfigured={snapshot.setup.aiConfigured} busy={busy} onAction={action} authedFetch={authedFetch} reload={load} setError={setError} setNotice={setNotice} /> : null}
           {tab === "calendar" && account ? <Calendar account={account} events={events} content={content} busy={busy} staff={snapshot.mode === "staff"} onAction={action} /> : null}
           {tab === "studio" && account ? <BuildStudio snapshot={snapshot} account={account} drafts={workflowDrafts} ledger={creditLedger} entitlements={entitlements} notes={knowledgeNotes} noteVersions={knowledgeNoteVersions} commentWorkflows={commentContentWorkflows} busy={busy} onAction={action} /> : null}
           {tab === "inbox" && account ? <Inbox account={account} thread={thread} messages={messages} assignments={snapshot.threadAssignments.filter((item) => item.thread_id === thread?.id)} staff={snapshot.mode === "staff"} canAssign={["owner", "admin", "manager"].includes(snapshot.staffRole ?? "")} busy={busy} onAction={action} /> : null}
@@ -653,18 +659,129 @@ function Overview({ snapshot, account, content, orders, assets, subscriptionStat
   );
 }
 
-function Queue({ account, items, paid, staff, aiConfigured, busy, onAction }: { account: PortalAccount; items: PortalContentItem[]; paid: boolean; staff: boolean; aiConfigured: boolean; busy: string; onAction: (payload: Record<string, unknown>, success: string) => Promise<unknown> }) {
-  async function create(event: FormEvent<HTMLFormElement>) {
+type CreatorMode = "post" | "campaign" | "episode" | "website" | "video";
+
+const CREATOR_MODES: Array<{ value: CreatorMode; label: string; eyebrow: string }> = [
+  { value: "post", label: "Post", eyebrow: "Ready-to-review caption" },
+  { value: "campaign", label: "Campaign", eyebrow: "Multi-post planning brief" },
+  { value: "episode", label: "Character episode", eyebrow: "Rights-confirmed series brief" },
+  { value: "website", label: "Website preview", eyebrow: "Private concept brief" },
+  { value: "video", label: "Video brief", eyebrow: "Storyboard-first workflow" },
+];
+
+function CreatorWorkbench({ account, items, drafts, assets, paid, aiConfigured, busy, onAction, authedFetch, reload, setError, setNotice }: {
+  account: PortalAccount;
+  items: PortalContentItem[];
+  drafts: PortalSnapshot["workflowDrafts"];
+  assets: PortalSnapshot["assets"];
+  paid: boolean;
+  aiConfigured: boolean;
+  busy: string;
+  onAction: (payload: Record<string, unknown>, success: string) => Promise<unknown>;
+  authedFetch: (url: string, init?: RequestInit) => Promise<Response>;
+  reload: () => Promise<void>;
+  setError: (value: string) => void;
+  setNotice: (value: string) => void;
+}) {
+  const [mode, setMode] = useState<CreatorMode>("post");
+  const [advanced, setAdvanced] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const imageAssets = assets.filter((asset) => asset.mime_type.startsWith("image/") && asset.rights_confirmed);
+
+  async function uploadFrame(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    await onAction({ action: "create_content", accountId: account.id, title: data.get("title"), caption: data.get("caption"), platform: data.get("platform"), contentType: data.get("contentType"), scheduledFor: data.get("scheduledFor"), rightsConfirmed: data.get("rightsConfirmed") === "on" }, "Content added to the human review queue.");
-    event.currentTarget.reset();
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+    const file = form.get("file");
+    if (!(file instanceof File) || !file.type.startsWith("image/")) return setError("Choose a JPG, PNG, or WebP start frame.");
+    setError("");
+    setUploading(true);
+    setNotice("Preparing a private reference upload…");
+    const metadata = { accountId: account.id, fileName: file.name, mimeType: file.type, sizeBytes: file.size, assetKind: "reference", rightsConfirmed: form.get("rightsConfirmed") === "on", peopleConsentConfirmed: form.get("peopleConsentConfirmed") === "on" };
+    try {
+      const prepared = await authedFetch("/api/portal/assets", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "prepare", ...metadata }) });
+      const payload = await prepared.json() as { error?: string; bucket?: string; path?: string; token?: string };
+      if (!prepared.ok || !payload.bucket || !payload.path || !payload.token) throw new Error(payload.error ?? "Unable to prepare the private upload.");
+      const storage = createSupabaseClient(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "", { auth: { persistSession: false, autoRefreshToken: false } });
+      const { error: uploadError } = await storage.storage.from(payload.bucket).uploadToSignedUrl(payload.path, payload.token, file, { contentType: file.type });
+      if (uploadError) throw uploadError;
+      const finalized = await authedFetch("/api/portal/assets", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "finalize", path: payload.path, ...metadata }) });
+      const finished = await finalized.json() as { error?: string };
+      if (!finalized.ok) throw new Error(finished.error ?? "Upload verification failed.");
+      formElement.reset();
+      setNotice("Reference frame stored privately. Select it in the video brief when the list refreshes.");
+      await reload();
+    } catch (reason) {
+      setNotice("");
+      setError(reason instanceof Error ? reason.message : "Upload failed.");
+    } finally { setUploading(false); }
   }
-  async function generate(event: FormEvent<HTMLFormElement>) {
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    await onAction({ action: "generate_calendar", accountId: account.id, startDate: data.get("startDate"), endDate: data.get("endDate"), cadence: Number(data.get("cadence")) }, "AI-assisted calendar created. Review every caption before approval.");
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    const prompt = String(data.get("prompt") ?? "").trim();
+    const title = String(data.get("title") ?? "").trim() || `${CREATOR_MODES.find((item) => item.value === mode)?.label ?? "Creative"} · ${prompt.slice(0, 64)}`;
+    const rightsConfirmed = data.get("rightsConfirmed") === "on";
+    if (mode === "post") {
+      const result = await onAction({ action: "create_content", accountId: account.id, title, caption: prompt, platform: data.get("channel"), contentType: "social_post", scheduledFor: data.get("scheduledFor"), rightsConfirmed }, "Post draft added to the private review queue. Nothing was published.");
+      if (result) form.reset();
+      return;
+    }
+    const workflowType = mode === "campaign" ? "post_plan" : mode === "episode" ? "mascot_series" : mode === "website" ? "website_site" : "ugc_ad";
+    const result = await onAction({
+      action: "create_workflow_draft", accountId: account.id, workflowType, title, brief: prompt,
+      rightsConfirmed, sourceAuthorized: rightsConfirmed, peopleConsentConfirmed: data.get("peopleConsentConfirmed") === "on", voiceConsentConfirmed: data.get("voiceConsentConfirmed") === "on",
+      cadence: data.get("cadence"), mode, channel: data.get("channel"), outputFormat: data.get("format"), aspect: data.get("aspect"), style: data.get("style"), durationSeconds: data.get("duration"), startFrameAssetId: data.get("startFrameAssetId") || null,
+    }, mode === "video" ? "Private video/storyboard brief saved. No video was generated or published." : "Private creation brief saved for review. Nothing was published.");
+    if (result) form.reset();
   }
+
+  const actionLabel = mode === "post" ? "Add draft to review queue" : mode === "video" ? "Save video brief" : "Save creation brief";
+  return (
+    <section className="overflow-hidden rounded-[26px] border border-[#191714]/10 bg-[#fffdf8] shadow-[0_26px_90px_rgba(25,23,20,.12)]">
+      <div className="border-b border-[#191714]/10 px-4 pt-5 sm:px-6 sm:pt-6">
+        <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+          <div><p className="text-xs font-bold uppercase tracking-[.16em] text-[#d94326]">WOVO Create · {aiConfigured ? "AI drafting connected" : "manual draft mode"}</p><h1 className="mt-2 text-3xl font-medium tracking-[-.035em] sm:text-4xl">Describe what you want Adam to create.</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-[#655f56]">Start with the outcome. WOVO saves tenant-private drafts and never marks a post, site, image, or video complete without evidence.</p></div>
+          <div className="flex items-center justify-between rounded-2xl bg-[#191714] px-4 py-3 text-white lg:min-w-52"><div><p className="text-[10px] font-bold uppercase tracking-[.14em] text-white/55">Available credits</p><p className="mt-1 text-xl font-semibold">{paid ? "Ledger-backed" : "Activation required"}</p></div><span className="h-2.5 w-2.5 rounded-full bg-[#f05a3a]" /></div>
+        </div>
+        <div className="mt-5 flex gap-1 overflow-x-auto pb-0" role="tablist" aria-label="Creation type">{CREATOR_MODES.map((item) => <button key={item.value} type="button" role="tab" aria-selected={mode === item.value} onClick={() => setMode(item.value)} className={`min-h-11 shrink-0 border-b-2 px-3 text-sm font-semibold transition ${mode === item.value ? "border-[#f05a3a] text-[#191714]" : "border-transparent text-[#756e64] hover:text-[#191714]"}`}>{item.label}</button>)}</div>
+      </div>
+
+      <form onSubmit={(event) => void submit(event)} className="p-4 sm:p-6">
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_290px]">
+          <div>
+            <label className="text-sm font-semibold">{CREATOR_MODES.find((item) => item.value === mode)?.eyebrow}<textarea required name="prompt" minLength={10} maxLength={5000} className="mt-2 min-h-40 w-full resize-y rounded-2xl border border-[#191714]/12 bg-[#f7f2e9] p-4 text-base leading-7 text-[#191714] outline-none transition placeholder:text-[#8a8278] focus:border-[#f05a3a]" placeholder={mode === "episode" ? "Introduce the character, episode goal, setting, key beats, and approved call to action…" : mode === "website" ? "Describe the offer, audience, hero message, sections, and action the page should drive…" : mode === "video" ? "Describe the opening frame, subject motion, camera movement, scene beats, and ending…" : "Describe the idea, offer, audience, and what the audience should do next…"} /></label>
+            <div className="mt-3 grid gap-3 sm:grid-cols-3">
+              <label className="text-xs font-semibold text-[#655f56]">Channel<select name="channel" defaultValue="instagram" className={inputClass}><option value="instagram">Instagram</option><option value="facebook">Facebook</option><option value="tiktok">TikTok</option><option value="youtube">YouTube</option><option value="linkedin">LinkedIn</option><option value="website">Website</option></select></label>
+              <label className="text-xs font-semibold text-[#655f56]">Format<select name="format" defaultValue={mode === "video" ? "vertical_video" : "single_post"} className={inputClass}><option value="single_post">Single post</option><option value="carousel">Carousel brief</option><option value="vertical_video">Vertical video brief</option><option value="landing_page">Landing page</option></select></label>
+              <label className="text-xs font-semibold text-[#655f56]">Aspect<select name="aspect" defaultValue="9:16" className={inputClass}><option value="9:16">Vertical · 1080×1920</option><option value="16:9">Landscape · 1920×1080</option><option value="1:1">Square · 1080×1080</option></select></label>
+            </div>
+            <button type="button" aria-expanded={advanced} onClick={() => setAdvanced((value) => !value)} className="mt-4 min-h-11 text-sm font-bold text-[#a9341f]">{advanced ? "Hide advanced settings" : "Advanced settings"}</button>
+            {advanced ? <div className="mt-2 grid gap-3 rounded-2xl border border-[#191714]/10 bg-[#f7f2e9] p-4 sm:grid-cols-2"><label className="text-sm font-medium">Internal title<input name="title" maxLength={180} className={inputClass} placeholder="Optional—WOVO will name it" /></label><label className="text-sm font-medium">Style / motion<select name="style" className={inputClass}><option value="editorial">Editorial and composed</option><option value="energetic">Energetic movement</option><option value="cinematic">Cinematic and restrained</option><option value="playful">Playful character motion</option><option value="product">Product-focused</option></select></label><label className="text-sm font-medium">Cadence<input name="cadence" maxLength={80} className={inputClass} placeholder="One-time, weekly, three episodes/week" /></label><label className="text-sm font-medium">Schedule<input name="scheduledFor" type="datetime-local" className={inputClass} /></label></div> : null}
+          </div>
+
+          <aside className="space-y-3">
+            <div className="rounded-2xl border border-[#191714]/10 bg-[#f7f2e9] p-4"><p className="text-xs font-bold uppercase tracking-[.12em] text-[#756e64]">Draft cost</p><p className="mt-2 text-xl font-semibold">0 credits to save</p><p className="mt-1 text-xs leading-5 text-[#756e64]">A provider render is never started by this form. WOVO will show a separate server-verified quote before any paid generation.</p></div>
+            {mode === "video" ? <div className="rounded-2xl border border-[#d94326]/20 bg-[#fff3ee] p-4"><p className="font-semibold">Video render paused</p><p className="mt-2 text-xs leading-5 text-[#6b493f]">The current provider path has not passed the metering, private-storage, moderation, and refund test. Save a useful storyboard brief now; Generate video remains unavailable.</p><label className="mt-3 block text-sm font-medium">Duration<select name="duration" defaultValue="8" className={inputClass}><option value="4">4 seconds</option><option value="8">8 seconds</option><option value="12">12 seconds</option></select></label><label className="mt-3 block text-sm font-medium">Private start frame<select name="startFrameAssetId" className={inputClass}><option value="">No start frame</option>{imageAssets.map((asset) => <option key={asset.id} value={asset.id}>{asset.file_name}</option>)}</select></label><label className="mt-3 block text-sm font-medium text-[#756e64]">End frame<input disabled value="Not supported by a verified provider" readOnly className={`${inputClass} opacity-60`} /></label></div> : null}
+          </aside>
+        </div>
+
+        <div className="mt-5 grid gap-3 border-t border-[#191714]/10 pt-5 lg:grid-cols-[1fr_auto] lg:items-end">
+          <div className="space-y-2"><label className="flex min-h-11 items-start gap-2 text-sm"><input required name="rightsConfirmed" type="checkbox" className="mt-1" /><span>I own or have permission to use every supplied reference and business fact.</span></label>{["episode", "video"].includes(mode) ? <><label className="flex min-h-11 items-start gap-2 text-sm"><input required name="peopleConsentConfirmed" type="checkbox" className="mt-1" /><span>I have explicit permission for every recognizable person or likeness.</span></label><label className="flex min-h-11 items-start gap-2 text-sm"><input required name="voiceConsentConfirmed" type="checkbox" className="mt-1" /><span>I have explicit permission for every referenced voice; no impersonation.</span></label></> : null}</div>
+          <button disabled={!paid || busy === "create_content" || busy === "create_workflow_draft"} className="inline-flex min-h-13 items-center justify-center rounded-xl bg-[#f05a3a] px-6 text-sm font-bold text-[#191714] transition hover:bg-[#d94326] disabled:cursor-not-allowed disabled:opacity-45">{actionLabel}</button>
+        </div>
+      </form>
+
+      {mode === "video" ? <form onSubmit={(event) => void uploadFrame(event)} className="border-t border-[#191714]/10 bg-[#f7f2e9] p-4 sm:p-5"><div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-end"><div><p className="text-sm font-semibold">Add a private reference frame</p><p className="mt-1 text-xs leading-5 text-[#756e64]">JPG, PNG, or WebP up to 10 MB. This stays in the selected workspace and is not public.</p><input required name="file" type="file" accept="image/jpeg,image/png,image/webp" className="mt-3 block max-w-full text-sm file:mr-3 file:rounded-full file:border-0 file:bg-[#191714] file:px-4 file:py-2.5 file:font-semibold file:text-white" /><div className="mt-3 flex flex-col gap-2 sm:flex-row"><label className="flex items-center gap-2 text-xs"><input required name="rightsConfirmed" type="checkbox" />I own or can use this frame.</label><label className="flex items-center gap-2 text-xs"><input required name="peopleConsentConfirmed" type="checkbox" />People/likeness consent is confirmed.</label></div></div><button disabled={uploading} className={secondaryButton}>{uploading ? "Uploading…" : "Upload privately"}</button></div></form> : null}
+
+      <div className="border-t border-[#191714]/10 bg-[#191714] p-4 text-white sm:p-5"><div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[.14em] text-[#ff8c70]">Workbench</p><h2 className="mt-1 text-xl font-medium">Recent drafts and review queue</h2></div><span className="text-xs text-white/55">{items.length + drafts.length} saved</span></div><div className="mt-4 flex gap-3 overflow-x-auto pb-1">{[...items.slice(0, 4).map((item) => ({ id: item.id, title: item.title, kind: item.platform, status: item.status })), ...drafts.slice(0, 4).map((draft) => ({ id: draft.id, title: draft.title, kind: draft.workflow_type.replaceAll("_", " "), status: draft.status }))].slice(0, 6).map((item) => <article key={item.id} className="min-w-60 rounded-2xl border border-white/10 bg-white/[.06] p-4"><p className="text-[10px] font-bold uppercase tracking-[.12em] text-white/50">{item.kind}</p><h3 className="mt-2 line-clamp-2 font-semibold">{item.title}</h3><p className="mt-3 text-xs capitalize text-[#ffab96]">{item.status.replaceAll("_", " ")}</p></article>)}{!items.length && !drafts.length ? <p className="w-full rounded-2xl border border-dashed border-white/15 p-6 text-center text-sm text-white/55">Your first saved draft will appear here.</p> : null}</div></div>
+    </section>
+  );
+}
+
+function Queue({ account, items, drafts, assets, paid, staff, aiConfigured, busy, onAction, authedFetch, reload, setError, setNotice }: { account: PortalAccount; items: PortalContentItem[]; drafts: PortalSnapshot["workflowDrafts"]; assets: PortalSnapshot["assets"]; paid: boolean; staff: boolean; aiConfigured: boolean; busy: string; onAction: (payload: Record<string, unknown>, success: string) => Promise<unknown>; authedFetch: (url: string, init?: RequestInit) => Promise<Response>; reload: () => Promise<void>; setError: (value: string) => void; setNotice: (value: string) => void }) {
   async function approveRange(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
@@ -672,11 +789,7 @@ function Queue({ account, items, paid, staff, aiConfigured, busy, onAction }: { 
   }
   return (
     <div className="space-y-5">
-      <div><p className="text-xs font-semibold uppercase tracking-[.16em] text-[#d94326]">Human-in-the-loop</p><h1 className="mt-2 text-3xl font-semibold">Weekly approval & posting queue</h1><p className="mt-2 text-sm text-[#655f56]">AI drafts; clients approve; the WOVO team copies and posts manually. No unbuilt automation is implied.</p></div>
-      <div className={`grid gap-5 ${aiConfigured && paid ? "xl:grid-cols-2" : ""}`}>
-        {aiConfigured && paid ? <form onSubmit={(event) => void generate(event)} className={cardClass}><h2 className="text-lg font-semibold">Build an AI-assisted plan</h2><p className="mt-1 text-sm text-[#7a7369]">Maximum 31 days and 14 posts per generation.</p><div className="mt-4 grid gap-3 sm:grid-cols-2"><label className="text-sm">Start<input required name="startDate" type="date" className={inputClass} /></label><label className="text-sm">End<input required name="endDate" type="date" className={inputClass} /></label><label className="text-sm sm:col-span-2">Posts per week<select name="cadence" defaultValue={account.posting_cadence_per_week} className={inputClass}>{[1,2,3,4,5,6,7].map((value) => <option key={value}>{value}</option>)}</select></label></div><button disabled={busy === "generate_calendar"} className={`${primaryButton} mt-4`}>Generate review queue</button></form> : null}
-        <form onSubmit={(event) => void create(event)} className={cardClass}><h2 className="text-lg font-semibold">Add a post manually</h2><div className="mt-4 grid gap-3 sm:grid-cols-2"><label className="text-sm sm:col-span-2">Title<input required name="title" maxLength={160} className={inputClass} /></label><label className="text-sm">Platform<select name="platform" className={inputClass}>{["instagram","facebook","google_business","linkedin","tiktok","youtube"].map((value) => <option key={value}>{value.replace("_", " ")}</option>)}</select></label><label className="text-sm">Workflow<select name="contentType" className={inputClass}><option value="social_post">Social post</option><option value="special">Special / recurring offer</option><option value="property_marketing">Authorized property marketing</option><option value="project_update">Project update</option></select></label><label className="text-sm sm:col-span-2">Caption<textarea required name="caption" maxLength={5000} className={textareaClass} /></label><label className="text-sm">Schedule<input name="scheduledFor" type="datetime-local" className={inputClass} /></label><label className="flex min-h-12 items-center gap-2 self-end rounded-xl border border-[#191714]/10 px-3 text-sm"><input name="rightsConfirmed" type="checkbox" />Rights confirmed</label></div><button disabled={!paid || busy === "create_content"} className={`${secondaryButton} mt-4`}>Add to queue</button></form>
-      </div>
+      <CreatorWorkbench account={account} items={items} drafts={drafts} assets={assets} paid={paid} aiConfigured={aiConfigured} busy={busy} onAction={onAction} authedFetch={authedFetch} reload={reload} setError={setError} setNotice={setNotice} />
       <section className={cardClass}>
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><h2 className="text-lg font-semibold">Scheduled posts</h2><p className="mt-1 text-xs leading-5 text-[#756e64]">Approval locks the current caption, platform, asset, and time. Any later change requires a new approval.</p></div><span className="text-sm text-[#7a7369]">{items.length} total</span></div>
         {items.some((item) => item.scheduled_for && ["draft", "client_review", "revision_requested"].includes(item.status)) ? <form onSubmit={(event) => void approveRange(event)} className="mt-4 grid gap-3 rounded-2xl border border-[#f05a3a]/20 bg-[#fff7f3] p-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end"><label className="text-sm font-medium">Approve from<input required name="startDate" type="date" className={inputClass} /></label><label className="text-sm font-medium">Through<input required name="endDate" type="date" className={inputClass} /></label><button disabled={busy === "approve_content_range"} className={primaryButton}>Approve date range</button></form> : null}
@@ -911,7 +1024,7 @@ function BuildStudio({ snapshot, account, drafts, ledger, entitlements, notes, n
           <p className="text-xs font-bold uppercase tracking-[.14em] text-[#756e64]">Credits</p>
           <p className="mt-3 text-4xl font-semibold">{balance}</p>
           <p className="mt-2 text-sm leading-6 text-[#655f56]">Server-authoritative balance. Purchases and generation costs will appear as idempotent ledger entries.</p>
-          {snapshot.setup.expansion.creditPurchaseReady ? <button className={`${secondaryButton} mt-4 w-full`}>Buy credits</button> : null}
+          {snapshot.setup.expansion.creditPurchaseReady ? <div className="mt-4 grid gap-2" aria-label="Credit packs">{CLIENT_CREDIT_PACKS.map((pack) => <button key={pack.key} className={`${secondaryButton} w-full justify-between`} onClick={() => void onAction({ action: "start_credit_checkout", accountId: account.id, packKey: pack.key }, `Opening secure Stripe Checkout for ${pack.units} credits.`)}><span>{pack.units} credits</span><span>{pack.price}</span></button>)}</div> : <p className="mt-4 rounded-xl bg-[#f7f2e9] p-3 text-xs leading-5 text-[#655f56]">Purchasing is hidden until all three Stripe prices pass the server allowlist. Your existing balance and history remain available.</p>}
         </section>
         {snapshot.setup.expansion.dmManagerCheckoutReady ? <section className={cardClass}>
           <div className="flex items-start justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[.14em] text-[#756e64]">Optional add-on</p><h2 className="mt-2 text-xl font-semibold">AI DM Manager · $1.99/month</h2></div><StatusPill status={dm?.status ?? "inactive"} /></div>

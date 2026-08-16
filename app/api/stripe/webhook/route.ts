@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { retrieveSubscription, type StripeSubscription } from "@/lib/stripe";
 import { cancelSubscriptionByCustomerId, cancelSubscriptionByStripeSubscriptionId, syncSubscriptionFromStripe } from "@/lib/wovo-ai/subscription";
+import { supabaseServiceRoleRequest } from "@/lib/supabase/server";
 import {
   beginPortalStripeEvent,
   failPortalStripeEvent,
@@ -35,6 +36,7 @@ export async function POST(request: Request) {
           subscription?: string;
           customer?: string;
           payment_intent?: string;
+          payment_status?: string;
           metadata?: {
             userId?: string;
             product?: string;
@@ -42,6 +44,8 @@ export async function POST(request: Request) {
             portalOrderId?: string;
             portalPurchaseType?: string;
             portalBillingFrequency?: string;
+            portalCreditPackKey?: string;
+            portalCreditUnits?: string;
           };
         };
         await handlePortalCheckoutCompleted(session);
@@ -49,6 +53,21 @@ export async function POST(request: Request) {
           const sub = await retrieveSubscription(String(session.subscription));
           await syncSubscriptionFromStripe(sub, session.metadata?.userId);
           await syncPortalSubscription(sub);
+        }
+        break;
+      }
+      case "checkout.session.async_payment_succeeded": {
+        await handlePortalCheckoutCompleted(event.data.object as unknown as Parameters<typeof handlePortalCheckoutCompleted>[0]);
+        break;
+      }
+      case "checkout.session.expired":
+      case "checkout.session.async_payment_failed": {
+        const session = event.data.object as unknown as { id: string; metadata?: { product?: string; portalPurchaseType?: string } };
+        if (session.metadata?.product === "wovo_portal" && session.metadata.portalPurchaseType === "credit_pack") {
+          await supabaseServiceRoleRequest(
+            `/rest/v1/wovo_credit_checkout_sessions?stripe_checkout_session_id=eq.${encodeURIComponent(session.id)}&status=eq.pending`,
+            { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ status: event.type === "checkout.session.expired" ? "expired" : "failed", updated_at: new Date().toISOString() }) },
+          );
         }
         break;
       }
