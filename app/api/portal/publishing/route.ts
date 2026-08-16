@@ -61,6 +61,15 @@ function requireOwner(context: PortalContext) {
   }
 }
 
+function publishingError(error: unknown, fallback: string) {
+  if (error instanceof PortalHttpError) return NextResponse.json({ error: error.message }, { status: error.status });
+  const message = error instanceof Error ? error.message : "";
+  if (message.includes("Missing bearer token") || message.includes("Unable to verify session")) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  return NextResponse.json({ error: fallback }, { status: 500 });
+}
+
 function enumValue(value: unknown, values: readonly string[], label: string) {
   const normalized = requiredString(value, label, 80).toLowerCase();
   if (!values.includes(normalized)) throw new PortalHttpError(400, `Invalid ${label.toLowerCase()}.`);
@@ -325,8 +334,7 @@ export async function GET(request: Request) {
     ]);
     return NextResponse.json({ jobs: jobs ?? [], connections: connections ?? [], revisions: revisions ?? [] }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
-    if (error instanceof PortalHttpError) return NextResponse.json({ error: error.message }, { status: error.status });
-    return NextResponse.json({ error: "Publishing data could not be loaded." }, { status: 500 });
+    return publishingError(error, "Publishing data could not be loaded.");
   }
 }
 
@@ -341,8 +349,10 @@ export async function POST(request: Request) {
     }
     throw new PortalHttpError(400, "Unknown publishing action.");
   } catch (error) {
-    if (error instanceof PortalHttpError) return NextResponse.json({ error: error.message }, { status: error.status });
-    console.error("Owner publishing request failed", { message: error instanceof Error ? error.message.slice(0, 180) : "unknown" });
-    return NextResponse.json({ error: "The publishing action could not be completed." }, { status: 500 });
+    const message = error instanceof Error ? error.message : "";
+    if (!message.includes("Missing bearer token") && !message.includes("Unable to verify session") && !(error instanceof PortalHttpError)) {
+      console.error("Owner publishing request failed", { message: message.slice(0, 180) || "unknown" });
+    }
+    return publishingError(error, "The publishing action could not be completed.");
   }
 }
