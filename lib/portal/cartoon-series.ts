@@ -40,10 +40,11 @@ export function cartoonSeriesPriceAllowlist(): string[] {
 }
 
 export function cartoonProviderStatus() {
+  const videoVerified = getEnv("WOVO_CARTOON_VIDEO_PROVIDER_VERIFIED") === "true";
   return {
     text: Boolean(getEnv("OPENAI_API_KEY")),
-    video: Boolean(getEnv("OPENAI_API_KEY")) && getEnv("WOVO_CARTOON_VIDEO_ENABLED") === "true",
+    video: Boolean(getEnv("OPENAI_API_KEY")) && getEnv("WOVO_CARTOON_VIDEO_ENABLED") === "true" && videoVerified,
     textModel: getEnv("WOVO_CARTOON_TEXT_MODEL") || "gpt-5.6-luna",
-    videoModel: getEnv("WOVO_CARTOON_VIDEO_MODEL") || "sora-2",
+    videoModel: videoVerified ? (getEnv("WOVO_CARTOON_VIDEO_MODEL") || "provider_not_configured") : "provider_not_verified",
   };
 }
