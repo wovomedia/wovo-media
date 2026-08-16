@@ -1,0 +1,22 @@
+import { NextResponse } from "next/server";
+import { metaPublishingScaffoldStatus, metaRedirectUrl } from "@/lib/meta/integration";
+import { loadMetaConnection } from "@/lib/meta/publishing";
+import { assertPortalAccountAccess, isUuid, requirePortalContext } from "@/lib/portal/server";
+
+export const runtime = "nodejs";
+
+export async function GET(request: Request) {
+  try {
+    const context = await requirePortalContext(request.headers.get("authorization"));
+    const accountId = new URL(request.url).searchParams.get("accountId") || undefined;
+    const ownerScope = !accountId && context.mode === "staff" && context.staffRole === "owner";
+    if (!ownerScope && !isUuid(accountId)) return NextResponse.json({ error: "A valid workspace is required." }, { status: 400 });
+    if (!ownerScope) await assertPortalAccountAccess(context, accountId!);
+    const connection = await loadMetaConnection({ accountId, ownerScope });
+    const runtime = metaPublishingScaffoldStatus();
+    return NextResponse.json({
+      runtime: { ...runtime, redirectUrl: metaRedirectUrl(new URL(request.url).origin) },
+      connection: connection ? { status: connection.status, actionPolicy: connection.action_policy, pageName: connection.page_name, instagramUsername: connection.instagram_username, killSwitch: connection.kill_switch, lastCheckedAt: connection.last_checked_at, lastActionAt: connection.last_action_at, tokenExpiresAt: connection.token_expires_at, lastErrorCode: connection.last_error_code, grantedScopes: connection.granted_scopes, e2eVerifiedAt: connection.e2e_verified_at, autoPublishOptedInAt: connection.auto_publish_opted_in_at } : null,
+    }, { headers: { "Cache-Control": "private, no-store" } });
+  } catch { return NextResponse.json({ error: "Unauthorized." }, { status: 401 }); }
+}

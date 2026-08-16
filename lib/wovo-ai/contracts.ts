@@ -28,4 +28,5 @@ export type UnifiedSubscriptionResponse = {
   remaining_credits?: number;
   current_period_end?: string | null;
   period_end?: string | null;
+  user_role?: string;
 };

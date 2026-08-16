@@ -1,25 +1,31 @@
 @import "tailwindcss";
 
 :root {
-  --wm-page: #f6f8fb;
-  --wm-muted: #edf2f6;
-  --wm-surface: #ffffff;
-  --wm-text: #101828;
-  --wm-subtle: #475467;
-  /* Real Wovo Media green from the physical logo */
-  --wm-accent: #4CAF50;
-  --wm-accent-strong: #43A047;
-  --wm-accent-glow: rgba(76,175,80,0.25);
+  --wm-page: #f3efe6;
+  --wm-muted: #e8e1d5;
+  --wm-surface: #fffdf8;
+  --wm-text: #191714;
+  --wm-subtle: #655f56;
+  --wm-accent: #f05a3a;
+  --wm-accent-strong: #d94326;
+  --wm-accent-glow: rgba(240, 90, 58, 0.18);
 }
-*,*::before,*::after { box-sizing: border-box; }
+
+*, *::before, *::after { box-sizing: border-box; }
 html { scroll-behavior: smooth; overflow-x: hidden; }
 html, body { margin: 0; padding: 0; }
 body {
   min-height: 100vh;
-  background: radial-gradient(circle at top, rgba(76,175,80,0.09), transparent 42%), var(--wm-page);
+  background: var(--wm-page);
   color: var(--wm-text);
-  font-family: "Avenir Next","Segoe UI Variable","Segoe UI","Helvetica Neue",sans-serif;
+  font-family: "Helvetica Neue", "Avenir Next", Arial, sans-serif;
+  text-rendering: optimizeLegibility;
 }
-h1,h2,h3,h4,h5,h6 { font-family: "Trebuchet MS","Avenir Next","Segoe UI Variable",sans-serif; }
-a { color: inherit; text-decoration: none; }
-@keyframes loading { 0%,100% { transform: translateX(-100%); } 50% { transform: translateX(100%); } }
+h1, h2, h3, h4, h5, h6 {
+  font-family: "Iowan Old Style", "Baskerville", "Times New Roman", serif;
+  text-wrap: balance;
+}
+p { text-wrap: pretty; }
+a { text-decoration: none; }
+::selection { background: #f8c6b8; color: #191714; }
+@keyframes loading { 0%, 100% { transform: translateX(-100%); } 50% { transform: translateX(100%); } }

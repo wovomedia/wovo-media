@@ -1,9 +1,12 @@
 import { requireServerUser, supabaseServiceRoleRequest } from "@/lib/supabase/server";
+import { parseBusinessProfilesFromGoal } from "@/lib/wovo-ai/business-profiles";
+import { findMissingRequirements, type RequirementIssue } from "@/lib/wovo-ai/business-requirements";
 import { getEnv } from "@/lib/env";
 import { isPaidStatus } from "@/lib/wovo-ai/plans";
 import { getSubscriptionStatus } from "@/lib/wovo-ai/subscription";
 import { resolveUserEmail } from "@/lib/wovo-ai/admin";
 import { getModerationStateForUser } from "@/lib/wovo-ai/moderation";
+import { getWovoAiRuntimeState } from "@/lib/wovo-ai/model-metering";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -160,7 +163,38 @@ async function generateImage(imagePrompt: string): Promise<string | null> {
   return first?.url ?? null;
 }
 
+/**
+ * Asset gate for generation.
+ *
+ * Every business needs a logo, and food-service businesses need real photos of
+ * their own food, before WOVO will generate marketing for them. Checked here
+ * rather than at profile-save time so users can still save a partial profile
+ * and work toward completeness.
+ *
+ * Fails OPEN on read errors. If the profiles schema is missing the `goal`
+ * column on some deployment, the correct outcome is degraded validation, not a
+ * total outage of content generation.
+ */
+async function findBlockingAssetRequirements(userId: string): Promise<RequirementIssue[]> {
+  try {
+    const rows = await supabaseServiceRoleRequest<Array<{ goal: string | null }>>(
+      `/rest/v1/profiles?select=goal&user_id=eq.${encodeURIComponent(userId)}&limit=1`,
+    );
+    const goal = rows?.[0]?.goal ?? null;
+    const { businesses, activeBusinessId } = parseBusinessProfilesFromGoal(goal);
+    if (businesses.length === 0) return [];
+
+    const active = businesses.find((item) => item.id === activeBusinessId) ?? businesses[0];
+    return findMissingRequirements(active);
+  } catch {
+    return [];
+  }
+}
+
 export async function POST(request: Request) {
+  if (!getWovoAiRuntimeState().aiReady) {
+    return Response.json({ error: "WOVO AI is not enabled until provider safeguards and metering are verified." }, { status: 503 });
+  }
   try {
     if (!OPENAI_API_KEY) {
       return Response.json({ error: "Missing OPENAI_API_KEY environment variable" }, { status: 500 });
@@ -185,6 +219,19 @@ export async function POST(request: Request) {
     const subscription = await getSubscriptionStatus(user.id, resolvedEmail);
     if (!isPaidStatus(subscription.status)) {
       return Response.json({ error: "An active subscription is required." }, { status: 402 });
+    }
+
+    // Checked before the credit is consumed — an incomplete profile should never
+    // cost the user a generation.
+    const missingAssets = await findBlockingAssetRequirements(user.id);
+    if (missingAssets.length > 0) {
+      return Response.json(
+        {
+          error: missingAssets[0].message,
+          requirements: missingAssets,
+        },
+        { status: 428 },
+      );
     }
 
     const consumeRows = await supabaseServiceRoleRequest<ConsumeProfileCreditRow[]>("/rest/v1/rpc/consume_profile_generation_credit", {

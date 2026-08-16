@@ -5,11 +5,25 @@ function getRequiredEnv(value: string | undefined, name: string): string {
 
 function getSupabaseUrl() { return getRequiredEnv(process.env.NEXT_PUBLIC_SUPABASE_URL, "NEXT_PUBLIC_SUPABASE_URL"); }
 function getSupabaseAnonKey() { return getRequiredEnv(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, "NEXT_PUBLIC_SUPABASE_ANON_KEY"); }
+function getSupabaseServerKey() {
+  return getRequiredEnv(
+    process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY,
+    "SUPABASE_SECRET_KEY or SUPABASE_SERVICE_ROLE_KEY"
+  );
+}
+
+function setServerKeyHeaders(headers: Headers, key: string) {
+  headers.set("apikey", key);
+  // New sb_secret_ keys are opaque, not JWTs, and must not be sent as Bearer tokens.
+  if (!key.startsWith("sb_secret_")) headers.set("Authorization", `Bearer ${key}`);
+}
 
 export type AuthUser = {
   id: string; email?: string;
-  app_metadata?: { provider?: string; providers?: string[] };
-  user_metadata?: { full_name?: string; name?: string; avatar_url?: string; picture?: string };
+  created_at?: string;
+  email_confirmed_at?: string | null;
+  app_metadata?: { provider?: string; providers?: string[]; role?: string; wovo_portal_role?: string; [key: string]: unknown };
+  user_metadata?: { full_name?: string; name?: string; avatar_url?: string; picture?: string; [key: string]: unknown };
   identities?: Array<{ provider?: string }>;
 };
 
@@ -37,10 +51,9 @@ export async function requireServerUser(authHeader: string | null): Promise<{ us
 }
 
 export async function deleteAuthUserById(userId: string) {
-  const serviceRoleKey = getRequiredEnv(process.env.SUPABASE_SERVICE_ROLE_KEY, "SUPABASE_SERVICE_ROLE_KEY");
+  const serviceRoleKey = getSupabaseServerKey();
   const headers = new Headers();
-  headers.set("apikey", serviceRoleKey);
-  headers.set("Authorization", `Bearer ${serviceRoleKey}`);
+  setServerKeyHeaders(headers, serviceRoleKey);
   const response = await fetch(`${getSupabaseUrl()}/auth/v1/admin/users/${userId}`, { method: "DELETE", headers, cache: "no-store" });
   if (!response.ok) throw new Error("Unable to delete user account.");
 }
@@ -52,10 +65,9 @@ function mergeHeaders(initHeaders?: HeadersInit): Headers {
 }
 
 export async function supabaseServiceRoleRequest<T = unknown>(path: string, init?: RequestInit): Promise<T | null> {
-  const serviceRoleKey = getRequiredEnv(process.env.SUPABASE_SERVICE_ROLE_KEY, "SUPABASE_SERVICE_ROLE_KEY");
+  const serviceRoleKey = getSupabaseServerKey();
   const headers = mergeHeaders(init?.headers);
-  headers.set("apikey", serviceRoleKey);
-  headers.set("Authorization", `Bearer ${serviceRoleKey}`);
+  setServerKeyHeaders(headers, serviceRoleKey);
   headers.set("Content-Type", "application/json");
   const response = await fetch(`${getSupabaseUrl()}${path}`, { ...init, headers, cache: "no-store" });
   if (!response.ok) {
@@ -63,7 +75,54 @@ export async function supabaseServiceRoleRequest<T = unknown>(path: string, init
     throw new Error(payload || `Supabase service-role request failed (${response.status}).`);
   }
   if (response.status === 204) return null;
-  return (await response.json()) as T;
+  const payload = await response.text();
+  if (!payload) return null;
+  return JSON.parse(payload) as T;
+}
+
+export async function supabaseServiceRoleRawRequest(path: string, init?: RequestInit): Promise<Response> {
+  const serviceRoleKey = getSupabaseServerKey();
+  const headers = mergeHeaders(init?.headers);
+  setServerKeyHeaders(headers, serviceRoleKey);
+  return fetch(`${getSupabaseUrl()}${path}`, { ...init, headers, cache: "no-store" });
+}
+
+export async function listAuthAdminUsers(options: { page?: number; perPage?: number } = {}): Promise<AuthUser[]> {
+  const page = Math.max(1, options.page ?? 1);
+  const perPage = Math.min(1000, Math.max(1, options.perPage ?? 100));
+  const response = await supabaseServiceRoleRequest<{ users?: AuthUser[] }>(
+    `/auth/v1/admin/users?page=${page}&per_page=${perPage}`
+  );
+  return response?.users ?? [];
+}
+
+export async function getAuthAdminUserById(userId: string): Promise<AuthUser | null> {
+  const response = await supabaseServiceRoleRequest<AuthUser>(
+    `/auth/v1/admin/users/${encodeURIComponent(userId)}`
+  );
+  return response ?? null;
+}
+
+export async function updateAuthUserById(userId: string, payload: Record<string, unknown>): Promise<AuthUser | null> {
+  return supabaseServiceRoleRequest<AuthUser>(
+    `/auth/v1/admin/users/${encodeURIComponent(userId)}`,
+    { method: "PUT", body: JSON.stringify(payload) }
+  );
+}
+
+export async function updateAuthUserMetadata(accessToken: string, metadata: Record<string, unknown>): Promise<void> {
+  const headers = new Headers({ apikey: getSupabaseAnonKey(), Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" });
+  const response = await fetch(`${getSupabaseUrl()}/auth/v1/user`, {
+    method: "PUT",
+    headers,
+    body: JSON.stringify({ data: metadata }),
+    cache: "no-store",
+  });
+  if (!response.ok) throw new Error("Unable to update account metadata.");
+}
+
+export async function updateAuthUserMetadataById(userId: string, metadata: Record<string, unknown>): Promise<void> {
+  await updateAuthUserById(userId, { user_metadata: metadata });
 }
 
 export async function updateAuthEmail(accessToken: string, email: string) {

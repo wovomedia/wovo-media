@@ -95,6 +95,8 @@ export const CREDIT_PACK_MAP: Record<string, number> = {
 };
 
 export const EXTRA_CREDITS_PRICE_ID = CREDIT_PACKS[0].priceId;
+export const VERIFIED_BADGE_PRICE_ID = process.env.WOVO_VERIFIED_BADGE_PRICE_ID ?? "";
+export const VERIFIED_BADGE_CHECKOUT_LINK = process.env.WOVO_VERIFIED_BADGE_CHECKOUT_LINK ?? "";
 
 export function getCreditPackByPriceId(priceId: string | null | undefined): CreditPack | null {
   if (!priceId) return null;

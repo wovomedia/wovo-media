@@ -34,7 +34,7 @@ export function ContactForm() {
       {field("email",    "Email *",             "email", "jane@business.com")}
       {field("business", "Business name",       "text",  "Jane's BBQ")}
       {field("phone",    "Phone *",             "tel",   "(555) 000-0000")}
-      {field("state",    "State",               "text",  "Tennessee")}
+      {field("state",    "Region",              "text",  "City, region, or service area")}
       {field("industry", "Industry",            "text",  "Restaurant, healthcare, farm...")}
       <div className="space-y-2 md:col-span-2">
         <label className="text-sm font-medium text-slate-800" htmlFor="message">What's your #1 goal? *</label>
@@ -45,7 +45,7 @@ export function ContactForm() {
       </div>
       {status === "success" && (
         <p className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900 md:col-span-2">
-          ✅ Thanks! We received your message. Call or text <a className="font-semibold underline" href={`tel:${brand.phone}`}>{brand.phoneDisplay}</a> for urgent questions.
+          Thanks! The WOVO team received your message. For follow-up, email <a className="font-semibold underline" href={`mailto:${brand.supportEmail}`}>{brand.supportEmail}</a>.
         </p>
       )}
       {status === "error" && (

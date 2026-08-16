@@ -1,83 +1,48 @@
 import type { Metadata } from "next";
-import Image from "next/image";
-import { CtaBanner } from "@/components/sections/cta-banner";
-import { FadeIn } from "@/components/motion/fade-in";
-import { PageIntro } from "@/components/sections/page-intro";
-import { SectionHeading } from "@/components/sections/section-heading";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { brand, founder, whyWovo } from "@/data/site-content";
+import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "About | Wovo Media",
-  description: "Learn about Wovo Media, our mission, and founder Payton Cody.",
+  title: "About the WOVO Marketing Workspace",
+  description: "WOVO combines a self-directed weekly marketing workspace with optional, separately scoped human production services.",
+  alternates: { canonical: "/about" },
 };
 
 export default function AboutPage() {
   return (
     <main>
-      <PageIntro
-        eyebrow="About Wovo"
-        title="A founder-led media company built for local growth"
-        description="Wovo Media combines practical AI tooling with high-output creative services for restaurants."
-        primaryCta={{ label: "Contact the Team", href: "/contact" }}
-        secondaryCta={{ label: "See Results", href: "/results" }}
-      />
-
-      <section className="py-16 sm:py-20">
-        <div className="mx-auto grid max-w-6xl gap-7 px-4 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
-          <FadeIn>
-            {/* TODO: Replace with team and founder photography from current brand shoot. */}
-            <Image
-              src="/images/team-placeholder.svg"
-              alt="Placeholder image for Wovo Media team"
-              width={820}
-              height={840}
-              className="w-full rounded-3xl border border-slate-200 bg-white object-cover shadow-[0_16px_44px_rgba(15,23,36,0.08)]"
-            />
-          </FadeIn>
-          <FadeIn delay={0.08} className="space-y-4">
-            <SectionHeading eyebrow="Founder" title={`${founder.name}, ${founder.title}`} description={founder.bio} />
-            <p className="text-sm text-slate-600">
-              Direct contact:{" "}
-              <a className="font-semibold text-slate-900 underline" href={`mailto:${brand.email}`}>
-                {brand.email}
-              </a>
-            </p>
-          </FadeIn>
+      <section className="border-b border-[#191714]/10 py-16 sm:py-24">
+        <div className="mx-auto max-w-[1280px] px-5 sm:px-8">
+          <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-[#d94326]">About WOVO</p>
+          <h1 className="mt-6 max-w-5xl text-[clamp(3rem,7vw,6.2rem)] font-medium leading-[.92] tracking-[-0.055em]">Built around the work, not the hype.</h1>
+          <p className="mt-7 max-w-2xl text-lg leading-8 text-[#655f56]">WOVO is a self-directed workspace for independent businesses that need a clearer way to plan, review, and move weekly marketing forward.</p>
         </div>
       </section>
-
-      <section className="bg-[var(--wm-muted)] py-16 sm:py-20">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <SectionHeading
-            eyebrow="Values"
-            title="How we partner with clients"
-            description="Clear communication, consistent execution, and outcomes tied to real business goals."
-          />
-
-          <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {whyWovo.map((item, index) => (
-              <FadeIn key={item.title} delay={index * 0.05}>
-                <Card className="h-full">
-                  <CardHeader>
-                    <CardTitle className="text-lg">{item.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-slate-600">{item.description}</p>
-                  </CardContent>
-                </Card>
-              </FadeIn>
+      <section className="py-16 sm:py-24">
+        <div className="mx-auto grid max-w-[1280px] gap-12 px-5 sm:px-8 lg:grid-cols-[.8fr_1.2fr]">
+          <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-[#d94326]">Operating principles</p>
+          <div className="divide-y divide-[#191714]/15 border-y border-[#191714]/15">
+            {[
+              ["Context matters", "The useful starting point is the business, audience, offers, voice, and source material—not a generic prompt."],
+              ["People stay in control", "Generated work enters a visible review queue. WOVO does not imply that external publishing happens without approval."],
+              ["Service boundaries stay clear", "The software subscription and human production services are priced separately."],
+            ].map(([title, copy]) => (
+              <article key={title} className="py-8">
+                <h2 className="text-3xl font-medium tracking-[-0.03em]">{title}</h2>
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-[#655f56]">{copy}</p>
+              </article>
             ))}
           </div>
         </div>
       </section>
-
-      <CtaBanner
-        title="Ready to build a growth system that your team can sustain?"
-        description="We can start with AI, done-for-you services, or a hybrid plan based on your current bandwidth."
-        primary={{ label: "Talk to Wovo", href: "/contact" }}
-        secondary={{ label: "See Pricing", href: "/pricing" }}
-      />
+      <section className="bg-[#f05a3a] py-16">
+        <div className="mx-auto flex max-w-[1280px] flex-col gap-7 px-5 sm:px-8 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h2 className="text-4xl font-medium tracking-[-0.035em]">Serving businesses worldwide.</h2>
+            <p className="mt-3 max-w-xl text-sm leading-6 text-[#191714]/70">Public support is handled through support@wovomedia.com and the authenticated client workspace.</p>
+          </div>
+          <Link href="/contact" className="inline-flex min-h-12 items-center justify-center rounded-full bg-[#191714] px-7 text-sm font-bold text-white">Contact WOVO</Link>
+        </div>
+      </section>
     </main>
   );
 }

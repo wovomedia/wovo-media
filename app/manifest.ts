@@ -2,23 +2,25 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Wovo Media",
-    short_name: "Wovo",
-    description: "Wovo Media AI + agency platform for restaurant growth.",
+    name: "WOVO Media",
+    short_name: "WOVO",
+    description: "WOVO Media weekly marketing workspace and private client portal.",
     start_url: "/",
     display: "standalone",
-    background_color: "#060a09",
-    theme_color: "#060a09",
+    background_color: "#f3efe6",
+    theme_color: "#191714",
     icons: [
       {
-        src: "/images/brand/wovo-glow-icon.svg",
-        sizes: "1024x1024",
+        src: "/icon.svg",
+        sizes: "512x512",
         type: "image/svg+xml",
+        purpose: "any",
       },
       {
-        src: "/favicon.svg",
-        sizes: "any",
+        src: "/icon.svg",
+        sizes: "512x512",
         type: "image/svg+xml",
+        purpose: "maskable",
       },
     ],
   };

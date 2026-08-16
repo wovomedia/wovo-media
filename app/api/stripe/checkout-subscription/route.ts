@@ -8,7 +8,7 @@ import { getAllowedSubscriptionPriceIds, WOVO_AI_PRICES } from "@/lib/wovo-ai/pl
 export async function POST(request: Request) {
   try {
     const { user } = await requireServerUser(request.headers.get("authorization"));
-    const body = (await request.json()) as { plan?: "starter" | "pro" | "business"; priceId?: string };
+    const body = (await request.json()) as { plan?: "starter" | "growth" | "pro"; priceId?: string };
     const priceId = body.priceId ?? (body.plan ? WOVO_AI_PRICES[body.plan] : "");
     if (!getAllowedSubscriptionPriceIds().includes(priceId)) {
       return NextResponse.json({ error: "Invalid plan." }, { status: 400 });

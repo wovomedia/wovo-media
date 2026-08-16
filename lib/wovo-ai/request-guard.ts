@@ -3,11 +3,15 @@ import { requireServerUser } from "@/lib/supabase/server";
 import { consumePromptCredits, getProfileCredits, maybeResetMonthlyUsage } from "@/lib/wovo-ai/credits";
 import { checkAiRateLimit } from "@/lib/wovo-ai/rate-limit";
 import { getPromptCreditCost } from "@/lib/wovo-ai/usage";
+import { getWovoAiRuntimeState } from "@/lib/wovo-ai/model-metering";
 
-type GuardSuccess = { userId: string; remainingCredits: number };
+type GuardSuccess = { userId: string; remainingCredits: number; billingSource: "credits"; remainingTrialUses: number };
 
 export async function guardAiRequest(authorizationHeader: string | null, actionType: string): Promise<GuardSuccess> {
   const { user } = await requireServerUser(authorizationHeader);
+  if (!getWovoAiRuntimeState().aiReady) {
+    throw new Error("WOVO AI is not enabled until provider safeguards and metering are verified.");
+  }
   const userId = user.id;
   const rateLimit = checkAiRateLimit(userId, actionType);
   if (!rateLimit.allowed) throw new Error("You're sending requests too quickly. Please wait a few minutes and try again.");
@@ -17,7 +21,7 @@ export async function guardAiRequest(authorizationHeader: string | null, actionT
   const creditCost = getPromptCreditCost(actionType);
   if (remainingCredits < creditCost) throw new Error("Not enough credits for this action.");
   await consumePromptCredits(userId, creditCost);
-  return { userId, remainingCredits: remainingCredits - creditCost };
+  return { userId, remainingCredits: remainingCredits - creditCost, billingSource: "credits", remainingTrialUses: 0 };
 }
 
 export function toAiGuardErrorResponse(error: unknown) {
@@ -29,6 +33,9 @@ export function toAiGuardErrorResponse(error: unknown) {
   }
   if (error instanceof Error && error.message.includes("too quickly")) {
     return NextResponse.json({ error: error.message }, { status: 429 });
+  }
+  if (error instanceof Error && error.message.includes("WOVO AI is not enabled")) {
+    return NextResponse.json({ error: error.message }, { status: 503 });
   }
   return null;
 }

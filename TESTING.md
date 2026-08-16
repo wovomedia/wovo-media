@@ -14,7 +14,7 @@ Set these before running locally/deploying:
 - `NEXT_PUBLIC_STRIPE_STARTER_PRICE_ID`
 - `NEXT_PUBLIC_STRIPE_PRO_PRICE_ID`
 - `NEXT_PUBLIC_STRIPE_AGENCY_PRICE_ID`
-- `WOVO_ADMIN_EMAILS` (comma-separated list, e.g. `payton@wovomedia.com`)
+- `WOVO_ADMIN_EMAILS` (comma-separated verified staff account emails; never expose this value client-side)
 
 ## Apply DB migrations
 

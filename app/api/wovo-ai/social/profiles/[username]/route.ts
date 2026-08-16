@@ -112,11 +112,11 @@ function extractBrandName(input: Record<string, unknown>, output: Record<string,
 
 export async function GET(
   request: Request,
-  context: { params: { username: string } | Promise<{ username: string }> },
+  context: { params: Promise<{ username: string }> },
 ) {
   try {
     const { user } = await requireServerUser(request.headers.get("authorization"));
-    const params = await Promise.resolve(context.params);
+    const params = await context.params;
     let normalizedUsername = "";
     try {
       normalizedUsername = normalizeUsername(params.username);

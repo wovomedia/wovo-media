@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireServerUser, supabaseServiceRoleRequest } from "@/lib/supabase/server";
 import { businessToContext, normalizeBusinessProfile, parseBusinessProfilesFromGoal, seedBusinessFromContext, serializeBusinessProfilesToGoal, type BusinessProfile } from "@/lib/wovo-ai/business-profiles";
+import { findMissingRequirements, type RequirementIssue } from "@/lib/wovo-ai/business-requirements";
 import { ensureProfileForUser } from "@/lib/wovo-ai/profile-bootstrap";
 
 type ProfileBusinessRow = {
@@ -20,6 +21,7 @@ type CreateBusinessBody = {
   phoneNumber?: string;
   email?: string;
   logoUrl?: string;
+  foodPhotoUrls?: string[];
   businessDescription?: string;
   setActive?: boolean;
 };
@@ -34,6 +36,7 @@ type UpdateBusinessBody = {
   phoneNumber?: string;
   email?: string;
   logoUrl?: string;
+  foodPhotoUrls?: string[];
   businessDescription?: string;
 };
 
@@ -207,7 +210,11 @@ async function persistBusinesses(params: {
 function responsePayload(params: {
   businesses: BusinessProfile[];
   activeBusinessId: string | null;
-}): { businesses: BusinessProfile[]; activeBusinessId: string | null } {
+}): {
+  businesses: BusinessProfile[];
+  activeBusinessId: string | null;
+  requirements: Record<string, RequirementIssue[]>;
+} {
   const businesses = params.businesses
     .slice()
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
@@ -217,7 +224,17 @@ function responsePayload(params: {
       ? params.activeBusinessId
       : businesses[0]?.id ?? null;
 
-  return { businesses, activeBusinessId };
+  // Outstanding asset requirements per business, keyed by id. Returned on every
+  // response so the UI can prompt without a second round trip. Saving a partial
+  // profile stays allowed on purpose — the hard gate lives at generation time,
+  // otherwise a user could never save their way toward a complete profile.
+  const requirements: Record<string, RequirementIssue[]> = {};
+  for (const business of businesses) {
+    const issues = findMissingRequirements(business);
+    if (issues.length > 0) requirements[business.id] = issues;
+  }
+
+  return { businesses, activeBusinessId, requirements };
 }
 
 export async function GET(request: Request) {
@@ -270,6 +287,7 @@ export async function POST(request: Request) {
       phoneNumber: body.phoneNumber ?? "",
       email: body.email ?? "",
       logoUrl: body.logoUrl ?? "",
+      foodPhotoUrls: body.foodPhotoUrls ?? [],
       businessDescription: body.businessDescription ?? "",
     });
 
@@ -333,6 +351,7 @@ export async function PATCH(request: Request) {
         phoneNumber: typeof body.phoneNumber === "string" ? body.phoneNumber : current.phoneNumber,
         email: typeof body.email === "string" ? body.email : current.email,
         logoUrl: typeof body.logoUrl === "string" ? body.logoUrl : current.logoUrl,
+        foodPhotoUrls: Array.isArray(body.foodPhotoUrls) ? body.foodPhotoUrls : current.foodPhotoUrls,
         businessDescription: typeof body.businessDescription === "string" ? body.businessDescription : current.businessDescription,
         createdAt: current.createdAt,
         updatedAt: new Date().toISOString(),

@@ -1,7 +1,9 @@
 {
-  "buildCommand": "next build",
-  "devCommand": "next dev",
-  "installCommand": "npm install",
-  "framework": "nextjs",
-  "outputDirectory": ".next"
+  "buildCommand": "node scripts/verify-deployment-env.mjs && next build --webpack",
+  "crons": [
+    {
+      "path": "/api/cron/adam-daily-report",
+      "schedule": "0 15 * * *"
+    }
+  ]
 }

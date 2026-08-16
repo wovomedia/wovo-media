@@ -1,74 +1,52 @@
 import type { Metadata } from "next";
-import { CtaBanner } from "@/components/sections/cta-banner";
-import { FadeIn } from "@/components/motion/fade-in";
-import { PageIntro } from "@/components/sections/page-intro";
-import { PricingGrid } from "@/components/sections/pricing-grid";
-import { SectionHeading } from "@/components/sections/section-heading";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { agencyDeliverables, agencyOfferNote, agencyPlans } from "@/data/site-content";
+import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Services | Wovo Media",
-  description: "Done-for-you restaurant marketing services from Wovo Media.",
+  title: "Separately Scoped Production Services",
+  description: "Review optional WOVO website, editing, on-site video, and commercial drone services, each separately scoped and priced.",
+  alternates: { canonical: "/services" },
 };
+
+const services = [
+  ["On-site production", "Photo and video shoots are scheduled, scoped, and priced separately from the software subscription."],
+  ["Commercial drone work", "Requests require staff approval for date, location, travel, weather, airspace, and operating compliance before fulfillment."],
+  ["Website projects", "Bespoke websites and online-ordering requests receive a defined scope and quote before work begins."],
+  ["Custom editing", "Additional editing and specialist time are approved and billed as separate project work."],
+];
 
 export default function ServicesPage() {
   return (
     <main>
-      <PageIntro
-        eyebrow="Done-for-you services"
-        title="Full-service content, ads, and conversion support"
-        description="Wovo Media handles the production, distribution, and optimization so your team can stay focused on operations."
-        primaryCta={{ label: "Book a Call", href: "/contact" }}
-        secondaryCta={{ label: "View Pricing", href: "/pricing" }}
-      />
-
-      <section className="py-16 sm:py-20">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        <SectionHeading
-          eyebrow="What we handle"
-          title="Execution built for restaurant growth"
-          description="Use us as your external media team, from filming to booking-focused campaigns."
-        />
-          <div className="mt-8 grid gap-4 md:grid-cols-2">
-            {agencyDeliverables.map((item, index) => (
-              <FadeIn key={item.title} delay={index * 0.05}>
-                <Card className="h-full">
-                  <CardHeader>
-                    <CardTitle className="text-lg">{item.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-slate-600">{item.description}</p>
-                  </CardContent>
-                </Card>
-              </FadeIn>
-            ))}
+      <section className="border-b border-[#191714]/10 py-16 sm:py-24">
+        <div className="mx-auto max-w-[1280px] px-5 sm:px-8">
+          <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-[#d94326]">Optional human services</p>
+          <h1 className="mt-6 max-w-5xl text-[clamp(3rem,7vw,6.2rem)] font-medium leading-[.92] tracking-[-0.055em]">Production when the work calls for it.</h1>
+          <p className="mt-7 max-w-2xl text-lg leading-8 text-[#655f56]">WOVO's workspace organizes the marketing week. Human production is never implied to be included: every project is separately scoped, approved, and priced.</p>
+        </div>
+      </section>
+      <section className="py-16 sm:py-24">
+        <div className="mx-auto grid max-w-[1280px] border-l border-t border-[#191714]/15 px-0 sm:grid-cols-2 lg:grid-cols-4">
+          {services.map(([title, copy], index) => (
+            <article key={title} className="min-h-72 border-b border-r border-[#191714]/15 p-6 sm:p-8">
+              <span className="text-[10px] font-bold text-[#d94326]">0{index + 1}</span>
+              <h2 className="mt-10 text-3xl font-medium leading-tight tracking-[-0.03em]">{title}</h2>
+              <p className="mt-4 text-sm leading-6 text-[#655f56]">{copy}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+      <section className="bg-[#191714] py-16 text-white">
+        <div className="mx-auto flex max-w-[1280px] flex-col gap-7 px-5 sm:px-8 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h2 className="text-4xl font-medium tracking-[-0.035em]">Start with the workspace.</h2>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/55">Request optional services later from the private booking area or contact WOVO for a scoped project.</p>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Link href="/signup?next=/portal" className="inline-flex min-h-12 items-center justify-center rounded-full bg-[#f05a3a] px-6 text-sm font-bold text-[#191714]">Start for $15/month</Link>
+            <Link href="/contact" className="inline-flex min-h-12 items-center justify-center rounded-full border border-white/25 px-6 text-sm font-bold">Contact WOVO</Link>
           </div>
         </div>
       </section>
-
-      <section className="bg-[var(--wm-muted)] py-16 sm:py-20">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <SectionHeading
-            eyebrow="Packages"
-            title="Transparent agency pricing"
-            description="Choose a level that matches your current growth stage."
-          />
-          <div className="mt-8">
-            <PricingGrid plans={agencyPlans} />
-          </div>
-          <p className="mt-6 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700">
-            {agencyOfferNote}
-          </p>
-        </div>
-      </section>
-
-      <CtaBanner
-        title="Need custom scope across multiple locations?"
-        description="Book a strategy call and we will map a rollout plan that keeps creative and reporting centralized."
-        primary={{ label: "Book a Strategy Call", href: "/contact" }}
-        secondary={{ label: "See Results", href: "/results" }}
-      />
     </main>
   );
 }

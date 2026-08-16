@@ -1,259 +1,88 @@
 import type { Metadata } from "next";
-import { CtaBanner } from "@/components/sections/cta-banner";
-import { PageIntro } from "@/components/sections/page-intro";
-import { SectionHeading } from "@/components/sections/section-heading";
-import { Card, CardContent } from "@/components/ui/card";
-import { FadeIn } from "@/components/motion/fade-in";
-import { Button } from "@/components/ui/button";
-import { agencyOfferNote } from "@/data/site-content";
+import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Pricing | Wovo Media",
-  description: "Transparent pricing for Wovo AI (from $24.99/mo with 7-day free trial) and Wovo Media done-for-you packages from $450/mo.",
+  title: "WOVO Workspace Pricing — Monthly, Quarterly, or Yearly",
+  description: "Choose $15 monthly, $36 every three months, or $120 yearly for the private WOVO marketing workspace. Human production stays separately scoped.",
+  alternates: { canonical: "/pricing" },
 };
 
-const aiPlans = [
-  {
-    name: "Starter",
-    price: "$24.99",
-    period: "/mo",
-    credits: "50 credits / month",
-    badge: null,
-    features: [
-      "7-day free trial included",
-      "50 AI credits every month",
-      "Caption generator (all platforms)",
-      "AI image generation",
-      "Content ideas engine",
-      "Business network access",
-    ],
-    cta: "Start Free Trial",
-    href: "/wovo-ai",
-  },
-  {
-    name: "Growth",
-    price: "$49.99",
-    period: "/mo",
-    credits: "150 credits / month",
-    badge: "Most Popular",
-    features: [
-      "7-day free trial included",
-      "150 AI credits every month",
-      "Everything in Starter",
-      "Caption + Image in one click",
-      "Saved chat history",
-      "Reference image uploads",
-      "Business network + messaging",
-    ],
-    cta: "Start Free Trial",
-    href: "/wovo-ai",
-  },
-  {
-    name: "Pro",
-    price: "$99",
-    period: "/mo",
-    credits: "300 credits / month",
-    badge: "Best Value",
-    features: [
-      "7-day free trial included",
-      "300 AI credits every month",
-      "Priority AI generation speed",
-      "Advanced brand voice presets",
-      "Best value per credit",
-      "Priority support",
-      "Full network features",
-    ],
-    cta: "Start Free Trial",
-    href: "/wovo-ai",
-  },
+const periods = [
+  { name: "Monthly", due: "$15", cadence: "every month", effective: "$15/month", savings: "Flexible monthly billing" },
+  { name: "Every 3 months", due: "$36", cadence: "every 3 months", effective: "$12/month", savings: "Save $9 each quarter · 20%" },
+  { name: "Yearly", due: "$120", cadence: "every year", effective: "$10/month", savings: "Save $60 each year · 33%" },
 ];
 
-const agencyPlans = [
-  {
-    name: "Essential",
-    price: "$450",
-    period: "/mo",
-    badge: "New",
-    desc: "A great entry point for any business",
-    features: [
-      "Social media strategy setup",
-      "2x posts per week (managed)",
-      "Monthly performance report",
-      "Caption & hashtag writing",
-      "Ad setup guidance",
-      "24/7 communication",
-    ],
-  },
-  {
-    name: "Starter",
-    price: "$600",
-    period: "/mo",
-    badge: null,
-    desc: "Consistent local visibility & trust",
-    features: [
-      "Weekly content production & edits",
-      "Platform posting & optimization",
-      "Monthly performance recap",
-      "Conversion recommendations",
-      "24/7 communication",
-    ],
-  },
-  {
-    name: "Growth",
-    price: "$800",
-    period: "/mo",
-    badge: "Best Value",
-    desc: "More velocity + lead generation",
-    features: [
-      "Everything in Starter",
-      "Paid ad setup & management",
-      "Lead capture funnel setup",
-      "Campaign A/B testing",
-      "Bi-weekly strategy calls",
-    ],
-  },
-  {
-    name: "Full Service",
-    price: "$1,000+",
-    period: "/mo",
-    badge: null,
-    desc: "Complete media partnership",
-    features: [
-      "Everything in Growth",
-      "On-site filming + drone sessions",
-      "Website conversion upgrades",
-      "Priority strategy access",
-      "Custom campaign planning",
-    ],
-  },
+const included = [
+  "Business and brand profile",
+  "Content ideas and caption drafts",
+  "Weekly calendar and approval queue",
+  "Private business-owned asset library",
+  "Team-level WOVO support inbox",
+  "Service and consultation requests",
+  "Stripe billing and cancellation controls",
+];
+
+const separate = [
+  "In-person photo and video shoots",
+  "Commercial drone projects and travel",
+  "Bespoke website creation",
+  "Custom editing and specialist time",
+  "Additional consultation participants",
+  "External publishing-provider setup",
 ];
 
 export default function PricingPage() {
-  return (
-    <main>
-      <PageIntro
-        eyebrow="Pricing"
-        title="Transparent plans for every business"
-        description="Wovo AI from $24.99/mo with a 7-day free trial. Done-for-you agency starting at $450/mo. No long contracts."
-        primaryCta={{ label: "Book a Free Call", href: "/contact" }}
-        secondaryCta={{ label: "Try Wovo Media AI Free", href: "/wovo-ai" }}
-      />
+  return <main>
+    <section className="border-b border-[#191714]/10 py-16 sm:py-24">
+      <div className="mx-auto max-w-[1180px] px-5 sm:px-8">
+        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#d94326]">One workspace · three billing periods</p>
+        <div className="mt-5 grid gap-7 lg:grid-cols-[1.15fr_.85fr] lg:items-end">
+          <h1 className="max-w-4xl text-[clamp(3rem,7vw,5.8rem)] font-medium leading-[0.93] tracking-[-0.055em]">Choose the rhythm that fits.</h1>
+          <p className="max-w-xl text-base leading-7 text-[#655f56]">Every option opens the same WOVO workspace. Longer billing periods reduce the effective monthly cost; they do not change the feature set.</p>
+        </div>
+      </div>
+    </section>
 
-      {/* AI Plans */}
-      <section className="py-16 sm:py-20">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <SectionHeading
-            eyebrow="Wovo AI — DIY plans"
-            title="Start free. Create instantly."
-            description="All plans include a 7-day free trial. Caption generation AND AI image creation included on every plan."
-          />
-
-          {/* Trial banner */}
-          <div className="mt-6 mb-8 flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4">
-            <span className="text-2xl">🎁</span>
-            <div>
-              <p className="font-semibold text-slate-900">7-Day Free Trial on All Plans</p>
-              <p className="text-sm text-slate-600">Pick any plan below — your card won't be charged until after 7 days. Cancel anytime before that and pay nothing.</p>
-            </div>
+    <section className="py-14 sm:py-20">
+      <div className="mx-auto max-w-[1180px] px-5 sm:px-8">
+        <div className="overflow-hidden rounded-[26px] border border-[#191714]/15 bg-[#fffdf8]">
+          <div className="grid border-b border-[#191714]/10 bg-[#191714] px-5 py-6 text-white sm:px-7 lg:grid-cols-[1fr_auto] lg:items-end">
+            <div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#ff8c70]">WOVO Workspace</p><h2 className="mt-2 text-3xl font-medium tracking-[-.035em]">A practical marketing operating system.</h2></div>
+            <p className="mt-4 max-w-md text-sm leading-6 text-white/60 lg:mt-0">Verify your email, finish private setup, then choose one billing period before Stripe checkout.</p>
           </div>
-
-          <div className="grid gap-5 md:grid-cols-3">
-            {aiPlans.map((plan, i) => (
-              <FadeIn key={plan.name} delay={i * 0.05}>
-                <div className={`relative flex h-full flex-col rounded-2xl border p-6 ${plan.badge === "Most Popular" ? "border-[var(--wm-accent)] bg-white shadow-[0_16px_40px_rgba(0,233,145,0.15)]" : "border-slate-200 bg-white shadow-[0_4px_20px_rgba(15,23,36,0.06)]"}`}>
-                  {plan.badge && (
-                    <div className={`absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-1 text-xs font-bold ${plan.badge === "Most Popular" ? "bg-[var(--wm-accent)] text-slate-900" : "bg-slate-900 text-white"}`}>
-                      {plan.badge}
-                    </div>
-                  )}
-                  <div className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--wm-accent)]">{plan.credits}</div>
-                  <h3 className="text-xl font-bold text-slate-900">{plan.name}</h3>
-                  <div className="my-3 flex items-baseline gap-1">
-                    <span className="text-4xl font-black text-slate-900">{plan.price}</span>
-                    <span className="text-slate-500">{plan.period}</span>
-                  </div>
-                  <p className="mb-1 text-xs font-semibold text-emerald-600">✓ 7-day free trial</p>
-                  <ul className="mb-6 mt-3 flex-1 space-y-2">
-                    {plan.features.map(f => (
-                      <li key={f} className="flex items-start gap-2 text-sm text-slate-700">
-                        <span className="mt-0.5 text-emerald-500 flex-shrink-0">✓</span> {f}
-                      </li>
-                    ))}
-                  </ul>
-                  <Button href={plan.href} className="w-full">{plan.cta}</Button>
-                </div>
-              </FadeIn>
-            ))}
+          <div className="grid lg:grid-cols-3">
+            {periods.map((period, index) => <article key={period.name} className={`p-5 sm:p-7 ${index ? "border-t border-[#191714]/10 lg:border-l lg:border-t-0" : ""}`}>
+              <p className="text-sm font-bold">{period.name}</p>
+              <div className="mt-5 flex items-end justify-between gap-4"><strong className="text-5xl font-medium tracking-[-.055em]">{period.due}</strong><span className="pb-1 text-right text-xs leading-5 text-[#655f56]">due today<br />then {period.cadence}</span></div>
+              <p className="mt-5 border-t border-[#191714]/10 pt-4 text-sm font-semibold">{period.effective}</p>
+              <p className="mt-1 text-xs leading-5 text-[#756e64]">{period.savings}</p>
+            </article>)}
           </div>
-
-          {/* Credit add-ons */}
-          <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-5">
-            <p className="font-semibold text-slate-900 mb-3">Need more credits? Add-on packs available anytime:</p>
-            <div className="flex flex-wrap gap-3">
-              {[
-                { label: "Small Pack", credits: "+5 credits", price: "$1.50" },
-                { label: "Medium Pack", credits: "+20 credits", price: "$5.00" },
-                { label: "Large Pack", credits: "+50 credits", price: "$10.00" },
-              ].map(p => (
-                <div key={p.label} className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm">
-                  <span className="font-semibold text-slate-900">{p.credits}</span>
-                  <span className="text-slate-400 mx-1">·</span>
-                  <span className="text-emerald-600 font-semibold">{p.price}</span>
-                  <span className="text-slate-400 text-xs ml-1">one-time</span>
-                </div>
-              ))}
-            </div>
+          <div className="grid gap-8 border-t border-[#191714]/10 p-5 sm:p-7 lg:grid-cols-[1.2fr_.8fr]">
+            <div><p className="text-[10px] font-bold uppercase tracking-[.18em] text-[#d94326]">Included in every period</p><ul className="mt-4 grid gap-x-7 sm:grid-cols-2">{included.map((item) => <li key={item} className="flex min-h-11 items-center gap-3 border-b border-[#191714]/10 py-2 text-sm"><span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#f05a3a]" />{item}</li>)}</ul></div>
+            <div className="rounded-2xl bg-[#f3efe6] p-5"><p className="text-sm font-bold">Ready to set up your workspace?</p><p className="mt-2 text-xs leading-5 text-[#655f56]">Account creation is free. No paid option is preselected. Stripe shows the total and renewal cadence again before payment.</p><Link href="/signup?next=/portal" className="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-[#f05a3a] px-5 text-sm font-bold text-[#191714] hover:bg-[#d94326]">Create account</Link></div>
           </div>
         </div>
-      </section>
 
-      {/* Agency Plans */}
-      <section className="bg-[var(--wm-muted)] py-16 sm:py-20">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <SectionHeading
-            eyebrow="Wovo Media — Done for you"
-            title="Let our team handle everything"
-            description="From $450/mo for managed social media to $1,000+/mo for full-service production with drone filming. Licensed, insured, 24/7 available."
-          />
-          <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {agencyPlans.map((plan, i) => (
-              <FadeIn key={plan.name} delay={i * 0.05}>
-                <div className={`relative flex h-full flex-col rounded-2xl border bg-white p-5 shadow-[0_4px_20px_rgba(15,23,36,0.06)] ${plan.badge === "Best Value" ? "border-[var(--wm-accent)]" : "border-slate-200"}`}>
-                  {plan.badge && (
-                    <div className={`absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-1 text-xs font-bold whitespace-nowrap ${plan.badge === "Best Value" ? "bg-[var(--wm-accent)] text-slate-900" : "bg-slate-800 text-white"}`}>
-                      {plan.badge}
-                    </div>
-                  )}
-                  <h3 className="text-lg font-bold text-slate-900">{plan.name}</h3>
-                  <div className="my-2 flex items-baseline gap-1">
-                    <span className="text-3xl font-black text-slate-900">{plan.price}</span>
-                    <span className="text-slate-500 text-sm">{plan.period}</span>
-                  </div>
-                  <p className="text-xs text-slate-500 mb-4">{plan.desc}</p>
-                  <ul className="flex-1 space-y-1.5 mb-5">
-                    {plan.features.map(f => (
-                      <li key={f} className="flex items-start gap-1.5 text-xs text-slate-600">
-                        <span className="mt-0.5 text-emerald-500 flex-shrink-0">✓</span> {f}
-                      </li>
-                    ))}
-                  </ul>
-                  <Button href="/contact" variant="outline" className="w-full text-sm">Book a Call</Button>
-                </div>
-              </FadeIn>
-            ))}
-          </div>
-          <Card className="mt-6">
-            <CardContent className="p-5 text-sm text-slate-700">{agencyOfferNote}</CardContent>
-          </Card>
+        <div className="mt-8 grid gap-5 lg:grid-cols-[.8fr_1.2fr]">
+          <aside className="border-t border-[#191714]/25 pt-5"><h2 className="text-2xl font-medium">Human work stays separate.</h2><p className="mt-3 text-sm leading-6 text-[#655f56]">Production labor, variable travel, and specialist projects are never silently bundled into the workspace price.</p></aside>
+          <ul className="grid gap-x-6 sm:grid-cols-2">{separate.map((item) => <li key={item} className="flex min-h-12 items-center border-b border-[#191714]/10 text-sm font-semibold text-[#514c45]">{item}</li>)}</ul>
         </div>
-      </section>
+        <div className="mt-8 grid gap-6 rounded-[26px] border border-[#191714]/15 bg-[#191714] p-6 text-white sm:p-8 lg:grid-cols-[1fr_auto] lg:items-end">
+          <div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#ff8c70]">Optional recurring production</p><h2 className="mt-3 text-3xl font-medium tracking-[-.035em]">Cartoon Episodes · $39.99/month</h2><p className="mt-3 max-w-2xl text-sm leading-6 text-white/60">Three original eight-second vertical cartoon drafts each week, with a consistent approved character and private review. Requires an active WOVO Workspace; the combined total is shown before checkout.</p></div>
+          <Link href="/cartoon-episodes" className="inline-flex min-h-12 items-center justify-center rounded-full bg-[#f05a3a] px-6 text-sm font-bold text-[#191714]">See Cartoon Episodes</Link>
+        </div>
+      </div>
+    </section>
 
-      <CtaBanner
-        title="Not sure which plan is right for you?"
-        description="Book a free 1-hour strategy call. We'll look at your business, your goals, and recommend the best path — AI, done-for-you, or both."
-        primary={{ label: "Book Free Strategy Call", href: "/contact" }}
-        secondary={{ label: "Try Wovo Media AI — 7 Days Free", href: "/wovo-ai" }}
-      />
-    </main>
-  );
+    <section className="border-y border-[#191714]/10 bg-[#e9e2d6] py-14">
+      <div className="mx-auto grid max-w-[1180px] gap-7 px-5 sm:px-8 lg:grid-cols-3">{[
+        ["Recurring billing", "Your selected total renews at the stated monthly, three-month, or yearly interval until canceled."],
+        ["Easy cancellation", "Use Manage billing in the workspace to open Stripe's customer portal and stop renewal at the end of the paid period."],
+        ["No automatic refund promise", "Stopping renewal does not itself create a refund. Review the posted policy before purchase."],
+      ].map(([title, copy]) => <article key={title} className="border-t border-[#191714]/30 pt-4"><h2 className="text-lg font-medium">{title}</h2><p className="mt-2 text-sm leading-6 text-[#655f56]">{copy}</p></article>)}</div>
+      <div className="mx-auto mt-8 flex max-w-[1180px] flex-wrap gap-x-6 px-5 text-sm font-bold text-[#5c554d] sm:px-8"><Link href="/cancellation-refund-policy" className="inline-flex min-h-11 items-center underline underline-offset-4">Cancellation & refund policy</Link><Link href="/terms-of-use" className="inline-flex min-h-11 items-center underline underline-offset-4">Terms of service</Link><Link href="/privacy-policy" className="inline-flex min-h-11 items-center underline underline-offset-4">Privacy policy</Link></div>
+    </section>
+  </main>;
 }

@@ -6,10 +6,12 @@ export async function POST(request: Request) {
     const { accessToken } = await requireServerUser(request.headers.get("authorization"));
     const body = (await request.json()) as { password?: string };
     const password = body.password?.trim();
-    if (!password || password.length < 6) return NextResponse.json({ error: "Password too short" }, { status: 400 });
+    if (!password || password.length < 10 || password.length > 128) {
+      return NextResponse.json({ error: "Use a password between 10 and 128 characters." }, { status: 400 });
+    }
     await updateAuthPassword(accessToken, password);
     return NextResponse.json({ success: true });
-  } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Failed" }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: "The recovery session is invalid or expired. Request a new link." }, { status: 401 });
   }
 }

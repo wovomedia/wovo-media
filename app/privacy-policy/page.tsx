@@ -3,109 +3,47 @@ import Link from "next/link";
 import { brand } from "@/data/site-content";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy | Wovo Media",
-  description: "Privacy policy for Wovo Media LLC and Wovo AI services.",
+  title: "Privacy Policy",
+  description: "How WOVO Media handles account, workspace, billing, support, and uploaded-asset data.",
+  alternates: { canonical: "/privacy-policy" },
 };
+
+const sections = [
+  ["1. Scope", "This policy describes how WOVO Media LLC collects, uses, and shares information when you use the website, private client workspace, subscriptions, and related services."],
+  ["2. Information collected", "We may collect account details, business and brand information, support messages, service requests, usage and security records, and content you choose to upload. Stripe handles payment-card details; WOVO receives billing identifiers and status needed to operate subscriptions."],
+  ["3. Uploaded assets and permissions", "Private workspace uploads may include photos, video, audio, documents, and information about people depicted. You must have the rights and permissions needed to supply those materials. WOVO uses them to operate the requested workspace and services."],
+  ["4. How information is used", "Information may be used to authenticate accounts, provide and secure the workspace, generate requested drafts, process billing status, coordinate support and services, prevent abuse, and improve operations."],
+  ["5. Private and public data", "Client workspace data and uploads are private by default. WOVO does not make a private asset public merely because it was uploaded. Any future public-profile or connected-account feature will require separate controls and approval."],
+  ["6. Service providers", "We may use providers for hosting, authentication, storage, payments, email, analytics, and support operations. We may also disclose information when legally required or reasonably necessary to protect users, the service, or legal rights."],
+  ["7. Retention and deletion", "Information is retained as needed to provide services, maintain security and billing records, resolve disputes, and meet legal obligations. You may request account or data access, correction, or deletion, subject to applicable law and necessary record-retention limits."],
+  ["8. Security", "WOVO uses administrative, technical, and organizational safeguards appropriate to the service, but no online system can guarantee absolute security."],
+  ["9. Children", "The services are not directed to children under 13, and WOVO does not knowingly collect personal information from children under 13."],
+];
 
 export default function PrivacyPolicyPage() {
   return (
-    <main className="bg-[var(--wm-page)] py-14 sm:py-18">
-      <div className="mx-auto max-w-4xl px-4 sm:px-6">
-        <div className="rounded-2xl border border-white/10 bg-[#0e1318] p-6 sm:p-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-300">Legal</p>
-          <h1 className="mt-2 text-3xl font-semibold text-white sm:text-4xl">Privacy Policy</h1>
-          <p className="mt-3 text-sm text-gray-300">Effective date: March 24, 2026</p>
-
-          <div className="mt-8 space-y-6 text-sm leading-7 text-gray-300">
-            <section>
-              <h2 className="text-lg font-semibold text-white">1. Who this applies to</h2>
-              <p>
-                This Privacy Policy explains how {brand.legalName} (&quot;Wovo,&quot; &quot;we,&quot; &quot;our,&quot; or
-                &quot;us&quot;) collects, uses, and discloses information when you use our website, Wovo AI tools,
-                subscriptions, and related services.
-              </p>
+    <main className="py-14 sm:py-20">
+      <article className="mx-auto max-w-4xl px-5 sm:px-8">
+        <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-[#d94326]">Legal & privacy</p>
+        <h1 className="mt-5 text-5xl font-medium tracking-[-0.045em] sm:text-6xl">Privacy Policy</h1>
+        <p className="mt-4 text-sm text-[#756e64]">Last updated July 30, 2026</p>
+        <div className="mt-10 divide-y divide-[#191714]/15 border-y border-[#191714]/15">
+          {sections.map(([title, copy]) => (
+            <section key={title} className="py-7">
+              <h2 className="text-2xl font-medium tracking-[-0.02em]">{title}</h2>
+              <p className="mt-3 text-sm leading-7 text-[#5f5951]">{copy}</p>
             </section>
-
-            <section>
-              <h2 className="text-lg font-semibold text-white">2. Information we collect</h2>
-              <p>We may collect account details (such as name, email, username), billing-related details, usage analytics, and content you upload or generate inside Wovo AI.</p>
-              <p>When you upload photos, video, audio, or likeness data, you are responsible for making sure you have all required permissions and consents.</p>
-            </section>
-
-            <section>
-              <h2 className="text-lg font-semibold text-white">3. How we use information</h2>
-              <p>We use information to provide and improve the service, process payments, secure accounts, support customers, detect abuse, and operate features such as private libraries and public feed posting when enabled by the user.</p>
-            </section>
-
-            <section>
-              <h2 className="text-lg font-semibold text-white">4. Public vs private content</h2>
-              <p>Content is private by default unless you choose to publish it publicly. If you choose to publish, your content may appear in feed surfaces and profile pages visible to other users.</p>
-            </section>
-
-            <section>
-              <h2 className="text-lg font-semibold text-white">5. Video ownership and commercial usage</h2>
-              <p>
-                By using Wovo AI, you acknowledge and agree that videos uploaded to or generated on this platform are owned by {brand.legalName}. We allow account holders to use those videos for lawful business operations, advertising, and income generation subject to these policies and our Terms.
-              </p>
-            </section>
-
-            <section>
-              <h2 className="text-lg font-semibold text-white">6. Data sharing</h2>
-              <p>We may share data with service providers that help us run authentication, storage, infrastructure, billing, and support operations. We may also disclose information when required by law, legal process, or to protect rights and safety.</p>
-            </section>
-
-            <section>
-              <h2 className="text-lg font-semibold text-white">7. Retention and deletion</h2>
-              <p>We retain information for as long as needed to provide services, comply with legal obligations, resolve disputes, and enforce agreements. If you delete your account, we will process deletion requests according to applicable law and operational backup limits.</p>
-            </section>
-
-            <section>
-              <h2 className="text-lg font-semibold text-white">8. Security</h2>
-              <p>We use reasonable administrative, technical, and organizational safeguards, but no system can guarantee absolute security.</p>
-            </section>
-
-            <section>
-              <h2 className="text-lg font-semibold text-white">9. Your choices</h2>
-              <p>You can edit profile details, update account settings, and request account deletion from your account area. You may also contact us to request access or correction where required by law.</p>
-            </section>
-
-            <section>
-              <h2 className="text-lg font-semibold text-white">10. Children</h2>
-              <p>Our services are not intended for children under 13, and we do not knowingly collect personal information from children under 13.</p>
-            </section>
-
-            <section>
-              <h2 className="text-lg font-semibold text-white">11. Contact</h2>
-              <p>
-                Questions about this policy can be sent to{" "}
-                <a className="underline hover:text-white" href={`mailto:${brand.email}`}>
-                  {brand.email}
-                </a>
-                .
-              </p>
-            </section>
-
-            <section>
-              <h2 className="text-lg font-semibold text-white">12. Service issues and billing support</h2>
-              <p>
-                If a Wovo AI feature is not working correctly, contact our support team and we will work to resolve the issue as soon as possible.
-              </p>
-              <p>
-                For platform-performance issues, we do not provide retroactive refunds for the current billing period. You may cancel before the next renewal date to prevent future charges while we address the issue.
-              </p>
-            </section>
-          </div>
-
-          <div className="mt-8 rounded-xl border border-white/10 bg-black/20 p-4 text-xs text-gray-400">
-            <p>
-              This page is a general policy draft and should be reviewed by qualified legal counsel for final legal compliance in your operating jurisdictions.
-            </p>
-            <p className="mt-2">
-              See also: <Link href="/terms-of-use" className="underline hover:text-white">Terms of Use</Link>
-            </p>
-          </div>
+          ))}
+          <section className="py-7">
+            <h2 className="text-2xl font-medium tracking-[-0.02em]">10. Contact and data requests</h2>
+            <p className="mt-3 text-sm leading-7 text-[#5f5951]">Use the authenticated client support workspace where available, or contact <a href={`mailto:${brand.supportEmail}`} className="font-bold text-[#d94326] underline underline-offset-4">{brand.supportEmail}</a>. Do not send passwords, payment-card data, or other highly sensitive information by email.</p>
+          </section>
         </div>
-      </div>
+        <div className="mt-8 rounded-2xl bg-[#e9e2d6] p-5 text-xs leading-6 text-[#655f56]">
+          This policy is operational launch wording and is not a substitute for advice from qualified legal counsel. Business-specific jurisdiction, retention, and statutory notices still require owner and counsel review.
+          <p className="mt-2">See also: <Link href="/terms-of-use" className="font-bold underline underline-offset-4">Terms of Use</Link></p>
+        </div>
+      </article>
     </main>
   );
 }

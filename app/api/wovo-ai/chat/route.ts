@@ -1,6 +1,7 @@
 import { requireServerUser, supabaseServiceRoleRequest } from "@/lib/supabase/server";
 import { getEnv } from "@/lib/env";
 import { normalizeRole, resolveEffectiveRole, resolveRoleForEmail, resolveUserEmail } from "@/lib/wovo-ai/admin";
+import { getWovoAiRuntimeState } from "@/lib/wovo-ai/model-metering";
 
 export const runtime = "nodejs";
 
@@ -37,6 +38,9 @@ function getSystemPrompt(quickAction?: string): string {
 
 export async function POST(request: Request) {
   try {
+    if (!getWovoAiRuntimeState().aiReady) {
+      return Response.json({ error: "WOVO AI is not enabled until provider safeguards and metering are verified." }, { status: 503 });
+    }
     const openAiKey = getEnv("OPENAI_API_KEY");
     if (!openAiKey) {
       return Response.json({ error: "Missing OPENAI_API_KEY environment variable" }, { status: 500 });

@@ -28,10 +28,10 @@ export default function BookingWidget() {
   const [calMonth, setCalMonth] = useState(today.getMonth());
   const [selDay,   setSelDay]   = useState<number | null>(null);
   const [selTime,  setSelTime]  = useState<string | null>(null);
-  const [meetType, setMeetType] = useState<"video" | "phone">("video");
   const [form, setForm] = useState({ fname:"", lname:"", email:"", phone:"", biz:"", goal:"" });
   const [submitted, setSubmitted] = useState(false);
   const [sending, setSending] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   const changeMonth = (dir: number) => {
     let m = calMonth + dir, y = calYear;
@@ -58,18 +58,23 @@ export default function BookingWidget() {
       ...form,
       date: dateStr,
       time: `${selTime} – (1 hour) CST`,
-      meetingType: meetType === "video" ? "Google Meet" : "Phone Call",
+      meetingType: "WOVO-hosted video meeting",
       source: "wovomedia.com-booking",
     };
     try {
-      await fetch("/api/lead", {
+      setSubmitError("");
+      const response = await fetch("/api/lead", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-    } catch { /* still show success */ }
-    setSending(false);
-    setSubmitted(true);
+      if (!response.ok) throw new Error("The request could not be sent.");
+      setSubmitted(true);
+    } catch {
+      setSubmitError("We could not send that request. Please email support@wovomedia.com.");
+    } finally {
+      setSending(false);
+    }
   };
 
   if (submitted) {
@@ -84,11 +89,10 @@ export default function BookingWidget() {
               <strong>{MONTHS[calMonth]} {selDay}, {calYear}</strong> at <strong>{selTime} CST</strong>.
             </p>
             <p className="mt-3 text-slate-600">
-              Check <strong>{form.email}</strong> — you'll receive a Google Meet link or phone call confirmation shortly.
+              Check <strong>{form.email}</strong> — a WOVO manager will confirm availability and send an organization meeting link.
             </p>
             <p className="mt-4 text-sm text-slate-500">
-              Questions? Call/text <a className="font-semibold underline" href="tel:9314583255">(931) 458-3255</a> or email{" "}
-              <a className="font-semibold underline" href="mailto:Payton@wovomedia.com">Payton@wovomedia.com</a>
+              Questions? Email <a className="font-semibold underline" href="mailto:support@wovomedia.com">support@wovomedia.com</a>.
             </p>
           </div>
         </div>
@@ -105,18 +109,18 @@ export default function BookingWidget() {
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 mb-2">Free Strategy Session</p>
             <h2 className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">Book a 1-Hour Meeting</h2>
             <p className="mt-3 text-slate-600 leading-relaxed">
-              Talk directly with Payton Cody, founder of Wovo Media. We'll review your social presence, map out a growth plan, and figure out the best path forward — no obligation.
+              Meet with WOVO Media as an organization. A manager confirms availability and assigns a qualified representative internally.
             </p>
             <div className="mt-5 space-y-2 text-sm text-slate-700">
               <div className="flex items-center gap-2"><span className="text-emerald-600">✓</span> 1 hour free — no sales pressure</div>
               <div className="flex items-center gap-2"><span className="text-emerald-600">✓</span> Available Mon–Sat, 12 PM–8 PM CST</div>
-              <div className="flex items-center gap-2"><span className="text-emerald-600">✓</span> Google Meet video or phone — your choice</div>
+              <div className="flex items-center gap-2"><span className="text-emerald-600">✓</span> Reputable external video provider with optional camera and screen sharing</div>
               <div className="flex items-center gap-2"><span className="text-emerald-600">✓</span> Get a custom plan before we hang up</div>
             </div>
           </div>
           <div className="flex flex-wrap gap-3">
-            {[["🍽️","Restaurants"],["🏥","Healthcare"],["🔨","Contractors"],["🌾","Farms"],["🏛️","Government"],["🏪","Retail"],["💡","Specialty"],["🏠","Real Estate"]].map(([icon, label]) => (
-              <span key={label} className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-600">{icon} {label}</span>
+            {["Restaurants", "Healthcare", "Contractors", "Farms", "Government", "Retail", "Specialty", "Real Estate"].map((label) => (
+              <span key={label} className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-600">{label}</span>
             ))}
           </div>
         </div>
@@ -125,19 +129,19 @@ export default function BookingWidget() {
         <div className="rounded-3xl border border-slate-200 bg-white shadow-[0_16px_48px_rgba(15,23,36,0.08)] overflow-hidden">
           {/* Green header */}
           <div className="bg-[var(--wm-accent)] px-6 py-5">
-            <h3 className="text-xl font-semibold text-slate-900">📅 Schedule Your Google Meet</h3>
-            <p className="text-sm text-slate-800 mt-1">1-hour sessions · Mon–Sat · 12 PM–8 PM CST · Free, no obligation</p>
+            <h3 className="text-xl font-semibold text-slate-900">Request a WOVO video consultation</h3>
+            <p className="mt-1 text-sm text-slate-800">Organization-hosted meeting · optional camera and screen sharing · Central Time</p>
           </div>
 
           <div className="grid gap-0 lg:grid-cols-2">
             {/* Left — calendar + time */}
-            <div className="border-b border-slate-200 p-6 lg:border-b-0 lg:border-r">
+            <div className="border-b border-slate-200 p-2 sm:p-6 lg:border-b-0 lg:border-r">
               {/* Calendar */}
               <div className="mb-5">
                 <div className="flex items-center justify-between mb-3">
-                  <button onClick={() => changeMonth(-1)} className="rounded-lg border border-slate-200 p-1.5 text-slate-500 hover:border-slate-400 transition">‹</button>
+                  <button aria-label="Previous month" onClick={() => changeMonth(-1)} className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-slate-400">‹</button>
                   <span className="font-semibold text-slate-900">{MONTHS[calMonth]} {calYear}</span>
-                  <button onClick={() => changeMonth(1)} className="rounded-lg border border-slate-200 p-1.5 text-slate-500 hover:border-slate-400 transition">›</button>
+                  <button aria-label="Next month" onClick={() => changeMonth(1)} className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-slate-400">›</button>
                 </div>
                 <div className="grid grid-cols-7 gap-1 text-center">
                   {DOW.map(d => <div key={d} className="text-[10px] font-semibold text-slate-400 py-1">{d}</div>)}
@@ -160,14 +164,14 @@ export default function BookingWidget() {
                     );
                   })}
                 </div>
-                <p className="mt-2 text-[11px] text-slate-400 text-center">Sundays unavailable · All times in CST</p>
+                <p className="mt-2 text-center text-[11px] text-slate-400">Sundays unavailable · Times shown in Central Time</p>
               </div>
 
               {/* Time slots */}
               {selDay && (
                 <div>
                   <p className="text-sm font-semibold text-slate-700 mb-2">
-                    Available times — {MONTHS[calMonth]} {selDay}
+                    Requested times — {MONTHS[calMonth]} {selDay}
                   </p>
                   <div className="grid grid-cols-2 gap-2">
                     {TIME_SLOTS.map(slot => (
@@ -184,28 +188,14 @@ export default function BookingWidget() {
                 </div>
               )}
               {!selDay && (
-                <p className="text-sm text-slate-400 text-center py-4">← Select a date to see available times</p>
+                <p className="py-4 text-center text-sm text-slate-400">Select a date to see requested times</p>
               )}
             </div>
 
             {/* Right — form */}
             <div className="p-6">
-              {/* Meeting type */}
-              <div className="mb-5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Meeting type</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { type: "video" as const, icon: "📹", label: "Google Meet" },
-                    { type: "phone" as const, icon: "📞", label: "Phone Call" },
-                  ].map(opt => (
-                    <button key={opt.type} onClick={() => setMeetType(opt.type)}
-                      className={`rounded-xl border p-3 text-center transition
-                        ${meetType === opt.type ? "border-[var(--wm-accent)] bg-emerald-50" : "border-slate-200 hover:border-slate-300"}`}>
-                      <div className="text-xl mb-1">{opt.icon}</div>
-                      <div className="text-xs font-semibold text-slate-700">{opt.label}</div>
-                    </button>
-                  ))}
-                </div>
+              <div className="mb-5 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+                WOVO-hosted video meeting. The provider link is sent after staff confirms availability.
               </div>
 
               {/* Form fields */}
@@ -242,7 +232,7 @@ export default function BookingWidget() {
               {selDay && selTime && (
                 <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm">
                   <p className="font-semibold text-slate-800">📅 {MONTHS[calMonth]} {selDay}, {calYear}</p>
-                  <p className="text-slate-600">{selTime} – 1 hour · {meetType === "video" ? "Google Meet" : "Phone Call"} · CST</p>
+                  <p className="text-slate-600">{selTime} – 1 hour · WOVO-hosted video meeting · CST</p>
                 </div>
               )}
 
@@ -250,9 +240,9 @@ export default function BookingWidget() {
                 className="mt-4 w-full rounded-xl bg-[var(--wm-accent)] py-3 font-semibold text-slate-900 shadow-[0_8px_24px_rgba(0,233,145,0.3)] transition hover:-translate-y-0.5 hover:bg-[var(--wm-accent-strong)] disabled:pointer-events-none disabled:opacity-50">
                 {sending ? "Sending..." : "✓ Confirm Meeting Request"}
               </button>
+              {submitError && <p role="alert" className="mt-3 text-center text-sm text-rose-700">{submitError}</p>}
               <p className="mt-2 text-center text-xs text-slate-400">
-                You'll receive a confirmation email with your meeting link.{" "}
-                Questions? <a className="underline" href="tel:9314583255">(931) 458-3255</a>
+                You'll receive a confirmation email after a manager assigns a representative. Questions? <a className="underline" href="mailto:support@wovomedia.com">support@wovomedia.com</a>
               </p>
             </div>
           </div>

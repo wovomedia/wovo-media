@@ -1,10 +1,11 @@
 export type BusinessContext = {
   businessName: string; phoneNumber: string; email: string;
   businessDescription: string; location: string; serviceLocation: string;
+  logoUrl: string;
 };
 
 export const EMPTY_BUSINESS_CONTEXT: BusinessContext = {
-  businessName: "", phoneNumber: "", email: "", businessDescription: "", location: "", serviceLocation: "",
+  businessName: "", phoneNumber: "", email: "", businessDescription: "", location: "", serviceLocation: "", logoUrl: "",
 };
 
 const labels: Array<{ key: keyof BusinessContext; label: string }> = [
@@ -14,6 +15,7 @@ const labels: Array<{ key: keyof BusinessContext; label: string }> = [
   { key: "businessDescription", label: "Business Description" },
   { key: "location",            label: "Location" },
   { key: "serviceLocation",     label: "Service Location" },
+  { key: "logoUrl",             label: "Logo URL" },
 ];
 
 export function normalizeBusinessContext(input?: Partial<BusinessContext> | null): BusinessContext {
@@ -24,6 +26,7 @@ export function normalizeBusinessContext(input?: Partial<BusinessContext> | null
     businessDescription: input?.businessDescription?.trim() ?? "",
     location:            input?.location?.trim()            ?? "",
     serviceLocation:     input?.serviceLocation?.trim()     ?? "",
+    logoUrl:             input?.logoUrl?.trim()             ?? "",
   };
 }
 

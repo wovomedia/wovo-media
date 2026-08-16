@@ -1,10 +1,11 @@
 "use client";
+
 import Link from "next/link";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { AuthFrame, authInputClass, authPrimaryButtonClass } from "@/components/auth/auth-frame";
 import { mapSupabaseAuthError } from "@/lib/supabase/auth-errors";
 import { supabase } from "@/lib/supabase/client";
-import { getBaseUrl } from "@/lib/site-url";
 import { persistSession } from "@/lib/supabase/session-client";
 
 export default function LoginPage() {
@@ -12,39 +13,87 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const loginWithGoogle = async () => {
-    const { data } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: `${getBaseUrl()}/auth/callback` } });
-    if (data?.url) window.location.href = data.url;
-  };
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const params = new URLSearchParams(window.location.search);
+      const errorValue = params.get("error");
+      if (errorValue === "verification_failed") setError("That verification link is invalid or expired. Request a new verification email from the sign-up page.");
+      if (errorValue === "oauth_session_missing") setError("That sign-in link came back without a session. Start again from this page.");
+      if (errorValue === "google_auth_failed") setError("Google sign-in did not complete. Try again, or use your email and password.");
+      const noticeValue = params.get("notice");
+      if (noticeValue === "check_email") setNotice("Check your inbox and verify your email before signing in. Verification links expire and can only be used once.");
+      if (noticeValue === "password_updated") setNotice("Your password was updated. Sign in with the new password.");
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
-  const loginWithEmail = async () => {
-    setLoading(true); setError("");
-    const { data, error: err } = await supabase.auth.signInWithPassword({ email, password });
+  function nextPath() {
+    const candidate = new URLSearchParams(window.location.search).get("next");
+    return candidate?.startsWith("/") && !candidate.startsWith("//") ? candidate : "/portal";
+  }
+
+  async function loginWithEmail(event?: FormEvent) {
+    event?.preventDefault();
+    setLoading(true);
+    setError("");
+    const { data, error: authError } = await supabase.auth.signInWithPassword({
+      email: email.trim().toLowerCase(),
+      password,
+    });
     setLoading(false);
-    if (err || !data.session) { setError(mapSupabaseAuthError(err).message); return; }
+    if (authError || !data.session) {
+      setError(mapSupabaseAuthError(authError).message);
+      return;
+    }
     persistSession(data.session);
-    router.push("/wovo-ai");
-  };
+    router.push(nextPath());
+  }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#060807] p-6 text-white">
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-zinc-950 p-6">
-        <div className="mb-6 text-center">
-          <div className="text-2xl font-black text-emerald-400 mb-1">Wovo Media AI</div>
-          <h1 className="text-xl font-bold text-white">Sign in to your account</h1>
-          <p className="mt-1 text-sm text-zinc-400">Use the same method you signed up with</p>
+    <AuthFrame
+      eyebrow="Welcome back"
+      title="Sign in to your workspace."
+      description="Use the same method you chose when you created your account."
+    >
+      <form onSubmit={(event) => void loginWithEmail(event)}>
+        <label className="block text-sm font-semibold text-[#3f3b35]">
+          Email address
+          <input
+            required
+            autoComplete="email"
+            inputMode="email"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="you@business.com"
+            className={authInputClass}
+          />
+        </label>
+        <label className="mt-4 block text-sm font-semibold text-[#3f3b35]">
+          Password
+          <input
+            required
+            autoComplete="current-password"
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            className={authInputClass}
+          />
+        </label>
+        <div className="mt-3 flex justify-end">
+          <Link href="/forgot-password" className="inline-flex min-h-11 items-center text-sm font-bold text-[#d94326] underline-offset-4 hover:underline">Forgot password?</Link>
         </div>
-        <button onClick={() => void loginWithGoogle()} className="w-full rounded-xl border border-white/20 bg-white/5 py-3 text-sm font-semibold text-white hover:bg-white/10 transition mb-4">Continue with Google</button>
-        <div className="relative mb-4"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10" /></div><div className="relative flex justify-center"><span className="bg-zinc-950 px-3 text-xs text-zinc-500">or email</span></div></div>
-        <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" type="email" className="mb-3 w-full rounded-xl border border-white/20 bg-black px-4 py-3 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-emerald-400/50" />
-        <input value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" type="password" onKeyDown={(e) => e.key === "Enter" && void loginWithEmail()} className="mb-4 w-full rounded-xl border border-white/20 bg-black px-4 py-3 text-sm text-white placeholder:text-zinc-600 outline-none focus:border-emerald-400/50" />
-        <button onClick={() => void loginWithEmail()} disabled={loading} className="w-full rounded-xl bg-emerald-400 py-3 text-sm font-bold text-black hover:bg-emerald-300 disabled:opacity-50 transition">{loading ? "Signing in..." : "Sign In"}</button>
-        {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
-        <p className="mt-4 text-center text-sm text-zinc-500">Don't have an account? <Link href="/signup" className="text-emerald-400 font-semibold">Sign up — 7 days free</Link></p>
-        <p className="mt-2 text-center text-xs text-zinc-600"><a href="/" className="hover:text-zinc-400">← Back to wovomedia.com</a></p>
-      </div>
-    </main>
+        <button disabled={loading} className={`${authPrimaryButtonClass} mt-2`}>{loading ? "Signing in…" : "Sign in"}</button>
+      </form>
+      {notice ? <p role="status" className="mt-4 rounded-xl border border-[#f05a3a]/22 bg-[#f05a3a]/10 p-3 text-sm leading-6 text-[#8f301f]">{notice}</p> : null}
+      {error ? <p role="alert" className="mt-4 rounded-xl border border-red-700/15 bg-red-50 p-3 text-sm leading-6 text-red-800">{error}</p> : null}
+      <p className="mt-6 text-center text-sm text-[#756e64]">
+        New to WOVO?{" "}
+        <Link href="/signup?next=/portal" className="inline-flex min-h-11 items-center font-bold text-[#d94326] underline-offset-4 hover:underline">Create an account</Link>
+      </p>
+    </AuthFrame>
   );
 }

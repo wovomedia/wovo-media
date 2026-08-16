@@ -1,4 +1,7 @@
 import { type BusinessContext, EMPTY_BUSINESS_CONTEXT, normalizeBusinessContext } from "@/lib/wovo-ai/business-context";
+// Safe despite the apparent cycle: business-requirements imports BusinessProfile
+// as `import type`, which is erased at compile time, so there is no runtime loop.
+import { MAX_FOOD_PHOTOS } from "@/lib/wovo-ai/business-requirements";
 
 export type BusinessProfile = {
   id: string;
@@ -9,6 +12,13 @@ export type BusinessProfile = {
   phoneNumber: string;
   email: string;
   logoUrl: string;
+  /**
+   * Required for food-service businesses — see lib/wovo-ai/business-requirements.
+   * Stored as hosted URLs, NOT data URLs: the whole profile blob shares a single
+   * text column capped at 700k chars, and inline base64 images would exhaust it
+   * after a couple of photos.
+   */
+  foodPhotoUrls: string[];
   businessDescription: string;
   createdAt: string;
   updatedAt: string;
@@ -43,6 +53,20 @@ function newBusinessId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `biz_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`;
 }
 
+function cleanUrlList(value: unknown, maxItems: number): string[] {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<string>();
+  const urls: string[] = [];
+  for (const item of value) {
+    const url = cleanText(item, 2_000);
+    if (!url || seen.has(url)) continue;
+    seen.add(url);
+    urls.push(url);
+    if (urls.length >= maxItems) break;
+  }
+  return urls;
+}
+
 export function normalizeBusinessProfile(input: Partial<BusinessProfile> & { id?: string }): BusinessProfile {
   const now = new Date().toISOString();
   const id = cleanText(input.id, 80) || newBusinessId();
@@ -57,6 +81,7 @@ export function normalizeBusinessProfile(input: Partial<BusinessProfile> & { id?
     phoneNumber: cleanText(input.phoneNumber, 40),
     email: cleanText(input.email, 120),
     logoUrl: cleanText(input.logoUrl, 220_000),
+    foodPhotoUrls: cleanUrlList(input.foodPhotoUrls, MAX_FOOD_PHOTOS),
     businessDescription: cleanText(input.businessDescription, 500),
     createdAt,
     updatedAt,

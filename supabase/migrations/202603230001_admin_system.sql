@@ -31,7 +31,7 @@ insert into public.users (id, email, role, name, created_at)
 select
   au.id,
   coalesce(au.email, ''),
-  case when lower(coalesce(au.email, '')) = 'payton@wovomedia.com' then 'admin' else 'user' end,
+  'user',
   coalesce(au.raw_user_meta_data ->> 'full_name', au.raw_user_meta_data ->> 'name', null),
   coalesce(au.created_at, now())
 from auth.users au
@@ -39,14 +39,9 @@ on conflict (id) do update
 set
   email = excluded.email,
   name = coalesce(excluded.name, public.users.name),
-  role = case
-    when lower(excluded.email) = 'payton@wovomedia.com' then 'admin'
-    else coalesce(public.users.role, excluded.role, 'user')
-  end;
+  role = coalesce(public.users.role, excluded.role, 'user');
 
-update public.users
-set role = 'admin'
-where lower(email) = 'payton@wovomedia.com';
+-- Owner/admin accounts must be assigned explicitly after their verified auth user is identified.
 
 create table if not exists public.credits (
   id uuid primary key default gen_random_uuid(),
@@ -126,12 +121,7 @@ as $$
       where u.id = p_user_id
         and lower(coalesce(u.role, 'user')) = 'admin'
     )
-    or exists (
-      select 1
-      from auth.users au
-      where au.id = p_user_id
-        and lower(coalesce(au.email, '')) = 'payton@wovomedia.com'
-    );
+    ;
 $$;
 
 revoke all on function public.is_admin_user(uuid) from public;
@@ -146,10 +136,7 @@ as $$
 declare
   resolved_role text;
 begin
-  resolved_role := case
-    when lower(coalesce(new.email, '')) = 'payton@wovomedia.com' then 'admin'
-    else 'user'
-  end;
+  resolved_role := 'user';
 
   insert into public.users (id, email, role, name, created_at)
   values (
@@ -163,10 +150,7 @@ begin
   set
     email = excluded.email,
     name = coalesce(excluded.name, public.users.name),
-    role = case
-      when lower(excluded.email) = 'payton@wovomedia.com' then 'admin'
-      else coalesce(public.users.role, excluded.role, 'user')
-    end;
+    role = coalesce(public.users.role, excluded.role, 'user');
 
   return new;
 end;

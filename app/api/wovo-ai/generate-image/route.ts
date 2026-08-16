@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getEnv } from "@/lib/env";
 import { requireServerUser } from "@/lib/supabase/server";
+import { getWovoAiRuntimeState } from "@/lib/wovo-ai/model-metering";
 
 const OPENAI_API_KEY = getEnv("OPENAI_API_KEY");
 
@@ -13,6 +14,9 @@ type GenerateImageBody = {
 
 export async function POST(request: Request) {
   try {
+    if (!getWovoAiRuntimeState().aiReady) {
+      return NextResponse.json({ error: "WOVO AI visual generation is not enabled until provider safeguards and metering are verified." }, { status: 503 });
+    }
     if (!OPENAI_API_KEY) {
       return NextResponse.json({ error: "Missing OPENAI_API_KEY on server." }, { status: 500 });
     }

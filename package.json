@@ -4,18 +4,22 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node scripts/verify-deployment-env.mjs && next build --webpack",
     "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.4",
     "framer-motion": "^12.38.0",
-    "next": "16.1.4",
+    "next": "16.2.12",
     "openai": "^6.6.0",
+    "postcss": "8.5.25",
+    "qs": "6.15.3",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "stripe": "^16.9.0"
+    "sharp": "0.35.3",
+    "stripe": "^16.9.0",
+    "ws": "8.21.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -23,7 +27,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.1.4",
+    "eslint-config-next": "16.2.12",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
