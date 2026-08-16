@@ -45,6 +45,15 @@ export type PortalContentItem = {
   content_type: string;
   scheduled_for: string | null;
   status: string;
+  creative_brief: string | null;
+  hashtags: string[];
+  platform_variant: Record<string, unknown>;
+  timezone: string;
+  series_key: string | null;
+  recurrence_rule: string | null;
+  approval_version: number;
+  approved_snapshot_id: string | null;
+  approval_revoked_at: string | null;
   source_rights_confirmed: boolean;
   ai_generated: boolean;
   ai_provider: string | null;
@@ -54,6 +63,21 @@ export type PortalContentItem = {
   archived_at: string | null;
   archived_by: string | null;
   created_at: string;
+};
+
+export type PortalContentApproval = {
+  id: string;
+  account_id: string;
+  content_item_id: string;
+  approved_by: string;
+  approved_at: string;
+  approval_version: number;
+  approval_scope: "item" | "date_range";
+  range_start: string | null;
+  range_end: string | null;
+  revoked_at: string | null;
+  revocation_reason: string | null;
+  correlation_id: string;
 };
 
 export type PortalEvent = {
@@ -366,6 +390,7 @@ export type PortalSnapshot = {
   staffRole: PortalStaffRole | null;
   accounts: PortalAccount[];
   content: PortalContentItem[];
+  contentApprovals: PortalContentApproval[];
   events: PortalEvent[];
   threads: PortalThread[];
   threadAssignments: PortalThreadAssignment[];

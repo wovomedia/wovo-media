@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { retrieveSubscription, type StripeSubscription } from "@/lib/stripe";
-import { cancelSubscriptionByCustomerId, cancelSubscriptionByStripeSubscriptionId, syncSubscriptionFromStripe, addExtraCredits, findUserIdByCustomerId } from "@/lib/wovo-ai/subscription";
-import { CREDIT_PACK_MAP } from "@/lib/wovo-ai/plans";
+import { cancelSubscriptionByCustomerId, cancelSubscriptionByStripeSubscriptionId, syncSubscriptionFromStripe } from "@/lib/wovo-ai/subscription";
 import {
   beginPortalStripeEvent,
   failPortalStripeEvent,
@@ -38,8 +37,6 @@ export async function POST(request: Request) {
           payment_intent?: string;
           metadata?: {
             userId?: string;
-            purchaseType?: string;
-            creditPackPriceId?: string;
             product?: string;
             portalAccountId?: string;
             portalOrderId?: string;
@@ -52,10 +49,6 @@ export async function POST(request: Request) {
           const sub = await retrieveSubscription(String(session.subscription));
           await syncSubscriptionFromStripe(sub, session.metadata?.userId);
           await syncPortalSubscription(sub);
-        } else if (session.metadata?.purchaseType === "extra_credits") {
-          const userId = session.metadata?.userId ?? (session.customer ? await findUserIdByCustomerId(String(session.customer)) : null);
-          const credits = CREDIT_PACK_MAP[session.metadata?.creditPackPriceId ?? ""] ?? 0;
-          if (userId && credits > 0) await addExtraCredits(userId, credits);
         }
         break;
       }

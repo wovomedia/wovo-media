@@ -33,6 +33,7 @@ import type {
   PortalAiUsageRequest,
   PortalClientInvite,
   PortalCommentContentWorkflow,
+  PortalContentApproval,
   PortalContentItem,
   PortalCreditAccount,
   PortalCreditEntry,
@@ -168,6 +169,7 @@ async function loadSnapshot(context: PortalContext): Promise<PortalSnapshot> {
       staffRole: context.staffRole,
       accounts: [],
       content: [],
+      contentApprovals: [],
       events: [],
       threads: [],
       threadAssignments: [],
@@ -236,6 +238,7 @@ async function loadSnapshot(context: PortalContext): Promise<PortalSnapshot> {
       staffRole: context.staffRole,
       accounts: visibleAccounts,
       content: [],
+      contentApprovals: [],
       events: [],
       threads: [],
       threadAssignments: [],
@@ -267,6 +270,7 @@ async function loadSnapshot(context: PortalContext): Promise<PortalSnapshot> {
   const archiveFilter = owner ? "" : "&archived_at=is.null";
   const [
     content,
+    contentApprovals,
     events,
     threads,
     threadAssignments,
@@ -286,6 +290,7 @@ async function loadSnapshot(context: PortalContext): Promise<PortalSnapshot> {
     commentContentWorkflows,
   ] = await Promise.all([
     supabaseServiceRoleRequest<PortalContentItem[]>(`/rest/v1/wovo_portal_content_items?select=*&account_id=${filter}${archiveFilter}&order=scheduled_for.asc.nullslast,created_at.desc&limit=300`),
+    supabaseServiceRoleRequest<PortalContentApproval[]>(`/rest/v1/wovo_portal_content_approvals?select=id,account_id,content_item_id,approved_by,approved_at,approval_version,approval_scope,range_start,range_end,revoked_at,revocation_reason,correlation_id&account_id=${filter}&order=approved_at.desc&limit=1000`).catch(() => []),
     supabaseServiceRoleRequest<PortalEvent[]>(`/rest/v1/wovo_portal_events?select=*&account_id=${filter}&order=starts_at.asc&limit=300`),
     supabaseServiceRoleRequest<PortalThread[]>(`/rest/v1/wovo_portal_threads?select=*&account_id=${filter}&order=last_message_at.desc`),
     supabaseServiceRoleRequest<PortalThreadAssignment[]>(`/rest/v1/wovo_portal_thread_assignments?select=*&account_id=${filter}&order=created_at.desc&limit=300`),
@@ -319,6 +324,7 @@ async function loadSnapshot(context: PortalContext): Promise<PortalSnapshot> {
     staffRole: context.staffRole,
     accounts: visibleAccounts,
     content: content ?? [],
+    contentApprovals: contentApprovals ?? [],
     events: events ?? [],
     threads: threads ?? [],
     threadAssignments: threadAssignments ?? [],
@@ -626,6 +632,10 @@ export async function POST(request: Request) {
         return NextResponse.json(await createContent(context, body), { status: 201 });
       case "update_content":
         return NextResponse.json(await updateContent(context, body));
+      case "approve_content_range":
+        return NextResponse.json(await approveContentRange(context, body));
+      case "revoke_content_approval":
+        return NextResponse.json(await revokeContentApproval(context, body));
       case "generate_calendar":
         return NextResponse.json(await generateCalendar(context, body), { status: 201 });
       case "send_message":
@@ -1347,7 +1357,12 @@ async function createContent(context: PortalContext, body: ActionBody) {
       platform: enumValue(body.platform, PLATFORM_VALUES, "Platform"),
       content_type: contentType,
       scheduled_for: body.scheduledFor ? parseIsoDate(body.scheduledFor, "Scheduled date") : null,
-      status: context.mode === "staff" ? "queued" : "client_review",
+      status: "client_review",
+      creative_brief: optionalString(body.creativeBrief, 3000),
+      hashtags: Array.isArray(body.hashtags)
+        ? body.hashtags.filter((item): item is string => typeof item === "string").map((item) => item.trim()).filter(Boolean).slice(0, 30)
+        : [],
+      timezone: optionalString(body.timezone, 80) ?? "America/Chicago",
       asset_id: isUuid(body.assetId) ? body.assetId : null,
       source_rights_confirmed: rightsConfirmed,
       ai_generated: false,
@@ -1359,7 +1374,7 @@ async function createContent(context: PortalContext, body: ActionBody) {
     account_id: accountId,
     notification_type: "content_ready",
     title: `Content ready: ${item.title}`,
-    body: "Review the caption and scheduled time in the manual posting queue.",
+    body: "Review the exact caption, asset, platform, and scheduled time before approval.",
     target_role: "manager",
     related_table: "wovo_portal_content_items",
     related_id: item.id,
@@ -1372,9 +1387,10 @@ async function updateContent(context: PortalContext, body: ActionBody) {
   const contentId = requiredString(body.contentId, "Content item", 80);
   await assertPortalAccountAccess(context, accountId);
   const status = requiredString(body.status, "Status", 40);
+  if (status === "approved") return approveContent(context, body, "item");
   const allowed = context.mode === "staff"
-    ? ["approved", "queued", "revision_requested", "manual_posted", "canceled"]
-    : ["approved", "revision_requested"];
+    ? ["queued", "revision_requested", "manual_posted", "canceled"]
+    : ["revision_requested"];
   if (!allowed.includes(status)) throw new PortalHttpError(403, "That status change is not allowed.");
   const patch: Record<string, unknown> = {
     status,
@@ -1391,18 +1407,124 @@ async function updateContent(context: PortalContext, body: ActionBody) {
     }
   );
   if (!rows?.[0]) throw new PortalHttpError(404, "Content item not found.");
-  if (status === "approved") {
-    await insertNotification({
-      account_id: accountId,
-      notification_type: "content_approved",
-      title: `Approved: ${rows[0].title}`,
-      body: "The post is ready for the WOVO team to publish manually at the scheduled time.",
-      target_role: "manager",
-      related_table: "wovo_portal_content_items",
-      related_id: rows[0].id,
-    });
-  }
   return { item: rows[0] };
+}
+
+function firstRpcRow<T>(value: T | T[] | null | undefined): T | null {
+  return Array.isArray(value) ? value[0] ?? null : value ?? null;
+}
+
+async function approveContent(
+  context: PortalContext,
+  body: ActionBody,
+  scope: "item" | "date_range",
+  range?: { start: string; end: string; correlationId: string }
+) {
+  const accountId = requiredString(body.accountId, "Account", 80);
+  const contentId = requiredString(body.contentId, "Content item", 80);
+  await assertPortalAccountAccess(context, accountId);
+  await assertPaid(context, accountId);
+  const result = await supabaseServiceRoleRequest<PortalContentApproval | PortalContentApproval[]>(
+    "/rest/v1/rpc/wovo_approve_content_item",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        p_account_id: accountId,
+        p_content_item_id: contentId,
+        p_approved_by: context.user.id,
+        p_approval_scope: scope,
+        p_range_start: range?.start ?? null,
+        p_range_end: range?.end ?? null,
+        p_correlation_id: range?.correlationId ?? crypto.randomUUID(),
+      }),
+    }
+  );
+  const approval = firstRpcRow(result);
+  if (!approval) throw new Error("Unable to record the approval snapshot.");
+  const itemRows = await supabaseServiceRoleRequest<PortalContentItem[]>(
+    `/rest/v1/wovo_portal_content_items?select=*&id=eq.${encodeURIComponent(contentId)}&account_id=eq.${encodeURIComponent(accountId)}&limit=1`
+  );
+  const item = itemRows?.[0];
+  if (!item) throw new PortalHttpError(404, "Content item not found.");
+  await insertNotification({
+    account_id: accountId,
+    notification_type: "content_approved",
+    title: `Approved: ${item.title}`,
+    body: "The exact approved version is ready for the WOVO manual posting workflow. Any edit requires a new approval.",
+    target_role: "manager",
+    related_table: "wovo_portal_content_items",
+    related_id: item.id,
+  });
+  return { item, approval };
+}
+
+async function approveContentRange(context: PortalContext, body: ActionBody) {
+  const accountId = requiredString(body.accountId, "Account", 80);
+  await assertPortalAccountAccess(context, accountId);
+  await assertPaid(context, accountId);
+  const startDate = optionalDateOnly(body.startDate, "Approval start");
+  const endDate = optionalDateOnly(body.endDate, "Approval end");
+  if (!startDate || !endDate) throw new PortalHttpError(400, "Choose an approval start and end date.");
+  const start = new Date(`${startDate}T00:00:00.000Z`).toISOString();
+  const end = new Date(`${endDate}T23:59:59.999Z`).toISOString();
+  if (Date.parse(end) < Date.parse(start)) throw new PortalHttpError(400, "Approval end must be after the start.");
+  if (Date.parse(end) - Date.parse(start) > 93 * 86400000) throw new PortalHttpError(400, "Approve at most 93 days at once.");
+  const correlationId = crypto.randomUUID();
+  const approvals = await supabaseServiceRoleRequest<PortalContentApproval[]>(
+    "/rest/v1/rpc/wovo_approve_content_range",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        p_account_id: accountId,
+        p_approved_by: context.user.id,
+        p_range_start: start,
+        p_range_end: end,
+        p_correlation_id: correlationId,
+      }),
+    }
+  );
+  if (!approvals?.length) throw new PortalHttpError(404, "No review-ready scheduled posts were found in that range.");
+  await insertNotification({
+    account_id: accountId,
+    notification_type: "content_approved",
+    title: `${approvals.length} scheduled posts approved`,
+    body: "The exact versions in this date range are now eligible for the manual posting workflow. Any edit requires reapproval.",
+    target_role: "manager",
+    related_table: "wovo_portal_accounts",
+    related_id: accountId,
+  });
+  return { approvedCount: approvals.length, correlationId, approvals };
+}
+
+async function revokeContentApproval(context: PortalContext, body: ActionBody) {
+  const accountId = requiredString(body.accountId, "Account", 80);
+  const contentId = requiredString(body.contentId, "Content item", 80);
+  await assertPortalAccountAccess(context, accountId);
+  await assertPaid(context, accountId);
+  const result = await supabaseServiceRoleRequest<PortalContentItem | PortalContentItem[]>(
+    "/rest/v1/rpc/wovo_revoke_content_approval",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        p_account_id: accountId,
+        p_content_item_id: contentId,
+        p_revoked_by: context.user.id,
+        p_reason: optionalString(body.reason, 500) ?? "Approval revoked for revision",
+      }),
+    }
+  );
+  const item = firstRpcRow(result);
+  if (!item) throw new Error("Unable to revoke the content approval.");
+  await insertNotification({
+    account_id: accountId,
+    notification_type: "content_revision",
+    title: `Approval revoked: ${item.title}`,
+    body: "This item returned to review. It cannot be queued or published until its current version is approved again.",
+    target_role: "manager",
+    related_table: "wovo_portal_content_items",
+    related_id: item.id,
+  });
+  return { item };
 }
 
 type GeneratedIdea = { date?: string; title?: string; caption?: string; platform?: string; content_type?: string };

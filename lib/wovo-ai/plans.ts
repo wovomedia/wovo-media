@@ -75,33 +75,8 @@ export function isPaidStatus(status: string | null | undefined): boolean {
 }
 
 // ─── CREDIT PACKS ───
-export type CreditPack = {
-  priceId: string;
-  credits: number;
-  price: number;
-  label: string;
-};
-
-export const CREDIT_PACKS: CreditPack[] = [
-  { priceId: "price_1T7K3uFmIvQosWF9B3oVEMMu", credits: 5,  price: 1.5,  label: "Small Pack" },
-  { priceId: "price_1T7tozFmIvQosWF9Nrnm4zqG", credits: 20, price: 5.0,  label: "Medium Pack" },
-  { priceId: "price_1T7tqNFmIvQosWF9emrI26Mi", credits: 50, price: 10.0, label: "Large Pack" },
-];
-
-export const CREDIT_PACK_MAP: Record<string, number> = {
-  price_1T7K3uFmIvQosWF9B3oVEMMu: 5,
-  price_1T7tozFmIvQosWF9Nrnm4zqG: 20,
-  price_1T7tqNFmIvQosWF9emrI26Mi: 50,
-};
-
-export const EXTRA_CREDITS_PRICE_ID = CREDIT_PACKS[0].priceId;
 export const VERIFIED_BADGE_PRICE_ID = process.env.WOVO_VERIFIED_BADGE_PRICE_ID ?? "";
 export const VERIFIED_BADGE_CHECKOUT_LINK = process.env.WOVO_VERIFIED_BADGE_CHECKOUT_LINK ?? "";
-
-export function getCreditPackByPriceId(priceId: string | null | undefined): CreditPack | null {
-  if (!priceId) return null;
-  return CREDIT_PACKS.find((p) => p.priceId === priceId) ?? null;
-}
 
 // ─── AGENCY PLANS (contact-based) ───
 export const AGENCY_PLANS = [
