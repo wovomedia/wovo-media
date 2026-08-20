@@ -35,11 +35,14 @@ export function getSoraModel(): string {
 }
 
 function getSoraSize(): string {
-  return getEnv("SORA_SIZE") || "1280x720";
+  return getEnv("SORA_SIZE") || "720x1280";
 }
 
 function normalizeSeconds(seconds?: number): string {
-  const allowed = [4, 8, 12, 16, 20];
+  // The current Videos API accepts 4, 8, or 12 second generations only.
+  // Keep this server-side so a stale client cannot submit an unsupported or
+  // unexpectedly expensive duration.
+  const allowed = [4, 8, 12];
   const requested = Number.isFinite(seconds) ? Number(seconds) : 8;
   const selected = allowed.reduce((closest, candidate) => {
     return Math.abs(candidate - requested) < Math.abs(closest - requested) ? candidate : closest;

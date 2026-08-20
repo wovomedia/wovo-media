@@ -45,6 +45,46 @@ async function waitForInstagramContainer(containerId: string, token: string) {
   throw new Error("META_CONTAINER_TIMEOUT");
 }
 
+function isVideoMediaUrl(value: string | null | undefined) {
+  return Boolean(value && /\.(mp4|mov)(?:\?|$)/i.test(value));
+}
+
+async function publishFacebookReel(connection: MetaConnection, mediaUrl: string, caption: string, token: string) {
+  const initialized = await metaGraph<{ video_id?: string; upload_url?: string }>(`${connection.page_id}/video_reels`, token, {
+    method: "POST",
+    body: new URLSearchParams({ upload_phase: "start", access_token: token }),
+  });
+  const videoId = initialized.video_id?.trim() ?? "";
+  const uploadUrl = initialized.upload_url?.trim() ?? "";
+  if (!videoId || !uploadUrl) throw new Error("META_REEL_UPLOAD_SESSION_INVALID");
+  const parsedUploadUrl = new URL(uploadUrl);
+  if (parsedUploadUrl.protocol !== "https:" || parsedUploadUrl.hostname !== "rupload.facebook.com") {
+    throw new Error("META_REEL_UPLOAD_HOST_INVALID");
+  }
+
+  const uploaded = await metaGraph<{ success?: boolean }>(uploadUrl, token, {
+    method: "POST",
+    headers: {
+      Authorization: `OAuth ${token}`,
+      file_url: mediaUrl,
+    },
+  });
+  if (uploaded.success !== true) throw new Error("META_REEL_UPLOAD_NOT_CONFIRMED");
+
+  const finished = await metaGraph<{ success?: boolean }>(`${connection.page_id}/video_reels`, token, {
+    method: "POST",
+    body: new URLSearchParams({
+      access_token: token,
+      video_id: videoId,
+      upload_phase: "finish",
+      video_state: "PUBLISHED",
+      description: caption,
+    }),
+  });
+  if (finished.success !== true) throw new Error("META_REEL_PUBLISH_NOT_CONFIRMED");
+  return videoId;
+}
+
 export async function publishMetaJob(job: MetaPublishJob, options: { explicitApproval?: boolean } = {}) {
   const rows = await supabaseServiceRoleRequest<MetaConnection[]>(`/rest/v1/wovo_meta_connections?select=*&id=eq.${encodeURIComponent(job.connection_id)}&status=eq.healthy&kill_switch=eq.false&limit=1`).catch(() => []);
   const connection = rows?.[0];
@@ -60,14 +100,18 @@ export async function publishMetaJob(job: MetaPublishJob, options: { explicitApp
   try {
     let providerPostId: string;
     if (job.destination === "facebook_page") {
-      const path = job.media_url ? `${connection.page_id}/photos` : `${connection.page_id}/feed`;
-      const body = new URLSearchParams({ message: job.caption, access_token: token });
-      if (job.media_url) body.set("url", job.media_url);
-      const result = await metaGraph<{ id: string }>(path, token, { method: "POST", body });
-      providerPostId = result.id;
+      if (isVideoMediaUrl(job.media_url)) {
+        providerPostId = await publishFacebookReel(connection, job.media_url!, job.caption, token);
+      } else {
+        const path = job.media_url ? `${connection.page_id}/photos` : `${connection.page_id}/feed`;
+        const body = new URLSearchParams({ message: job.caption, access_token: token });
+        if (job.media_url) body.set("url", job.media_url);
+        const result = await metaGraph<{ id: string }>(path, token, { method: "POST", body });
+        providerPostId = result.id;
+      }
     } else {
       if (!connection.instagram_user_id || !job.media_url) throw new Error("META_INSTAGRAM_MEDIA_REQUIRED");
-      const isVideo = /\.(mp4|mov)(?:\?|$)/i.test(job.media_url);
+      const isVideo = isVideoMediaUrl(job.media_url);
       const fields = new URLSearchParams({ caption: job.caption, access_token: token });
       if (isVideo) {
         fields.set("media_type", "REELS");
@@ -179,6 +223,8 @@ export async function enqueueWovoDailyImagePost(options: { force?: boolean; now?
         status: "queued",
         source: "scheduled_automation",
         caption: creative.caption,
+        topic: creative.campaignKey,
+        hashtags: creative.hashtags,
         normalized_caption_hash: captionHash,
         topic_hash: topicHash,
         creative_hash: contentHash(`${creative.kicker}|${creative.headline}|${creative.cta}`),

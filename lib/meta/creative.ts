@@ -9,6 +9,7 @@ export type WovoDailyCreative = {
   headline: string;
   cta: string;
   caption: string;
+  hashtags: string[];
 };
 
 const DAILY_CREATIVES: WovoDailyCreative[] = [
@@ -18,6 +19,7 @@ const DAILY_CREATIVES: WovoDailyCreative[] = [
     headline: "Three original cartoon episodes every week.",
     cta: "$39.99/month · Review before publishing",
     caption: "Give your business a character people recognize. WOVO prepares three original vertical cartoon episodes each week from an approved character brief, with private review before anything is published. The Cartoon Episodes add-on is $39.99/month. Learn more at wovomedia.com/cartoon-episodes. — Adam, WOVO Media AI Operations Assistant",
+    hashtags: ["#WOVOMedia", "#BrandCharacter", "#ContentMarketing"],
   },
   {
     campaignKey: "weekly-queue",
@@ -25,6 +27,7 @@ const DAILY_CREATIVES: WovoDailyCreative[] = [
     headline: "Plan the week. Review the work. Keep moving.",
     cta: "WOVO Media · Serving businesses worldwide",
     caption: "WOVO gives independent businesses one organized place for brand context, content drafts, approvals, schedules, and support. Automation prepares the work; people stay in control of what goes public. Explore the workflow at wovomedia.com/product. — Adam, WOVO Media AI Operations Assistant",
+    hashtags: ["#WOVOMedia", "#MarketingWorkflow", "#SmallBusinessMarketing"],
   },
   {
     campaignKey: "local-business-os",
@@ -32,6 +35,7 @@ const DAILY_CREATIVES: WovoDailyCreative[] = [
     headline: "Marketing should feel like a system—not another chore.",
     cta: "Create · Approve · Schedule · Measure",
     caption: "WOVO is a marketing operating system for local businesses: a useful brand profile, a weekly content queue, clear approvals, scheduling, and a human support path when you need it. See how it works at wovomedia.com/workflow. — Adam, WOVO Media AI Operations Assistant",
+    hashtags: ["#WOVOMedia", "#LocalBusinessMarketing", "#ContentPlanning"],
   },
   {
     campaignKey: "brand-assets",
@@ -39,6 +43,7 @@ const DAILY_CREATIVES: WovoDailyCreative[] = [
     headline: "Approved assets in. On-brand drafts out.",
     cta: "Private workspace · Rights-aware workflow",
     caption: "Organize business-owned photos, videos, voice, colors, and approved facts once. WOVO uses that private workspace context to prepare more consistent drafts without mixing one business’s information with another. Learn more at wovomedia.com/product. — Adam, WOVO Media AI Operations Assistant",
+    hashtags: ["#WOVOMedia", "#BrandAssets", "#BrandConsistency"],
   },
   {
     campaignKey: "human-control",
@@ -46,6 +51,7 @@ const DAILY_CREATIVES: WovoDailyCreative[] = [
     headline: "Nothing should publish by accident.",
     cta: "Draft first · Approval-aware publishing",
     caption: "WOVO separates drafting from publishing. Connected accounts use official authorization, work is traceable, and publishing follows the policy the workspace owner selected. Start at wovomedia.com. — Adam, WOVO Media AI Operations Assistant",
+    hashtags: ["#WOVOMedia", "#ContentApproval", "#SocialMediaWorkflow"],
   },
   {
     campaignKey: "website-concepts",
@@ -53,6 +59,7 @@ const DAILY_CREATIVES: WovoDailyCreative[] = [
     headline: "Turn your brand into a website plan you can review.",
     cta: "Structure · Copy · Visual direction",
     caption: "WOVO helps businesses turn approved brand context into editable website concepts, page plans, and project requests. Drafts stay drafts until hosting and publishing are explicitly authorized. Visit wovomedia.com/services. — Adam, WOVO Media AI Operations Assistant",
+    hashtags: ["#WOVOMedia", "#WebsitePlanning", "#SmallBusinessWebsite"],
   },
   {
     campaignKey: "team-inbox",
@@ -60,6 +67,7 @@ const DAILY_CREATIVES: WovoDailyCreative[] = [
     headline: "Your request reaches WOVO—not a staff member’s personal inbox.",
     cta: "Private cases · Clear ownership · Tracked replies",
     caption: "Clients can message WOVO through a private team inbox with a clear case reference, assignment history, and accountable follow-up—without exposing individual staff accounts. Contact WOVO at wovomedia.com/contact. — Adam, WOVO Media AI Operations Assistant",
+    hashtags: ["#WOVOMedia", "#ClientSupport", "#BusinessOperations"],
   },
 ];
 
@@ -80,7 +88,7 @@ export function creativeForDate(date: string, slotIndex = 0): WovoDailyCreative 
   const frame = CAPTION_FRAMES[Math.abs(dayNumber + slotIndex * 5) % CAPTION_FRAMES.length];
   return {
     ...base,
-    caption: `${frame} ${base.caption}\n\nSent by Adam Carter, WOVO Media's AI COO / Operations Assistant. Adam is an AI-generated representative, not a human employee.`,
+    caption: `${frame} ${base.caption}\n\n${base.hashtags.join(" ")}\n\nSent by Adam Carter, WOVO Media's AI COO / Operations Assistant. Adam is an AI-generated representative, not a human employee.`,
   };
 }
 
