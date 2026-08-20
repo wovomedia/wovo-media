@@ -46,6 +46,23 @@ export async function GET(request: Request) {
     enqueued: 0,
     reason: error instanceof Error ? error.message.slice(0, 120) : "enqueue_failed",
   }));
-  const processed = await processMetaPublishJobs(6).catch(() => ({ found: 0, published: 0 }));
-  return NextResponse.json({ queued, ...processed }, { headers: { "Cache-Control": "private, no-store" } });
+  try {
+    const processed = await processMetaPublishJobs(6);
+    if (processed.failed > 0) {
+      console.error("Meta publishing run completed with provider failures", {
+        failed: processed.failed,
+        codes: [...new Set(processed.failures.map((failure) => failure.code))],
+      });
+    }
+    return NextResponse.json({ queued, ...processed }, { headers: { "Cache-Control": "private, no-store" } });
+  } catch (error) {
+    const code = error instanceof Error
+      ? error.message.split(":")[0].replace(/[^A-Z0-9_]/gi, "_").slice(0, 80)
+      : "META_WORKER_FAILED";
+    console.error("Meta publishing worker failed before provider delivery", { code });
+    return NextResponse.json(
+      { queued, found: 0, published: 0, failed: 0, workerError: code || "META_WORKER_FAILED" },
+      { status: 503, headers: { "Cache-Control": "private, no-store" } },
+    );
+  }
 }

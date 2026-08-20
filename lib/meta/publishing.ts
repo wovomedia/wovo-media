@@ -19,8 +19,15 @@ export type MetaConnection = {
 
 export type MetaPublishJob = {
   id: string; connection_id: string; destination: string; caption: string; media_url: string | null;
-  attempt_count: number;
+  attempt_count: number; scheduled_for?: string | null;
 };
+
+const AUTOMATION_DELIVERY_WINDOW_MS = 75 * 60 * 1000;
+
+function safeProviderErrorCode(error: unknown) {
+  const message = error instanceof Error ? error.message : "META_PUBLISH_FAILED";
+  return message.split(":")[0].replace(/[^A-Z0-9_]/gi, "_").slice(0, 80) || "META_PUBLISH_FAILED";
+}
 
 export async function loadMetaConnection(options: { accountId?: string; ownerScope?: boolean }) {
   const filter = options.ownerScope ? "owner_scope=eq.true&account_id=is.null" : `owner_scope=eq.false&account_id=eq.${encodeURIComponent(options.accountId || "")}`;
@@ -87,12 +94,27 @@ export async function publishMetaJob(job: MetaPublishJob, options: { explicitApp
   }
 }
 
-export async function processMetaPublishJobs(limit = 3) {
-  const now = new Date().toISOString();
-  const jobs = await supabaseServiceRoleRequest<MetaPublishJob[]>(`/rest/v1/wovo_meta_publish_jobs?select=id,connection_id,destination,caption,media_url,attempt_count&connection_id=not.is.null&status=in.(approved,queued)&or=(scheduled_for.is.null,scheduled_for.lte.${encodeURIComponent(now)})&order=created_at.asc&limit=${Math.max(1, Math.min(limit, 10))}`).catch(() => []);
+export async function processMetaPublishJobs(limit = 3, options: { now?: Date } = {}) {
+  const clock = options.now ?? new Date();
+  const now = clock.toISOString();
+  const recentCutoff = new Date(clock.getTime() - AUTOMATION_DELIVERY_WINDOW_MS).toISOString();
+  // Automated delivery deliberately ignores stale jobs. This prevents a recovered
+  // worker from bursting old scheduled posts after an outage. Those items remain
+  // visible in the owner ledger for an explicit reschedule or cancellation.
+  const jobs = await supabaseServiceRoleRequest<MetaPublishJob[]>(
+    `/rest/v1/wovo_meta_publish_jobs?select=id,connection_id,destination,caption,media_url,attempt_count,scheduled_for&connection_id=not.is.null&source=eq.scheduled_automation&status=in.(approved,queued)&scheduled_for=not.is.null&scheduled_for=gte.${encodeURIComponent(recentCutoff)}&scheduled_for=lte.${encodeURIComponent(now)}&order=scheduled_for.asc&limit=${Math.max(1, Math.min(limit, 6))}`,
+  );
   let published = 0;
-  for (const job of jobs ?? []) { try { await publishMetaJob(job); published += 1; } catch { /* durable failed state is visible */ } }
-  return { found: jobs?.length ?? 0, published };
+  const failures: Array<{ jobId: string; code: string }> = [];
+  for (const job of jobs ?? []) {
+    try {
+      await publishMetaJob(job);
+      published += 1;
+    } catch (error) {
+      failures.push({ jobId: job.id, code: safeProviderErrorCode(error) });
+    }
+  }
+  return { found: jobs?.length ?? 0, published, failed: failures.length, failures };
 }
 
 function localDateParts(timezone: string, now = new Date()) {
