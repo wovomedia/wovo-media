@@ -263,7 +263,7 @@ async function finalizeVideo(episode: CartoonEpisodeRow) {
       storage_path: path,
       mime_type: "video/mp4",
       size_bytes: bytes.length,
-      actual_cost_micros: 320000,
+      actual_cost_micros: 100000,
       generated_at: new Date().toISOString(),
       next_attempt_at: null,
       last_error_code: null,

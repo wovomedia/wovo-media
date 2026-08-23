@@ -46,6 +46,8 @@ export function cartoonProviderStatus() {
     text: Boolean(getEnv("OPENAI_API_KEY")),
     video: falConfigured && getEnv("WOVO_CARTOON_VIDEO_ENABLED") === "true" && videoVerified,
     textModel: getEnv("WOVO_CARTOON_TEXT_MODEL") || "gpt-5.6-luna",
-    videoModel: videoVerified ? (getEnv("WOVO_CARTOON_VIDEO_MODEL") || "fal-ai/longcat-video/text-to-video/720p") : "provider_not_verified",
+    videoModel: videoVerified
+      ? (getEnv("WOVO_CARTOON_VIDEO_MODEL") || "fal-ai/wan/v2.2-a14b/text-to-video/turbo")
+      : "provider_not_verified",
   };
 }

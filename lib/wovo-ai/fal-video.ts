@@ -3,8 +3,8 @@ import "server-only";
 import { fal } from "@fal-ai/client";
 import { getEnv } from "@/lib/env";
 
-const TEXT_MODEL = "fal-ai/longcat-video/text-to-video/720p";
-const IMAGE_MODEL = "fal-ai/longcat-video/image-to-video/720p";
+const TEXT_MODEL = "fal-ai/wan/v2.2-a14b/text-to-video/turbo";
+const IMAGE_MODEL = "fal-ai/wan/v2.2-a14b/image-to-video/turbo";
 
 type FalVideoData = {
   video?: { url?: string; content_type?: string; file_name?: string; file_size?: number };
@@ -18,12 +18,6 @@ function configureFal() {
   fal.config({ credentials });
 }
 
-function secondsToFrames(seconds?: number) {
-  const requested = Number.isFinite(seconds) ? Math.round(Number(seconds)) : 6;
-  const bounded = Math.max(4, Math.min(requested, 10));
-  return { seconds: bounded, frames: bounded * 30 };
-}
-
 export function getFalVideoModel(hasReferenceImage: boolean) {
   return hasReferenceImage ? IMAGE_MODEL : TEXT_MODEL;
 }
@@ -34,24 +28,27 @@ export async function createFalVideoJob(input: {
   inputReferenceImageUrl?: string;
 }) {
   configureFal();
-  const timing = secondsToFrames(input.durationSeconds);
+  // Wan Turbo currently returns one short clip per fixed-price generation.
+  // Retain the requested duration only as UI metadata; never promise an exact
+  // runtime that the provider endpoint does not accept.
+  const requestedSeconds = Number.isFinite(input.durationSeconds) ? Math.round(Number(input.durationSeconds)) : 5;
+  const seconds = Math.max(4, Math.min(requestedSeconds, 8));
   const model = getFalVideoModel(Boolean(input.inputReferenceImageUrl));
   const common = {
     prompt: input.prompt,
-    num_frames: timing.frames,
-    fps: 30,
-    enable_prompt_expansion: true,
+    resolution: "720p" as const,
     enable_safety_checker: true,
-    video_output_type: "X264 (.mp4)" as const,
-    video_quality: "high" as const,
-    video_write_mode: "balanced" as const,
-    acceleration: "regular" as const,
+    enable_output_safety_checker: true,
   };
   const submitted = input.inputReferenceImageUrl
-    ? await fal.queue.submit(IMAGE_MODEL, { input: { ...common, image_url: input.inputReferenceImageUrl } })
-    : await fal.queue.submit(TEXT_MODEL, { input: { ...common, aspect_ratio: "9:16" as const } });
+    ? await fal.queue.submit(IMAGE_MODEL, {
+        input: { ...common, image_url: input.inputReferenceImageUrl, aspect_ratio: "auto" as const },
+      })
+    : await fal.queue.submit(TEXT_MODEL, {
+        input: { ...common, aspect_ratio: "9:16" as const, enable_prompt_expansion: true },
+      });
   if (!submitted.request_id) throw new Error("FAL_VIDEO_JOB_ID_MISSING");
-  return { providerJobId: submitted.request_id, status: "queued", model, seconds: timing.seconds };
+  return { providerJobId: submitted.request_id, status: "queued", model, seconds };
 }
 
 export async function getFalVideoJob(model: string, requestId: string): Promise<{
