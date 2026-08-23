@@ -189,7 +189,7 @@ async function createOwnerItem(request: Request, context: PortalContext, body: B
   const caption = requiredString(body.caption, "Caption", 5000);
   const destination = enumValue(body.destination, ["facebook_page", "instagram"], "Platform") as MetaJobRow["destination"];
   const timezone = safeTimezone(body.timezone);
-  const scheduledFor = scheduledIso(body.scheduledFor, timezone);
+  const scheduledFor = accountId ? scheduledIso(body.scheduledFor, timezone) : null;
   const tags = hashtags(body.hashtags);
   const rightsConfirmed = body.rightsConfirmed === true;
   const assetId = optionalString(body.assetId, 80);
@@ -276,7 +276,7 @@ async function updateOwnerMetaItem(context: PortalContext, body: Body) {
   if (!isUuid(id)) throw new PortalHttpError(400, "Invalid publishing item.");
   const job = await loadJob(id);
   if (!job.owner_scope) throw new PortalHttpError(403, "Open client content in its tenant workspace.");
-  const action = enumValue(body.action, ["approve_meta_item", "cancel_meta_item", "publish_meta_item"], "Action");
+  const action = enumValue(body.action, ["approve_meta_item", "schedule_meta_item", "cancel_meta_item", "publish_meta_item"], "Action");
   if (action === "cancel_meta_item") {
     if (["published", "publishing"].includes(job.status)) throw new PortalHttpError(409, "A provider-confirmed or in-flight post cannot be canceled here.");
     const now = new Date().toISOString();
@@ -289,17 +289,34 @@ async function updateOwnerMetaItem(context: PortalContext, body: Body) {
     return { item: rows[0] };
   }
   const connection = await getOwnerConnection(null);
-  const scheduledFor = body.scheduledFor ? scheduledIso(body.scheduledFor, job.timezone) : job.scheduled_for;
   if (action === "approve_meta_item") {
     if (job.status !== "draft") throw new PortalHttpError(409, "Only a draft can be approved.");
     const now = new Date().toISOString();
     const rows = await supabaseServiceRoleRequest<MetaJobRow[]>(
       `/rest/v1/wovo_meta_publish_jobs?id=eq.${encodeURIComponent(id)}&status=eq.draft`,
-      { method: "PATCH", headers: { Prefer: "return=representation" }, body: JSON.stringify({ connection_id: connection?.id ?? null, status: "approved", approved_at: now, approved_by: context.user.id, scheduled_for: scheduledFor, updated_at: now }) },
+      { method: "PATCH", headers: { Prefer: "return=representation" }, body: JSON.stringify({ connection_id: connection?.id ?? null, status: "approved", approved_at: now, approved_by: context.user.id, scheduled_for: null, updated_at: now }) },
     );
     if (!rows?.[0]) throw new PortalHttpError(409, "This draft changed before approval.");
-    await revision({ sourceType: "meta_job", sourceId: id, accountId: null, ownerScope: true, actorUserId: context.user.id, action: scheduledFor ? "scheduled" : "approved", snapshot: rows[0] as unknown as Record<string, unknown> });
+    await revision({ sourceType: "meta_job", sourceId: id, accountId: null, ownerScope: true, actorUserId: context.user.id, action: "approved", snapshot: rows[0] as unknown as Record<string, unknown> });
     return { item: rows[0], providerReady: Boolean(connection) };
+  }
+  if (action === "schedule_meta_item") {
+    if (job.status !== "approved") throw new PortalHttpError(409, "Approve the exact draft before scheduling it.");
+    if (!connection || connection.status !== "healthy" || connection.kill_switch) {
+      throw new PortalHttpError(409, "Connect a healthy WOVO Meta account and turn off its publishing kill switch before scheduling.");
+    }
+    if (connection.action_policy === "draft_only") throw new PortalHttpError(409, "Change the WOVO Meta policy from Draft only before scheduling.");
+    const scheduledFor = scheduledIso(body.scheduledFor, job.timezone);
+    if (!scheduledFor || Date.parse(scheduledFor) < Date.now() + 60_000) throw new PortalHttpError(400, "Choose a schedule time at least one minute from now.");
+    if (Date.parse(scheduledFor) > Date.now() + 366 * 86_400_000) throw new PortalHttpError(400, "Choose a schedule time within the next year.");
+    const now = new Date().toISOString();
+    const rows = await supabaseServiceRoleRequest<MetaJobRow[]>(
+      `/rest/v1/wovo_meta_publish_jobs?id=eq.${encodeURIComponent(id)}&status=eq.approved`,
+      { method: "PATCH", headers: { Prefer: "return=representation" }, body: JSON.stringify({ connection_id: connection.id, status: "queued", scheduled_for: scheduledFor, updated_at: now }) },
+    );
+    if (!rows?.[0]) throw new PortalHttpError(409, "This approved post changed before it could be scheduled.");
+    await revision({ sourceType: "meta_job", sourceId: id, accountId: null, ownerScope: true, actorUserId: context.user.id, action: "scheduled", snapshot: rows[0] as unknown as Record<string, unknown> });
+    return { item: rows[0] };
   }
   if (!connection || connection.status !== "healthy" || connection.kill_switch) {
     throw new PortalHttpError(409, "Connect a healthy WOVO Meta account and turn off its publishing kill switch before publishing.");
@@ -344,7 +361,7 @@ export async function POST(request: Request) {
     requireOwner(context);
     const body = await request.json() as Body;
     if (body.action === "create_owner_item") return NextResponse.json(await createOwnerItem(request, context, body), { status: 201 });
-    if (["approve_meta_item", "cancel_meta_item", "publish_meta_item"].includes(String(body.action))) {
+    if (["approve_meta_item", "schedule_meta_item", "cancel_meta_item", "publish_meta_item"].includes(String(body.action))) {
       return NextResponse.json(await updateOwnerMetaItem(context, body));
     }
     throw new PortalHttpError(400, "Unknown publishing action.");

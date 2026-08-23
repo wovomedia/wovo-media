@@ -82,7 +82,8 @@ function date(value: string | null) {
 function Status({ value }: { value: string }) {
   const confirmed = ["published", "manual_posted", "completed"].includes(value);
   const blocked = ["failed", "canceled"].includes(value);
-  return <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold capitalize ${confirmed ? "bg-[#dff3e8] text-[#205b3b]" : blocked ? "bg-[#f7dfd9] text-[#8f301f]" : "bg-[#fff0c7] text-[#694616]"}`}>{human(value)}</span>;
+  const label = value === "draft" ? "verifying" : value;
+  return <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold capitalize ${confirmed ? "bg-[#dff3e8] text-[#205b3b]" : blocked ? "bg-[#f7dfd9] text-[#8f301f]" : "bg-[#fff0c7] text-[#694616]"}`}>{human(label)}</span>;
 }
 
 export default function OwnerPublishingCenter({
@@ -111,6 +112,7 @@ export default function OwnerPublishingCenter({
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showComposer, setShowComposer] = useState(true);
+  const [scheduleTimes, setScheduleTimes] = useState<Record<string, string>>({});
 
   const request = useCallback(async (url: string, init?: RequestInit) => {
     const token = (await getActiveSession())?.access_token;
@@ -210,7 +212,7 @@ export default function OwnerPublishingCenter({
           caption,
           hashtags: tags,
           destination,
-          scheduledFor: values.get("scheduledFor") || null,
+          scheduledFor: null,
           timezone: values.get("timezone"),
           presetAsset: selectedAccountId ? null : values.get("presetAsset"),
           assetId: selectedAccountId ? values.get("assetId") : null,
@@ -228,13 +230,13 @@ export default function OwnerPublishingCenter({
     } finally { setBusy(""); }
   }
 
-  async function metaAction(itemId: string, action: "approve_meta_item" | "cancel_meta_item" | "publish_meta_item") {
+  async function metaAction(itemId: string, action: "approve_meta_item" | "schedule_meta_item" | "cancel_meta_item" | "publish_meta_item", scheduledFor?: string) {
     setBusy(`${action}:${itemId}`); setError(""); setMessage("");
     try {
-      const response = await request("/api/portal/publishing", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, itemId }) });
+      const response = await request("/api/portal/publishing", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, itemId, scheduledFor }) });
       const result = await response.json() as { error?: string; providerPostId?: string };
       if (!response.ok) throw new Error(result.error || "The publishing action failed.");
-      setMessage(result.providerPostId ? "Meta confirmed the post. The provider ID is now in the ledger." : action === "approve_meta_item" ? "The exact draft is approved. Provider delivery still follows the connection policy." : "The item was canceled and retained in history.");
+      setMessage(result.providerPostId ? "Meta confirmed the post. The provider ID is now in the ledger." : action === "approve_meta_item" ? "Verified and approved. Choose its publish time next." : action === "schedule_meta_item" ? "Scheduled. WOVO automation will deliver it at that time and record Meta proof." : "The item was canceled and retained in history.");
       await load();
     } catch (reason) { setError(reason instanceof Error ? reason.message : "The publishing action failed."); }
     finally { setBusy(""); }
@@ -246,12 +248,12 @@ export default function OwnerPublishingCenter({
         <div className="bg-[#191714] p-5 text-white sm:p-7">
           <p className="text-xs font-bold uppercase tracking-[.16em] text-[#ff8c70]">Owner composer</p>
           <h2 className="mt-3 text-3xl font-medium tracking-[-.035em]">One clear path from idea to proof.</h2>
-          <p className="mt-3 max-w-md text-sm leading-6 text-white/65">Create an exact draft, attach approved media, schedule it, then approve. WOVO records the version and never calls it published until the provider confirms.</p>
+          <p className="mt-3 max-w-md text-sm leading-6 text-white/65">Create an exact draft, verify and approve it, then choose its publish time. WOVO records every step and never calls it published until Meta confirms.</p>
           <button type="button" className="mt-6 min-h-11 rounded-xl bg-[#fffdf8] px-4 text-sm font-bold text-[#191714] lg:hidden" onClick={() => setShowComposer((value) => !value)}>{showComposer ? "Hide composer" : "Open composer"}</button>
           <div className="mt-7 grid gap-2 text-xs sm:grid-cols-3 lg:grid-cols-1">
-            <div className="rounded-xl border border-white/10 bg-white/[.06] p-3"><strong className="block text-white">Composer</strong><span className="mt-1 block text-white/60">Ready for WOVO and client drafts</span></div>
-            <div className="rounded-xl border border-white/10 bg-white/[.06] p-3"><strong className="block text-white">Approval log</strong><span className="mt-1 block text-white/60">Versioned and retained</span></div>
-            <div className="rounded-xl border border-white/10 bg-white/[.06] p-3"><strong className="block text-white">Provider delivery</strong><span className="mt-1 block text-white/60">{ownerConnection?.status === "healthy" ? `${ownerConnection.page_name} connected` : "Requires a healthy Meta connection"}</span></div>
+            <div className="rounded-xl border border-white/10 bg-white/[.06] p-3"><strong className="block text-white">1 · Verifying</strong><span className="mt-1 block text-white/60">Review the exact caption and media</span></div>
+            <div className="rounded-xl border border-white/10 bg-white/[.06] p-3"><strong className="block text-white">2 · Schedule</strong><span className="mt-1 block text-white/60">Owner chooses the delivery time</span></div>
+            <div className="rounded-xl border border-white/10 bg-white/[.06] p-3"><strong className="block text-white">3 · Publish</strong><span className="mt-1 block text-white/60">{ownerConnection?.status === "healthy" ? `${ownerConnection.page_name} connected` : "Requires a healthy Meta connection"}</span></div>
           </div>
         </div>
         {showComposer ? <form className="p-5 sm:p-7" onSubmit={submit}>
@@ -264,12 +266,11 @@ export default function OwnerPublishingCenter({
           <label className="mt-4 block text-sm font-bold">Caption<textarea required maxLength={5000} className={`${field} mt-1 min-h-32 py-3`} value={caption} onChange={(event) => setCaption(event.target.value)} placeholder="Write the exact caption the audience will see." /></label>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <label className="text-sm font-bold">Relevant hashtags<input maxLength={500} className={`${field} mt-1`} value={tags} onChange={(event) => setTags(event.target.value)} placeholder="wovomedia localmarketing" /></label>
-            <label className="text-sm font-bold">Schedule (optional)<input type="datetime-local" name="scheduledFor" className={`${field} mt-1`} /></label>
             <label className="text-sm font-bold">Timezone<select name="timezone" className={`${field} mt-1`} defaultValue="America/Chicago"><option value="America/Chicago">Central time</option><option value="America/New_York">Eastern time</option><option value="America/Denver">Mountain time</option><option value="America/Los_Angeles">Pacific time</option></select></label>
             {selectedAccountId ? <label className="text-sm font-bold">Approved client media<select name="assetId" className={`${field} mt-1`} defaultValue=""><option value="">Caption-only draft</option>{selectedAssets.map((asset) => <option key={asset.id} value={asset.id}>{asset.file_name}</option>)}</select></label> : <label className="text-sm font-bold">WOVO-owned media<select name="presetAsset" className={`${field} mt-1`} defaultValue={destination === "instagram" ? "cover" : ""}><option value="">Caption only (Facebook)</option><option value="cover">WOVO social cover</option><option value="editorial">WOVO editorial background</option></select></label>}
           </div>
           <label className="mt-4 flex items-start gap-3 rounded-xl border border-[#191714]/10 bg-[#f7f2e9] p-3 text-sm"><input required type="checkbox" name="rightsConfirmed" className="mt-1 size-4" /><span><strong>I confirm WOVO or this client owns or may use the selected media.</strong><span className="mt-1 block text-xs leading-5 text-[#655f56]">Any recognizable person must also have consented. Saving creates a private draft only.</span></span></label>
-          <div className="mt-5 flex flex-wrap items-center gap-3"><button disabled={busy === "create"} className={primary}>{busy === "create" ? "Saving…" : "Save private draft"}</button><span className="text-xs text-[#756e64]">Approval and publishing are separate actions.</span></div>
+          <div className="mt-5 flex flex-wrap items-center gap-3"><button disabled={busy === "create"} className={primary}>{busy === "create" ? "Saving…" : "Send to verification"}</button><span className="text-xs text-[#756e64]">Scheduling appears only after owner approval.</span></div>
         </form> : null}
       </div>
     </section>
@@ -290,8 +291,8 @@ export default function OwnerPublishingCenter({
           </div>
           <div className="mt-4 grid gap-2 rounded-xl bg-[#f7f2e9] p-3 text-xs leading-5 text-[#655f56] sm:grid-cols-2 lg:grid-cols-4"><p><strong className="block text-[#191714]">Policy</strong>{item.policy}</p><p><strong className="block text-[#191714]">Topic</strong>{item.topic}</p><p><strong className="block text-[#191714]">Provider proof</strong>{item.providerId || "None yet"}</p><p><strong className="block text-[#191714]">Result</strong>{item.publishedAt ? `Confirmed ${date(item.publishedAt)}` : item.lastError || "Awaiting action"}</p></div>
           <div className="mt-4 flex flex-wrap gap-2">
-            {item.kind === "meta" && item.status === "draft" ? <button className={primary} disabled={busy.endsWith(item.id)} onClick={() => void metaAction(item.id, "approve_meta_item")}>Approve exact draft</button> : null}
-            {item.kind === "meta" && item.status === "approved" ? <button className={primary} disabled={busy.endsWith(item.id)} onClick={() => void metaAction(item.id, "publish_meta_item")}>Publish now</button> : null}
+            {item.kind === "meta" && item.status === "draft" ? <button className={primary} disabled={busy.endsWith(item.id)} onClick={() => void metaAction(item.id, "approve_meta_item")}>Verify &amp; approve</button> : null}
+            {item.kind === "meta" && item.status === "approved" ? <div className="flex w-full flex-col gap-2 rounded-xl border border-[#f05a3a]/20 bg-[#f05a3a]/[.06] p-3 sm:w-auto sm:flex-row"><label className="text-xs font-bold text-[#655f56]">Publish time<input aria-label={`Schedule ${item.title}`} type="datetime-local" className={`${field} mt-1 sm:w-60`} value={scheduleTimes[item.id] ?? ""} onChange={(event) => setScheduleTimes((current) => ({ ...current, [item.id]: event.target.value }))} /></label><button className={`${primary} self-end`} disabled={busy.endsWith(item.id) || !scheduleTimes[item.id]} onClick={() => void metaAction(item.id, "schedule_meta_item", scheduleTimes[item.id])}>Schedule post</button></div> : null}
             {item.kind === "meta" && !["published", "publishing", "canceled"].includes(item.status) ? <button className={secondary} disabled={busy.endsWith(item.id)} onClick={() => void metaAction(item.id, "cancel_meta_item")}>Cancel</button> : null}
             {item.kind === "client" && item.status === "draft" && item.accountId ? <button className={primary} onClick={() => void onPortalAction({ action: "update_content", accountId: item.accountId, contentId: item.id, status: "approved" }, `${item.title} approved with an immutable snapshot.`)}>Approve for client queue</button> : null}
             {item.kind === "client" && ["approved", "queued"].includes(item.status) && item.accountId ? <button className={primary} onClick={() => void onPortalAction({ action: "update_content", accountId: item.accountId, contentId: item.id, status: "manual_posted" }, `${item.title} marked manually posted.`)}>Confirm manually posted</button> : null}

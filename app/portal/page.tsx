@@ -183,10 +183,7 @@ export default function PortalPage() {
       snapshot.setup.expansion.websiteHostingCheckoutReady ? "website_hosting" : "",
       snapshot.setup.expansion.personalAssistantCheckoutReady ? "personal_ai_assistant" : "",
     ].filter(Boolean)} busy={busy} error={error} onSubmit={async (payload) => {
-      const result = await action(payload, "Your private workspace plan is saved.") as { account?: PortalAccount } | null;
-      if (result?.account && snapshot.setup.billingOptions.length) {
-        await action({ action: "start_checkout", accountId: result.account.id, purchaseType: "subscription", planConfirmed: true, billingFrequency: payload.billingFrequency }, "Opening secure Stripe checkout.");
-      }
+      await action(payload, "Your private workspace plan is saved. Your personalized preview is ready.");
     }} />;
   }
 
@@ -313,11 +310,12 @@ export default function PortalPage() {
   if (snapshot.mode === "client" && account && !isPaid) {
     return (
       <main className="min-h-screen bg-[#f3efe6] p-4 text-[#191714] sm:p-8">
-        <div className="mx-auto max-w-4xl">
+        <div className="mx-auto max-w-6xl">
           <div className="flex items-center justify-between gap-4"><WovoLogo variant="full" size={144} className="" /><button className={secondaryButton} onClick={() => void signOut()}>Sign out</button></div>
-          <div className="mt-10"><BillingCard snapshot={snapshot} account={account} busy={busy} onAction={action} /></div>
+          <UnpaidWorkspacePreview account={account} />
+          <div id="activate" className="scroll-mt-6"><BillingCard snapshot={snapshot} account={account} busy={busy} onAction={action} /></div>
           {error ? <p role="alert" className="rounded-xl border border-[#b42318]/25 bg-[#fff1ed] p-4 text-sm text-[#8f2118]">{error}</p> : null}
-          <p className="mt-5 text-center text-sm text-[#7a7369]">The private content, calendar, uploads, bookings, and support workspace opens after Stripe confirms an active subscription or an owner-approved temporary access grant.</p>
+          <p className="mt-5 text-center text-sm text-[#7a7369]">Your preview stays available. Private generation, exports, scheduling, publishing, uploads, and support open after Stripe confirms an active subscription or an owner-approved temporary access grant.</p>
         </div>
       </main>
     );
@@ -508,13 +506,38 @@ function BillingCard({ snapshot, account, busy, onAction }: { snapshot: PortalSn
     <section className={`${cardClass} mb-5 border-[#f05a3a]/20`}>
       <div className="grid gap-6 lg:grid-cols-[1fr_360px] lg:items-start">
         <div className="max-w-2xl">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#d94326]">Activate WOVO Workspace</p>
-          <h2 className="mt-2 text-3xl font-semibold tracking-[-.03em]">Choose how often you pay.</h2>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#d94326]">Keep building this workspace</p>
+          <h2 className="mt-2 text-3xl font-semibold tracking-[-.03em]">Your preview is ready. Unlock the working version.</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-[#5f574e]">Includes your industry-specific brand profile, weekly planning workflow, approval/manual posting queue, private asset library, calendar, private team inbox, and one assigned WOVO representative for consultations. Automatic social publishing and human production labor are not included.</p>
           <p className="mt-2 text-sm text-[#655f56]">Separate paid add-ons or quotes: in-person shoots, drone work, bespoke website creation, custom editing, extra participants, and additional staff time.</p>
           <p className="mt-3 text-xs leading-5 text-[#7a7369]">Stripe displays the final price and renewal cadence before payment. Cancel future renewal from the visible Manage billing button; timing of access and refund eligibility follow the posted policy and Stripe checkout terms.</p>
         </div>
         <div className="rounded-2xl border border-[#191714]/10 bg-[#f7f2e9] p-4"><BillingPeriodSelector options={snapshot.setup.billingOptions} value={selected?.frequency ?? "monthly"} onChange={setBillingFrequency} /><div className="mt-4 flex items-end justify-between border-t border-[#191714]/10 pt-4"><span className="text-xs font-semibold text-[#655f56]">Due today</span><strong className="text-3xl">{selected ? formatMoney(selected.amountCents) : "—"}</strong></div><button disabled={!selected || busy === "start_checkout"} onClick={() => void onAction({ action: "start_checkout", accountId: account.id, purchaseType: "subscription", planConfirmed: true, billingFrequency: selected?.frequency }, "Opening secure Stripe checkout.")} className={`${primaryButton} mt-4 w-full`}>{selected ? "Continue to secure checkout" : "Billing setup required"}</button></div>
+      </div>
+    </section>
+  );
+}
+
+function UnpaidWorkspacePreview({ account }: { account: PortalAccount }) {
+  const platforms = account.preferred_platforms.length ? account.preferred_platforms : ["Instagram", "Facebook"];
+  const modules = account.onboarding_plan?.coreModules?.length ? account.onboarding_plan.coreModules : ["Weekly plan", "Content review", "Brand workspace"];
+  const audience = account.audience || "Your best-fit customers";
+  const voice = account.brand_voice || "Clear, recognizable, and consistent";
+  return (
+    <section className="py-10 sm:py-14">
+      <div className="grid gap-6 lg:grid-cols-[.8fr_1.2fr] lg:items-stretch">
+        <div className="rounded-[28px] bg-[#191714] p-6 text-white shadow-[0_28px_90px_rgba(25,23,20,.2)] sm:p-8">
+          <p className="text-xs font-bold uppercase tracking-[.18em] text-[#ff8c70]">Personalized workspace preview</p>
+          <h1 className="mt-4 text-4xl font-medium leading-[1.02] tracking-[-.045em] sm:text-5xl">See {account.business_name} inside WOVO before paying.</h1>
+          <p className="mt-5 max-w-xl text-sm leading-6 text-white/65">This private preview uses the details you just supplied. Explore the shape of your weekly system first; payment only unlocks generation, exports, scheduling, publishing, and team support.</p>
+          <div className="mt-8 flex flex-wrap gap-2">{platforms.map((platform) => <span key={platform} className="rounded-full border border-white/12 bg-white/[.06] px-3 py-2 text-xs font-semibold text-white/75">{platform}</span>)}</div>
+          <a href="#activate" className="mt-8 inline-flex min-h-12 items-center justify-center rounded-xl bg-[#f05a3a] px-5 text-sm font-bold text-[#191714]">Unlock this workspace</a>
+        </div>
+        <div className="overflow-hidden rounded-[28px] border border-[#191714]/10 bg-[#fffdf8] shadow-[0_28px_90px_rgba(25,23,20,.12)]">
+          <div className="flex items-center justify-between border-b border-[#191714]/10 px-5 py-4 sm:px-7"><div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-[#d94326]">This week</p><h2 className="mt-1 text-2xl font-semibold">{account.business_name}</h2></div><span className="rounded-full bg-[#f05a3a]/10 px-3 py-2 text-xs font-bold text-[#a9341f]">Preview mode</span></div>
+          <div className="grid gap-4 p-5 sm:grid-cols-3 sm:p-7">{modules.slice(0, 3).map((module, index) => <article key={module} className="rounded-2xl border border-[#191714]/10 bg-[#f7f2e9] p-4"><span className="text-xs font-bold text-[#d94326]">0{index + 1}</span><h3 className="mt-5 font-bold capitalize">{module.replaceAll("_", " ")}</h3><p className="mt-2 text-xs leading-5 text-[#655f56]">Set up and personalized from your onboarding answers.</p></article>)}</div>
+          <div className="grid gap-4 border-t border-[#191714]/10 p-5 sm:grid-cols-2 sm:p-7"><div className="rounded-2xl bg-[#191714] p-5 text-white"><p className="text-[10px] font-bold uppercase tracking-[.14em] text-[#ff8c70]">Brand direction</p><p className="mt-3 text-lg font-semibold">{voice}</p><p className="mt-2 text-sm leading-6 text-white/55">Audience: {audience}</p></div><div className="rounded-2xl border border-dashed border-[#f05a3a]/45 bg-[#f05a3a]/[.06] p-5"><p className="text-[10px] font-bold uppercase tracking-[.14em] text-[#d94326]">Sample output</p><h3 className="mt-3 text-lg font-semibold">Your first content week</h3><p className="mt-2 text-sm leading-6 text-[#655f56]">A branded plan with {account.posting_cadence_per_week} post{account.posting_cadence_per_week === 1 ? "" : "s"} per week, review checkpoints, and platform-ready scheduling.</p><span className="mt-4 inline-flex rounded-full border border-[#191714]/10 bg-white px-3 py-2 text-xs font-bold">Preview only · no credits used</span></div></div>
+        </div>
       </div>
     </section>
   );

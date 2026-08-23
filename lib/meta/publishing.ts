@@ -19,7 +19,7 @@ export type MetaConnection = {
 
 export type MetaPublishJob = {
   id: string; connection_id: string; destination: string; caption: string; media_url: string | null;
-  attempt_count: number; scheduled_for?: string | null;
+  attempt_count: number; scheduled_for?: string | null; source?: string;
 };
 
 const AUTOMATION_DELIVERY_WINDOW_MS = 75 * 60 * 1000;
@@ -146,13 +146,16 @@ export async function processMetaPublishJobs(limit = 3, options: { now?: Date } 
   // worker from bursting old scheduled posts after an outage. Those items remain
   // visible in the owner ledger for an explicit reschedule or cancellation.
   const jobs = await supabaseServiceRoleRequest<MetaPublishJob[]>(
-    `/rest/v1/wovo_meta_publish_jobs?select=id,connection_id,destination,caption,media_url,attempt_count,scheduled_for&connection_id=not.is.null&source=eq.scheduled_automation&status=in.(approved,queued)&scheduled_for=not.is.null&scheduled_for=gte.${encodeURIComponent(recentCutoff)}&scheduled_for=lte.${encodeURIComponent(now)}&order=scheduled_for.asc&limit=${Math.max(1, Math.min(limit, 6))}`,
+    `/rest/v1/wovo_meta_publish_jobs?select=id,connection_id,destination,caption,media_url,attempt_count,scheduled_for,source&connection_id=not.is.null&source=in.(scheduled_automation,manual)&status=eq.queued&scheduled_for=not.is.null&scheduled_for=gte.${encodeURIComponent(recentCutoff)}&scheduled_for=lte.${encodeURIComponent(now)}&order=scheduled_for.asc&limit=${Math.max(1, Math.min(limit, 6))}`,
   );
   let published = 0;
   const failures: Array<{ jobId: string; code: string }> = [];
   for (const job of jobs ?? []) {
     try {
-      await publishMetaJob(job);
+      // A queued job reaches this worker only after the owner approved the exact
+      // version and selected its publish time. Treat that durable approval as the
+      // explicit action; generated drafts never enter this state automatically.
+      await publishMetaJob(job, { explicitApproval: true });
       published += 1;
     } catch (error) {
       failures.push({ jobId: job.id, code: safeProviderErrorCode(error) });
@@ -220,7 +223,7 @@ export async function enqueueWovoDailyImagePost(options: { force?: boolean; now?
         created_by: connection.connected_by,
         idempotency_key: idempotencyKey,
         destination,
-        status: "queued",
+        status: "draft",
         source: "scheduled_automation",
         caption: creative.caption,
         topic: creative.campaignKey,
@@ -234,10 +237,10 @@ export async function enqueueWovoDailyImagePost(options: { force?: boolean; now?
         creative_kicker: creative.kicker,
         creative_headline: creative.headline,
         creative_cta: creative.cta,
-        approved_at: new Date().toISOString(),
-        approved_by: connection.connected_by,
+        approved_at: null,
+        approved_by: null,
         rights_confirmed: true,
-        scheduled_for: new Date().toISOString(),
+        scheduled_for: null,
       }),
     });
     const job = created?.[0];
