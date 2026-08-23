@@ -41,10 +41,11 @@ export function cartoonSeriesPriceAllowlist(): string[] {
 
 export function cartoonProviderStatus() {
   const videoVerified = getEnv("WOVO_CARTOON_VIDEO_PROVIDER_VERIFIED") === "true";
+  const falConfigured = Boolean(getEnv("FAL_KEY") || getEnv("FAL_API_KEY"));
   return {
     text: Boolean(getEnv("OPENAI_API_KEY")),
-    video: Boolean(getEnv("OPENAI_API_KEY")) && getEnv("WOVO_CARTOON_VIDEO_ENABLED") === "true" && videoVerified,
+    video: falConfigured && getEnv("WOVO_CARTOON_VIDEO_ENABLED") === "true" && videoVerified,
     textModel: getEnv("WOVO_CARTOON_TEXT_MODEL") || "gpt-5.6-luna",
-    videoModel: videoVerified ? (getEnv("WOVO_CARTOON_VIDEO_MODEL") || "provider_not_configured") : "provider_not_verified",
+    videoModel: videoVerified ? (getEnv("WOVO_CARTOON_VIDEO_MODEL") || "fal-ai/longcat-video/text-to-video/720p") : "provider_not_verified",
   };
 }

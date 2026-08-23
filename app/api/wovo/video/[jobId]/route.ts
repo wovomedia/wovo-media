@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { downloadSoraVideoContent, getSoraJobStatus } from "@/lib/wovo-ai/sora";
+import { downloadFalVideo, getFalVideoJob } from "@/lib/wovo-ai/fal-video";
+import { getEnv } from "@/lib/env";
 import { requireServerUser, supabaseServiceRoleRequest } from "@/lib/supabase/server";
 import { asRecord, asString, isEligibleFeedPost } from "@/lib/wovo-ai/feed-utils";
 
@@ -37,6 +39,17 @@ function normalizeJobStatus(status: string): string {
 
 function getInternalResultUrl(jobId: string): string {
   return `/api/wovo/video/${encodeURIComponent(jobId)}?content=1`;
+}
+
+function adminStorage() {
+  const url = getEnv("NEXT_PUBLIC_SUPABASE_URL");
+  const key = getEnv("SUPABASE_SECRET_KEY") || getEnv("SUPABASE_SERVICE_ROLE_KEY");
+  if (!url || !key) throw new Error("VIDEO_STORAGE_NOT_CONFIGURED");
+  return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+}
+
+function storagePath(row: VideoJobRow) {
+  return `${row.user_id}/generated/video/${row.id}.mp4`;
 }
 
 function isDemoVideoJob(row: VideoJobRow): boolean {
@@ -122,12 +135,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ jobI
         return NextResponse.json({ error: "Video is not ready yet." }, { status: 409 });
       }
 
-      const content = await downloadSoraVideoContent(row.provider_job_id);
-      return new Response(content.bytes, {
+      const stored = await adminStorage().storage.from("wovo-portal-assets").download(storagePath(row));
+      if (stored.error || !stored.data) return NextResponse.json({ error: "Video file is unavailable." }, { status: 404 });
+      return new Response(await stored.data.arrayBuffer(), {
         status: 200,
         headers: {
-          "Content-Type": content.contentType,
-          "Content-Disposition": content.contentDisposition,
+          "Content-Type": "video/mp4",
+          "Content-Disposition": `inline; filename="${row.id}.mp4"`,
           "Cache-Control": "private, max-age=60",
         },
       });
@@ -152,10 +166,23 @@ export async function GET(request: Request, { params }: { params: Promise<{ jobI
     }
 
     try {
-      const status = await getSoraJobStatus(row.provider_job_id);
+      const model = asString(asRecord(row.result_payload).model);
+      if (row.provider !== "fal" || !model) throw new Error("VIDEO_PROVIDER_JOB_INVALID");
+      const status = await getFalVideoJob(model, row.provider_job_id);
       const normalized = normalizeJobStatus(status.status);
       const resultUrl = normalized === "completed" ? getInternalResultUrl(jobId) : row.result_url;
-      const failureMessage = normalized === "failed" ? String(status.raw.error?.message ?? "Sora job failed.") : null;
+      const failureMessage = normalized === "failed" ? "Video provider could not complete this render." : null;
+      if (normalized === "completed") {
+        const remoteUrl = status.data?.video?.url;
+        if (!remoteUrl) throw new Error("FAL_VIDEO_RESULT_MISSING");
+        const content = await downloadFalVideo(remoteUrl);
+        const uploaded = await adminStorage().storage.from("wovo-portal-assets").upload(
+          storagePath(row),
+          new Uint8Array(content.bytes),
+          { contentType: "video/mp4", upsert: false },
+        );
+        if (uploaded.error && !uploaded.error.message.toLowerCase().includes("already exists")) throw uploaded.error;
+      }
 
       const patchRows = await supabaseServiceRoleRequest<VideoJobRow[]>(
         `/rest/v1/video_jobs?select=id,user_id,status,provider,provider_job_id,result_url,result_payload,error,updated_at,created_at&id=eq.${encodeURIComponent(jobId)}&user_id=eq.${encodeURIComponent(user.id)}`,
@@ -165,7 +192,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ jobI
           body: JSON.stringify({
             status: normalized,
             result_url: resultUrl,
-            result_payload: status.raw,
+            result_payload: { ...asRecord(row.result_payload), providerCompleted: normalized === "completed" },
             error: failureMessage,
             updated_at: new Date().toISOString(),
           }),
@@ -176,7 +203,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ jobI
     } catch (pollError) {
       return NextResponse.json({
         job: row,
-        warning: pollError instanceof Error ? pollError.message : "Unable to refresh Sora job state.",
+        warning: pollError instanceof Error ? pollError.message : "Unable to refresh video job state.",
       });
     }
   } catch (error) {
@@ -184,7 +211,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ jobI
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unable to load Sora job." },
+      { error: error instanceof Error ? error.message : "Unable to load video job." },
       { status: 500 },
     );
   }

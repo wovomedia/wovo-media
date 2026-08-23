@@ -6,6 +6,7 @@ import OpenAI from "openai";
 import { getEnv } from "@/lib/env";
 import { cartoonProviderStatus } from "@/lib/portal/cartoon-series";
 import { supabaseServiceRoleRequest } from "@/lib/supabase/server";
+import { createFalVideoJob, downloadFalVideo, getFalVideoJob } from "@/lib/wovo-ai/fal-video";
 
 export type CartoonSeriesRow = {
   id: string;
@@ -197,43 +198,41 @@ async function writeAndQueueVideo(series: CartoonSeriesRow, episode: CartoonEpis
     text: { format: { type: "json_schema", name: "wovo_cartoon_episode", strict: true, schema: episodeSchema() } },
   }, { idempotencyKey: `wovo-cartoon-script-${episode.id}` });
   const draft = JSON.parse(response.output_text) as { title: string; premise: string; script: string; storyboard: Array<Record<string, unknown>>; caption: string; videoPrompt: string };
-  const video = await client.videos.create({
-    model: providers.videoModel,
-    seconds: "8",
-    size: "720x1280",
+  const video = await createFalVideoJob({
+    durationSeconds: 8,
     prompt: `${draft.videoPrompt}\n\nOriginal fictional cartoon only. Series character: ${series.character_name}. Visual direction: ${series.style_direction}. Exclude: ${series.do_not_include || "logos or protected characters not supplied by the client"}. No photorealistic real person. No on-screen private information.`,
-  }, { idempotencyKey: `wovo-cartoon-video-${episode.id}` });
+  });
   await supabaseServiceRoleRequest(`/rest/v1/wovo_cartoon_episode_jobs?id=eq.${encodeURIComponent(episode.id)}`, {
     method: "PATCH",
     headers: { Prefer: "return=minimal" },
     body: JSON.stringify({
-      status: video.status === "completed" ? "video_rendering" : "video_queued",
+      status: "video_queued",
       title: draft.title,
       premise: draft.premise,
       script: draft.script,
       storyboard: draft.storyboard,
       caption: draft.caption,
       video_prompt: draft.videoPrompt,
-      provider: "openai",
+      provider: "fal",
       provider_model: video.model,
-      provider_video_id: video.id,
+      provider_video_id: video.providerJobId,
       provider_request_id: response.id,
       next_attempt_at: new Date(Date.now() + 10 * 60_000).toISOString(),
       updated_at: new Date().toISOString(),
     }),
   });
-  return video.id;
+  return video.providerJobId;
 }
 
 async function finalizeVideo(episode: CartoonEpisodeRow) {
   if (!episode.provider_video_id) return false;
-  const client = new OpenAI({ apiKey: getEnv("OPENAI_API_KEY"), timeout: 60_000, maxRetries: 1 });
-  const video = await client.videos.retrieve(episode.provider_video_id);
+  if (episode.provider !== "fal" || !episode.provider_model) throw new Error("CARTOON_VIDEO_PROVIDER_INVALID");
+  const video = await getFalVideoJob(episode.provider_model, episode.provider_video_id);
   if (video.status === "failed") {
     await supabaseServiceRoleRequest(`/rest/v1/wovo_cartoon_episode_jobs?id=eq.${encodeURIComponent(episode.id)}`, {
       method: "PATCH",
       headers: { Prefer: "return=minimal" },
-      body: JSON.stringify({ status: "failed", last_error_code: video.error?.code ?? "VIDEO_GENERATION_FAILED", last_error_summary: "The video provider could not render this episode. No post was published.", updated_at: new Date().toISOString() }),
+      body: JSON.stringify({ status: "failed", last_error_code: "VIDEO_GENERATION_FAILED", last_error_summary: "The video provider could not render this episode. No post was published.", updated_at: new Date().toISOString() }),
     });
     return false;
   }
@@ -245,8 +244,10 @@ async function finalizeVideo(episode: CartoonEpisodeRow) {
     });
     return false;
   }
-  const response = await client.videos.downloadContent(video.id);
-  const bytes = new Uint8Array(await response.arrayBuffer());
+  const remoteUrl = video.data?.video?.url;
+  if (!remoteUrl) throw new Error("CARTOON_VIDEO_RESULT_MISSING");
+  const downloaded = await downloadFalVideo(remoteUrl);
+  const bytes = new Uint8Array(downloaded.bytes);
   if (!bytes.length || bytes.length > 100 * 1024 * 1024) throw new Error("CARTOON_VIDEO_SIZE_INVALID");
   const bucket = "wovo-portal-assets";
   const path = `${episode.account_id}/generated/cartoon/${episode.id}.mp4`;
@@ -262,7 +263,7 @@ async function finalizeVideo(episode: CartoonEpisodeRow) {
       storage_path: path,
       mime_type: "video/mp4",
       size_bytes: bytes.length,
-      actual_cost_micros: 800000,
+      actual_cost_micros: 320000,
       generated_at: new Date().toISOString(),
       next_attempt_at: null,
       last_error_code: null,

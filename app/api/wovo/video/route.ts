@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
 import { guardAiRequest, toAiGuardErrorResponse } from "@/lib/wovo-ai/request-guard";
-import { createSoraEditJob, createSoraJob } from "@/lib/wovo-ai/sora";
+import { createFalVideoJob } from "@/lib/wovo-ai/fal-video";
 import { requireServerUser, supabaseServiceRoleRequest } from "@/lib/supabase/server";
 import { asRecord, asString, extractVideoJobIdFromPath, isUuid } from "@/lib/wovo-ai/feed-utils";
 import { resolveUserEmail } from "@/lib/wovo-ai/admin";
@@ -135,34 +136,28 @@ export async function POST(request: Request) {
     }
 
     if (remixMode === "replace_dance") {
-      if (!sourceOutputId || !isUuid(sourceOutputId)) {
-        return NextResponse.json({ error: "A valid source output is required for replace-dance mode." }, { status: 400 });
-      }
+      return NextResponse.json({ error: "Dance replacement is temporarily unavailable while WOVO verifies a consent-safe provider." }, { status: 503 });
     }
 
-    const sourceVideo = remixMode === "replace_dance" ? await resolveSourceVideo(guard.userId, sourceOutputId) : null;
+    const sourceVideo = null;
 
-    const soraJob =
-      remixMode === "replace_dance" && sourceVideo
-        ? await createSoraEditJob({
-            prompt,
-            sourceProviderVideoId: sourceVideo.sourceProviderVideoId,
-          })
-        : await createSoraJob({
-            prompt,
-            durationSeconds: body.durationSeconds,
-            inputReferenceImageUrl: remixMode === "animate_image" ? inputReferenceImage : undefined,
-          });
-    const provider = "sora";
-    const providerJobId = soraJob.providerJobId;
-    const providerStatus = soraJob.status;
+    const falJob = await createFalVideoJob({
+      prompt,
+      durationSeconds: body.durationSeconds,
+      inputReferenceImageUrl: remixMode === "animate_image" ? inputReferenceImage : undefined,
+    });
+    const provider = "fal";
+    const providerJobId = falJob.providerJobId;
+    const providerStatus = falJob.status;
     const providerResultUrl: string | null = null;
-    const providerPayload = asRecord(soraJob.raw);
+    const providerPayload = { model: falJob.model, durationSeconds: falJob.seconds };
+    const jobId = randomUUID();
 
     const rows = await supabaseServiceRoleRequest<VideoJobRow[]>("/rest/v1/video_jobs?select=id,status,provider,provider_job_id,result_url,created_at", {
       method: "POST",
       headers: { Prefer: "return=representation" },
       body: JSON.stringify({
+        id: jobId,
         user_id: guard.userId,
         provider,
         provider_job_id: providerJobId,
@@ -173,7 +168,7 @@ export async function POST(request: Request) {
           ...providerPayload,
           remixMode,
           sourceOutputId: sourceOutputId || null,
-          sourceVideoJobId: sourceVideo?.sourceVideoJobId ?? null,
+          sourceVideoJobId: null,
           hasInputReferenceImage: remixMode === "animate_image" ? Boolean(inputReferenceImage) : false,
         },
       }),
@@ -190,7 +185,7 @@ export async function POST(request: Request) {
     const guardResponse = toAiGuardErrorResponse(error);
     if (guardResponse) return guardResponse;
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unable to create Sora video job." },
+      { error: error instanceof Error ? error.message : "Unable to create video job." },
       { status: 500 },
     );
   }
