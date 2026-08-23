@@ -312,7 +312,7 @@ export default function PortalPage() {
       <main className="min-h-screen bg-[#f3efe6] p-4 text-[#191714] sm:p-8">
         <div className="mx-auto max-w-6xl">
           <div className="flex items-center justify-between gap-4"><WovoLogo variant="full" size={144} className="" /><button className={secondaryButton} onClick={() => void signOut()}>Sign out</button></div>
-          <UnpaidWorkspacePreview account={account} />
+          <UnpaidWorkspacePreview account={account} authedFetch={authedFetch} />
           <div id="activate" className="scroll-mt-6"><BillingCard snapshot={snapshot} account={account} busy={busy} onAction={action} /></div>
           {error ? <p role="alert" className="rounded-xl border border-[#b42318]/25 bg-[#fff1ed] p-4 text-sm text-[#8f2118]">{error}</p> : null}
           <p className="mt-5 text-center text-sm text-[#7a7369]">Your preview stays available. Private generation, exports, scheduling, publishing, uploads, and support open after Stripe confirms an active subscription or an owner-approved temporary access grant.</p>
@@ -518,25 +518,61 @@ function BillingCard({ snapshot, account, busy, onAction }: { snapshot: PortalSn
   );
 }
 
-function UnpaidWorkspacePreview({ account }: { account: PortalAccount }) {
+function UnpaidWorkspacePreview({ account, authedFetch }: { account: PortalAccount; authedFetch: (url: string, init?: RequestInit) => Promise<Response> }) {
+  const [prompt, setPrompt] = useState(`A polished vertical social video for ${account.business_name}, made for ${account.audience || "their ideal audience"}, with a ${account.brand_voice || "clear and confident"} tone.`);
+  const [status, setStatus] = useState("");
+  const [previewUrl, setPreviewUrl] = useState("");
+  const [previewError, setPreviewError] = useState("");
+  const [creating, setCreating] = useState(false);
   const platforms = account.preferred_platforms.length ? account.preferred_platforms : ["Instagram", "Facebook"];
-  const modules = account.onboarding_plan?.coreModules?.length ? account.onboarding_plan.coreModules : ["Weekly plan", "Content review", "Brand workspace"];
   const audience = account.audience || "Your best-fit customers";
   const voice = account.brand_voice || "Clear, recognizable, and consistent";
+  useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
+
+  async function pollVideo(id: string) {
+    for (let attempt = 0; attempt < 60; attempt += 1) {
+      const response = await authedFetch(`/api/wovo/video/${encodeURIComponent(id)}`);
+      const payload = await response.json() as { job?: { status?: string }; error?: string };
+      if (!response.ok) throw new Error(payload.error ?? "Unable to check the preview render.");
+      const nextStatus = payload.job?.status ?? "processing";
+      setStatus(nextStatus);
+      if (nextStatus === "completed") {
+        const content = await authedFetch(`/api/wovo/video/${encodeURIComponent(id)}?content=1`);
+        if (!content.ok) throw new Error("The preview rendered but could not be loaded.");
+        setPreviewUrl(URL.createObjectURL(await content.blob()));
+        return;
+      }
+      if (nextStatus === "failed") throw new Error("The preview provider could not complete this render.");
+      await new Promise((resolve) => window.setTimeout(resolve, 3000));
+    }
+    throw new Error("The preview is still rendering. Return to this workspace in a moment.");
+  }
+
+  async function createPreview() {
+    setCreating(true); setPreviewError(""); setStatus("Submitting secure preview…");
+    try {
+      const response = await authedFetch("/api/wovo/video", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt, durationSeconds: 4, preview: true, accountId: account.id }) });
+      const payload = await response.json() as { job?: { id?: string; status?: string }; error?: string; existingJobId?: string };
+      const id = payload.job?.id ?? payload.existingJobId ?? "";
+      if (!response.ok && !id) throw new Error(payload.error ?? "Unable to create the preview.");
+      setStatus(payload.job?.status ?? "processing");
+      await pollVideo(id);
+    } catch (reason) { setPreviewError(reason instanceof Error ? reason.message : "Unable to create the preview."); }
+    finally { setCreating(false); }
+  }
   return (
-    <section className="py-10 sm:py-14">
-      <div className="grid gap-6 lg:grid-cols-[.8fr_1.2fr] lg:items-stretch">
-        <div className="rounded-[28px] bg-[#191714] p-6 text-white shadow-[0_28px_90px_rgba(25,23,20,.2)] sm:p-8">
-          <p className="text-xs font-bold uppercase tracking-[.18em] text-[#ff8c70]">Personalized workspace preview</p>
-          <h1 className="mt-4 text-4xl font-medium leading-[1.02] tracking-[-.045em] sm:text-5xl">See {account.business_name} inside WOVO before paying.</h1>
-          <p className="mt-5 max-w-xl text-sm leading-6 text-white/65">This private preview uses the details you just supplied. Explore the shape of your weekly system first; payment only unlocks generation, exports, scheduling, publishing, and team support.</p>
-          <div className="mt-8 flex flex-wrap gap-2">{platforms.map((platform) => <span key={platform} className="rounded-full border border-white/12 bg-white/[.06] px-3 py-2 text-xs font-semibold text-white/75">{platform}</span>)}</div>
-          <a href="#activate" className="mt-8 inline-flex min-h-12 items-center justify-center rounded-xl bg-[#f05a3a] px-5 text-sm font-bold text-[#191714]">Unlock this workspace</a>
-        </div>
-        <div className="overflow-hidden rounded-[28px] border border-[#191714]/10 bg-[#fffdf8] shadow-[0_28px_90px_rgba(25,23,20,.12)]">
-          <div className="flex items-center justify-between border-b border-[#191714]/10 px-5 py-4 sm:px-7"><div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-[#d94326]">This week</p><h2 className="mt-1 text-2xl font-semibold">{account.business_name}</h2></div><span className="rounded-full bg-[#f05a3a]/10 px-3 py-2 text-xs font-bold text-[#a9341f]">Preview mode</span></div>
-          <div className="grid gap-4 p-5 sm:grid-cols-3 sm:p-7">{modules.slice(0, 3).map((module, index) => <article key={module} className="rounded-2xl border border-[#191714]/10 bg-[#f7f2e9] p-4"><span className="text-xs font-bold text-[#d94326]">0{index + 1}</span><h3 className="mt-5 font-bold capitalize">{module.replaceAll("_", " ")}</h3><p className="mt-2 text-xs leading-5 text-[#655f56]">Set up and personalized from your onboarding answers.</p></article>)}</div>
-          <div className="grid gap-4 border-t border-[#191714]/10 p-5 sm:grid-cols-2 sm:p-7"><div className="rounded-2xl bg-[#191714] p-5 text-white"><p className="text-[10px] font-bold uppercase tracking-[.14em] text-[#ff8c70]">Brand direction</p><p className="mt-3 text-lg font-semibold">{voice}</p><p className="mt-2 text-sm leading-6 text-white/55">Audience: {audience}</p></div><div className="rounded-2xl border border-dashed border-[#f05a3a]/45 bg-[#f05a3a]/[.06] p-5"><p className="text-[10px] font-bold uppercase tracking-[.14em] text-[#d94326]">Sample output</p><h3 className="mt-3 text-lg font-semibold">Your first content week</h3><p className="mt-2 text-sm leading-6 text-[#655f56]">A branded plan with {account.posting_cadence_per_week} post{account.posting_cadence_per_week === 1 ? "" : "s"} per week, review checkpoints, and platform-ready scheduling.</p><span className="mt-4 inline-flex rounded-full border border-[#191714]/10 bg-white px-3 py-2 text-xs font-bold">Preview only · no credits used</span></div></div>
+    <section className="py-6 sm:py-10">
+      <div className="overflow-hidden rounded-[30px] border border-black/10 bg-[#11110f] text-white shadow-[0_32px_100px_rgba(25,23,20,.24)]">
+        <header className="flex flex-col gap-4 border-b border-white/10 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-7"><div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#ff7558]">WOVO preview studio</p><h1 className="mt-1 text-2xl font-semibold tracking-[-.03em]">Create something for {account.business_name}</h1></div><div className="flex flex-wrap gap-2">{["Video", "Image", "Website", "Cartoon"].map((item, index) => <span key={item} className={`rounded-full px-3 py-2 text-xs font-bold ${index === 0 ? "bg-[#f2563d] text-[#171512]" : "border border-white/10 bg-white/[.04] text-white/55"}`}>{item}</span>)}</div></header>
+        <div className="grid lg:grid-cols-[210px_1fr_260px]">
+          <aside className="hidden border-r border-white/10 p-5 lg:block"><p className="text-xs font-semibold text-white/40">Your setup</p><div className="mt-5 space-y-5 text-sm"><div><p className="text-white/40">Voice</p><p className="mt-1 font-semibold">{voice}</p></div><div><p className="text-white/40">Audience</p><p className="mt-1 leading-5">{audience}</p></div><div><p className="text-white/40">Channels</p><div className="mt-2 flex flex-wrap gap-1">{platforms.map((platform) => <span key={platform} className="rounded-md bg-white/[.06] px-2 py-1 text-[11px]">{platform}</span>)}</div></div></div></aside>
+          <main className="min-h-[520px] p-5 sm:p-7">
+            <div className="flex min-h-[330px] items-center justify-center overflow-hidden rounded-[24px] border border-white/10 bg-[radial-gradient(circle_at_top,#432218_0%,#1a1714_48%,#0d0d0c_100%)]">
+              {previewUrl ? <div className="relative h-full w-full"><video className="mx-auto max-h-[520px] w-full object-contain" src={previewUrl} controls playsInline controlsList="nodownload" /><div className="pointer-events-none absolute bottom-12 right-4 rounded-full bg-black/65 px-3 py-1.5 text-xs font-bold tracking-[.15em] text-white">WOVO PREVIEW</div></div> : <div className="max-w-md px-6 text-center"><div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#f2563d] text-2xl">▶</div><h2 className="mt-5 text-3xl font-semibold tracking-[-.04em]">Make your first preview video.</h2><p className="mt-3 text-sm leading-6 text-white/55">One private, four-second, vertical AI preview is included before checkout. It is visibly watermarked and cannot be exported.</p>{status ? <p className="mt-4 text-sm font-semibold text-[#ff8c70]">{status}</p> : null}{previewError ? <p className="mt-4 rounded-xl bg-red-500/10 p-3 text-sm text-red-200">{previewError}</p> : null}</div>}
+            </div>
+            <div className="mt-4 rounded-2xl border border-white/10 bg-[#1c1c1a] p-3 sm:p-4"><label className="sr-only" htmlFor="preview-prompt">Describe the preview video</label><textarea id="preview-prompt" value={prompt} onChange={(event) => setPrompt(event.target.value)} maxLength={700} className="min-h-24 w-full resize-none bg-transparent text-sm leading-6 text-white outline-none placeholder:text-white/30" placeholder="Describe the scene, subject, camera movement, mood, and message…" /><div className="mt-3 flex flex-col gap-3 border-t border-white/10 pt-3 sm:flex-row sm:items-center sm:justify-between"><div className="flex gap-2 text-xs text-white/55"><span className="rounded-lg bg-white/[.06] px-2.5 py-2">9:16</span><span className="rounded-lg bg-white/[.06] px-2.5 py-2">4 sec</span><span className="rounded-lg bg-white/[.06] px-2.5 py-2">Watermarked</span></div><button type="button" onClick={() => void createPreview()} disabled={creating || Boolean(previewUrl) || prompt.trim().length < 12} className="min-h-12 rounded-xl bg-[#f2563d] px-5 text-sm font-bold text-[#171512] disabled:cursor-not-allowed disabled:opacity-45">{creating ? "Rendering…" : previewUrl ? "Preview created" : "Generate free preview"}</button></div></div>
+          </main>
+          <aside className="border-t border-white/10 p-5 lg:border-l lg:border-t-0"><p className="text-xs font-semibold text-white/40">What unlocks after payment</p><ul className="mt-4 space-y-3 text-sm leading-5 text-white/75">{["Unwatermarked exports", "Your monthly credit allowance", "Images, videos, cartoons, and websites", "Approval and scheduling workflow", "Connected Facebook and Instagram publishing"].map((item) => <li key={item} className="flex gap-2"><span className="text-[#ff7558]">✓</span>{item}</li>)}</ul><a href="#activate" className="mt-6 flex min-h-12 items-center justify-center rounded-xl border border-white/15 bg-white text-sm font-bold text-[#171512]">See plans</a><p className="mt-3 text-xs leading-5 text-white/35">No card is required for this single preview. Provider safety checks apply.</p></aside>
         </div>
       </div>
     </section>

@@ -14,6 +14,8 @@ type CreateVideoBody = {
   remixMode?: "standard" | "animate_image" | "replace_dance";
   inputReferenceImage?: string;
   sourceOutputId?: string;
+  preview?: boolean;
+  accountId?: string;
 };
 
 type VideoJobRow = {
@@ -92,6 +94,8 @@ async function resolveSourceVideo(
 export async function POST(request: Request) {
   try {
     const { user } = await requireServerUser(request.headers.get("authorization"));
+    const body = (await request.json().catch(() => ({}))) as CreateVideoBody;
+    const isWorkspacePreview = body.preview === true;
     const subscription = await getSubscriptionStatus(user.id, resolveUserEmail(user));
     const effectivePlan = (subscription.effective_plan ?? subscription.plan ?? "none").toString().toLowerCase();
     const hasProFeatureAccess =
@@ -100,7 +104,7 @@ export async function POST(request: Request) {
       effectivePlan === "pro" ||
       effectivePlan === "business";
 
-    if (!hasProFeatureAccess) {
+    if (!hasProFeatureAccess && !isWorkspacePreview) {
       return NextResponse.json(
         { error: "AI Video Ad Studio and Dance Remix are Pro features. Upgrade to Pro to unlock video generation." },
         { status: 402 },
@@ -114,8 +118,34 @@ export async function POST(request: Request) {
       );
     }
 
-    const guard = await guardAiRequest(request.headers.get("authorization"), "video");
-    const body = (await request.json().catch(() => ({}))) as CreateVideoBody;
+    let billingSource = "workspace_preview";
+    let remainingTrialUses = 0;
+    if (isWorkspacePreview) {
+      const accountId = body.accountId?.trim() ?? "";
+      if (!isUuid(accountId)) return NextResponse.json({ error: "A valid workspace is required." }, { status: 400 });
+      const accounts = await supabaseServiceRoleRequest<Array<{ id: string; owner_user_id: string; subscription_status: string }>>(
+        `/rest/v1/wovo_portal_accounts?select=id,owner_user_id,subscription_status&id=eq.${encodeURIComponent(accountId)}&owner_user_id=eq.${encodeURIComponent(user.id)}&archived_at=is.null&limit=1`,
+      );
+      const account = accounts?.[0];
+      if (!account) return NextResponse.json({ error: "Workspace not found." }, { status: 404 });
+      if (["active", "trialing"].includes((account.subscription_status ?? "").toLowerCase())) {
+        return NextResponse.json({ error: "Open the full creator studio for paid video generation." }, { status: 409 });
+      }
+      const priorJobs = await supabaseServiceRoleRequest<Array<{ id: string; status: string; result_payload: Record<string, unknown> | null }>>(
+        `/rest/v1/video_jobs?select=id,status,result_payload&user_id=eq.${encodeURIComponent(user.id)}&order=created_at.desc&limit=100`,
+      );
+      const priorPreview = (priorJobs ?? []).find((job) => asString(asRecord(job.result_payload).previewAccountId) === accountId);
+      if (priorPreview) {
+        return NextResponse.json(
+          { error: "This workspace already used its complimentary video preview.", existingJobId: priorPreview.id },
+          { status: 409 },
+        );
+      }
+    } else {
+      const guard = await guardAiRequest(request.headers.get("authorization"), "video");
+      billingSource = guard.billingSource;
+      remainingTrialUses = guard.remainingTrialUses;
+    }
     const prompt = body.prompt?.trim() ?? "";
 
     if (!prompt) {
@@ -158,7 +188,7 @@ export async function POST(request: Request) {
       headers: { Prefer: "return=representation" },
       body: JSON.stringify({
         id: jobId,
-        user_id: guard.userId,
+        user_id: user.id,
         provider,
         provider_job_id: providerJobId,
         prompt,
@@ -170,6 +200,9 @@ export async function POST(request: Request) {
           sourceOutputId: sourceOutputId || null,
           sourceVideoJobId: null,
           hasInputReferenceImage: remixMode === "animate_image" ? Boolean(inputReferenceImage) : false,
+          workspacePreview: isWorkspacePreview,
+          previewAccountId: isWorkspacePreview ? body.accountId?.trim() : null,
+          previewWatermarkRequired: isWorkspacePreview,
         },
       }),
     });
@@ -177,8 +210,8 @@ export async function POST(request: Request) {
     const created = rows?.[0];
     return NextResponse.json({
       job: created ?? null,
-      billing_source: guard.billingSource,
-      trial_uses_remaining: guard.remainingTrialUses,
+      billing_source: billingSource,
+      trial_uses_remaining: remainingTrialUses,
       warning: null,
     });
   } catch (error) {
