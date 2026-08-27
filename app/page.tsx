@@ -28,14 +28,14 @@ export default function HomePage() {
   return (
     <main>
       <section className="overflow-hidden border-b border-[#191714]/10">
-        <div className="mx-auto grid max-w-[1280px] gap-14 px-5 py-16 sm:px-8 sm:py-24 lg:grid-cols-[.9fr_1.1fr] lg:items-center lg:py-28">
+        <div className="mx-auto grid max-w-[1380px] gap-12 px-5 py-12 sm:px-8 sm:py-20 lg:grid-cols-[.82fr_1.18fr] lg:items-center lg:py-24">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-[#d94326]">A weekly marketing operating system</p>
-            <h1 className="mt-6 max-w-3xl text-[clamp(3rem,7vw,6.4rem)] font-medium leading-[0.9] tracking-[-0.055em] text-[#191714]">
-              Make the week make sense.
+            <h1 className="mt-6 max-w-3xl text-[clamp(3rem,6vw,5.8rem)] font-medium leading-[0.92] tracking-[-0.055em] text-[#191714]">
+              Create it. Approve it. Put it to work.
             </h1>
             <p className="mt-7 max-w-xl text-lg leading-8 text-[#655f56]">
-              Turn your business context into a focused content plan, approval queue, private asset library, and organized WOVO support—without pretending marketing runs itself.
+              Build videos, images, campaigns, and a weekly publishing queue from one private workspace—then approve exactly what moves forward.
             </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               <Link href="/signup?next=/portal" className="inline-flex min-h-13 items-center justify-center rounded-full bg-[#191714] px-7 text-sm font-bold text-white transition hover:bg-[#f05a3a]">
@@ -50,19 +50,19 @@ export default function HomePage() {
 
           <div id="product" className="relative scroll-mt-28">
             <div className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-[#f05a3a]/20 blur-3xl" />
-            <div className="relative overflow-hidden rounded-[30px] border border-[#191714]/15 bg-[#fffdf8] shadow-[0_38px_90px_rgba(25,23,20,.17)]">
-              <div className="flex items-center justify-between border-b border-[#191714]/10 px-5 py-4">
+            <div className="relative overflow-hidden rounded-[30px] border border-black/15 bg-[#141310] text-white shadow-[0_38px_100px_rgba(25,23,20,.24)]">
+              <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
                 <div className="flex items-center gap-2">
                   <span className="h-2.5 w-2.5 rounded-full bg-[#f05a3a]" />
-                  <span className="text-[11px] font-black tracking-[-0.04em]">WOVO</span>
+                  <span className="text-[11px] font-black tracking-[-0.04em]">WOVO STUDIO</span>
                 </div>
-                <span className="rounded-full bg-[#eee8dc] px-3 py-1.5 text-[10px] font-bold text-[#655f56]">Client workspace</span>
+                <span className="rounded-full border border-white/10 bg-white/[.06] px-3 py-1.5 text-[10px] font-bold text-white/65">Private workspace</span>
               </div>
               <div className="grid min-h-[460px] sm:grid-cols-[145px_1fr]">
-                <aside className="hidden border-r border-[#191714]/10 bg-[#f8f4ec] p-4 sm:block">
-                  <p className="mb-4 text-[9px] font-bold uppercase tracking-[0.2em] text-[#8b8378]">Workspace</p>
+                <aside className="hidden border-r border-white/10 bg-black/20 p-4 sm:block">
+                  <p className="mb-4 text-[9px] font-bold uppercase tracking-[0.2em] text-white/35">Create</p>
                   {productSections.map((item, index) => (
-                    <div key={item} className={`mb-1 rounded-xl px-3 py-2.5 text-xs font-semibold ${index === 0 ? "bg-[#191714] text-white" : "text-[#716a60]"}`}>
+                    <div key={item} className={`mb-1 rounded-xl px-3 py-2.5 text-xs font-semibold ${index === 0 ? "bg-[#f2563d] text-[#191714]" : "text-white/48"}`}>
                       {item}
                     </div>
                   ))}
@@ -71,25 +71,25 @@ export default function HomePage() {
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#d94326]">This week</p>
-                      <h2 className="mt-2 text-3xl font-medium tracking-[-0.035em]">Your plan at a glance</h2>
+                      <h2 className="mt-2 text-3xl font-medium tracking-[-0.035em]">Your week, ready to review</h2>
                     </div>
-                    <span className="rounded-full border border-[#191714]/10 px-3 py-2 text-[10px] font-semibold text-[#655f56]">3 items</span>
+                    <span className="rounded-full border border-white/10 px-3 py-2 text-[10px] font-semibold text-white/55">3 items</span>
                   </div>
                   <div className="mt-7 grid grid-cols-3 gap-2">
                     {[["3", "Planned"], ["1", "Review"], ["1", "Ready"]].map(([value, label]) => (
-                      <div key={label} className="rounded-2xl bg-[#f3efe6] p-3">
+                      <div key={label} className="rounded-2xl border border-white/8 bg-white/[.055] p-3">
                         <p className="text-2xl font-medium">{value}</p>
-                        <p className="mt-1 text-[10px] font-semibold text-[#777067]">{label}</p>
+                        <p className="mt-1 text-[10px] font-semibold text-white/40">{label}</p>
                       </div>
                     ))}
                   </div>
                   <div className="mt-6 space-y-2">
                     {queue.map((item) => (
-                      <div key={item.title} className="grid grid-cols-[38px_1fr] gap-3 rounded-2xl border border-[#191714]/10 bg-white/70 p-3 sm:grid-cols-[38px_1fr_auto] sm:items-center">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#191714] text-[10px] font-bold text-white">{item.day}</div>
+                      <div key={item.title} className="grid grid-cols-[38px_1fr] gap-3 rounded-2xl border border-white/10 bg-white/[.045] p-3 sm:grid-cols-[38px_1fr_auto] sm:items-center">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-[10px] font-bold text-white">{item.day}</div>
                         <div>
                           <p className="text-xs font-bold">{item.title}</p>
-                          <p className="mt-1 text-[10px] text-[#81796f]">{item.channel}</p>
+                          <p className="mt-1 text-[10px] text-white/40">{item.channel}</p>
                         </div>
                         <span className="col-start-2 w-fit rounded-full bg-[#f6ded6] px-2.5 py-1 text-[9px] font-bold text-[#a9341f] sm:col-auto">{item.status}</span>
                       </div>
