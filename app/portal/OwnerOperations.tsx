@@ -210,7 +210,7 @@ export default function OwnerOperations({
           type="button"
           onClick={() => choose(item.value)}
           className={`mb-1 flex min-h-12 w-full items-center justify-between rounded-xl px-3 text-left text-sm font-bold transition ${
-            section === item.value ? "bg-[#f05a3a] text-[#191714]" : "text-[#5e574f] hover:bg-[#191714]/[.045] hover:text-[#191714]"
+            section === item.value ? "bg-[#f2563d] text-[#191714]" : "text-white/62 hover:bg-white/[.07] hover:text-white"
           }`}
         >
           <span>{item.label}</span>
@@ -240,10 +240,10 @@ export default function OwnerOperations({
 
       {drawerOpen ? (
         <div className="fixed inset-0 z-50 bg-[#191714]/45 lg:hidden" onClick={() => setDrawerOpen(false)}>
-          <div className="h-full w-[min(88vw,340px)] overflow-y-auto bg-[#fffdf8] p-4 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+          <div className="h-full w-[min(88vw,340px)] overflow-y-auto bg-[#151411] p-4 text-white shadow-2xl" onClick={(event) => event.stopPropagation()}>
             <div className="mb-5 flex items-center justify-between">
               <p className="font-bold">WOVO Operations</p>
-              <button type="button" className="min-h-12 min-w-12 rounded-xl border border-[#191714]/12" onClick={() => setDrawerOpen(false)} aria-label="Close navigation">×</button>
+              <button type="button" className="min-h-12 min-w-12 rounded-xl border border-white/15" onClick={() => setDrawerOpen(false)} aria-label="Close navigation">×</button>
             </div>
             {nav}
             <button type="button" className={`${secondary} mt-6 w-full`} onClick={() => void onSignOut()}>Sign out</button>
@@ -253,11 +253,11 @@ export default function OwnerOperations({
 
       <div className="mx-auto grid max-w-[1500px] gap-6 px-4 py-5 sm:px-6 lg:grid-cols-[250px_minmax(0,1fr)] lg:py-8">
         <aside className="hidden lg:block">
-          <div className="sticky top-24">
+          <div className="sticky top-24 rounded-[24px] bg-[#151411] p-3 shadow-[0_20px_55px_rgba(25,23,20,.18)]">
             {nav}
-            <div className="mt-5 rounded-2xl border border-[#191714]/10 bg-[#fffdf8] p-4 text-xs leading-5 text-[#655f56]">
-              <p className="font-bold text-[#191714]">Owner access</p>
-              <p className="mt-1">Cross-client tools are owner-only. Client workspaces open only after an explicit selection.</p>
+            <div className="mt-3 rounded-2xl border border-white/10 bg-white/[.05] p-4 text-xs leading-5 text-white/48">
+              <p className="font-bold text-white">Owner access</p>
+              <p className="mt-1">Cross-client tools stay private. Client workspaces open only after an explicit selection.</p>
             </div>
           </div>
         </aside>

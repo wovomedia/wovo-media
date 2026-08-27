@@ -123,14 +123,11 @@ export async function POST(request: Request) {
     if (isWorkspacePreview) {
       const accountId = body.accountId?.trim() ?? "";
       if (!isUuid(accountId)) return NextResponse.json({ error: "A valid workspace is required." }, { status: 400 });
-      const accounts = await supabaseServiceRoleRequest<Array<{ id: string; owner_user_id: string; subscription_status: string }>>(
-        `/rest/v1/wovo_portal_accounts?select=id,owner_user_id,subscription_status&id=eq.${encodeURIComponent(accountId)}&owner_user_id=eq.${encodeURIComponent(user.id)}&archived_at=is.null&limit=1`,
+      const accounts = await supabaseServiceRoleRequest<Array<{ id: string; owner_user_id: string }>>(
+        `/rest/v1/wovo_portal_accounts?select=id,owner_user_id&id=eq.${encodeURIComponent(accountId)}&owner_user_id=eq.${encodeURIComponent(user.id)}&archived_at=is.null&limit=1`,
       );
       const account = accounts?.[0];
       if (!account) return NextResponse.json({ error: "Workspace not found." }, { status: 404 });
-      if (["active", "trialing"].includes((account.subscription_status ?? "").toLowerCase())) {
-        return NextResponse.json({ error: "Open the full creator studio for paid video generation." }, { status: 409 });
-      }
       const priorJobs = await supabaseServiceRoleRequest<Array<{ id: string; status: string; result_payload: Record<string, unknown> | null }>>(
         `/rest/v1/video_jobs?select=id,status,result_payload&user_id=eq.${encodeURIComponent(user.id)}&order=created_at.desc&limit=100`,
       );
@@ -217,9 +214,10 @@ export async function POST(request: Request) {
   } catch (error) {
     const guardResponse = toAiGuardErrorResponse(error);
     if (guardResponse) return guardResponse;
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unable to create video job." },
-      { status: 500 },
-    );
+    const message = error instanceof Error ? error.message : "";
+    const safeMessage = message.startsWith("FAL_") || message.startsWith("VIDEO_")
+      ? "The video provider is temporarily unavailable. Please try again shortly."
+      : "Unable to create the preview right now. Please try again.";
+    return NextResponse.json({ error: safeMessage }, { status: 500 });
   }
 }

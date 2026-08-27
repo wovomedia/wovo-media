@@ -111,21 +111,22 @@ export default function AdamOperations() {
 
   return (
     <div className="space-y-5">
-      <header className="grid gap-5 border-b border-[#191714]/10 pb-6 xl:grid-cols-[minmax(0,1fr)_340px] xl:items-end">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[.18em] text-[#d94326]">Owner-only operating system</p>
-          <h1 className="mt-3 max-w-4xl text-4xl font-medium leading-[.98] tracking-[-.045em] sm:text-6xl">Adam Carter <span className="text-[#80776c]">— WOVO Media AI COO / Operations Assistant</span></h1>
-          <p className="mt-4 max-w-3xl text-base leading-7 text-[#625b52]">Adam is WOVO&apos;s AI-generated operations representative—not a human employee. It organizes evidence, drafts, and decisions; consequential external actions remain controlled by verified server policies and audit records.</p>
-        </div>
-        <div className="border-l-4 border-[#f05a3a] bg-[#191714] p-5 text-white">
-          <p className="text-xs font-bold uppercase tracking-[.16em] text-[#ff8c70]">Operating boundary</p>
-          <p className="mt-2 text-lg font-medium">Approval first. External actions off.</p>
-          <p className="mt-2 text-sm leading-6 text-white/65">All completed-action claims require a recorded event. Drafts remain drafts until Payton decides.</p>
+      <header className="overflow-hidden rounded-[28px] bg-[#151411] text-white shadow-[0_24px_70px_rgba(25,23,20,.2)]">
+        <div className="grid gap-7 p-6 sm:p-8 xl:grid-cols-[minmax(0,1fr)_300px] xl:items-end">
+          <div>
+            <div className="flex flex-wrap items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-[#f2563d]" /><p className="text-xs font-bold uppercase tracking-[.18em] text-[#ff8c70]">Owner command center</p><span className="rounded-full border border-white/10 bg-white/[.06] px-2.5 py-1 text-[10px] font-bold text-white/55">Private</span></div>
+            <h1 className="mt-5 max-w-4xl text-3xl font-semibold leading-[1.02] tracking-[-.04em] sm:text-5xl">Adam Carter <span className="font-normal text-white/45">runs the operating queue.</span></h1>
+            <p className="mt-4 max-w-3xl text-sm leading-6 text-white/60">AI COO and operations assistant for WOVO. Adam organizes evidence, drafts, priorities, and reports; every completed action still needs a recorded server event.</p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/[.06] p-4">
+            <div className="flex items-center justify-between"><p className="text-[10px] font-bold uppercase tracking-[.15em] text-[#ff8c70]">Action policy</p><span className="rounded-full bg-[#f2563d]/15 px-2 py-1 text-[10px] font-bold text-[#ff9b85]">Approval first</span></div>
+            <p className="mt-3 text-sm leading-6 text-white/70">Drafts stay private until approved. Provider actions require an audit record.</p>
+          </div>
         </div>
       </header>
 
-      <nav aria-label="Adam Operations sections" className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1">
-        {views.map((item) => <button key={item.value} type="button" onClick={() => setView(item.value)} className={`min-h-11 shrink-0 border-b-2 px-3 text-sm font-bold transition ${view === item.value ? "border-[#f05a3a] text-[#191714]" : "border-transparent text-[#756e64] hover:text-[#191714]"}`}>{item.label}</button>)}
+      <nav aria-label="Adam Operations sections" className="flex gap-2 overflow-x-auto rounded-2xl border border-[#191714]/10 bg-[#fffdf8] p-2 shadow-[0_10px_30px_rgba(25,23,20,.05)]">
+        {views.map((item) => <button key={item.value} type="button" onClick={() => setView(item.value)} className={`min-h-11 shrink-0 rounded-xl px-4 text-sm font-bold transition ${view === item.value ? "bg-[#191714] text-white" : "text-[#756e64] hover:bg-[#191714]/[.05] hover:text-[#191714]"}`}>{item.label}</button>)}
       </nav>
 
       {notice ? <div role="status" className="rounded-xl border border-[#f05a3a]/25 bg-[#f05a3a]/10 p-4 text-sm text-[#7d2d1f]">{notice}</div> : null}
