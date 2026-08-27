@@ -132,6 +132,27 @@ export default function OwnerPublishingCenter({
   const selectedAccountId = scope === "wovo" ? null : scope;
   const selectedAssets = assets.filter((asset) => asset.account_id === selectedAccountId && asset.rights_confirmed && !asset.archived_at);
   const ownerConnection = data?.connections.find((connection) => connection.owner_scope) ?? null;
+  const selectedClientConnection = selectedAccountId
+    ? data?.connections.find((connection) => connection.account_id === selectedAccountId) ?? null
+    : null;
+
+  async function connectClientMeta() {
+    if (!selectedAccountId) return;
+    setBusy("connect-client-meta"); setError(""); setMessage("");
+    try {
+      const response = await request("/api/integrations/meta/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accountId: selectedAccountId }),
+      });
+      const result = await response.json() as { error?: string; url?: string };
+      if (!response.ok || !result.url) throw new Error(result.error || "Meta connection could not start.");
+      window.location.href = result.url;
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Meta connection could not start.");
+      setBusy("");
+    }
+  }
 
   const ledger = useMemo<LedgerItem[]>(() => {
     const meta = (data?.jobs ?? []).map((job): LedgerItem => {
@@ -269,6 +290,7 @@ export default function OwnerPublishingCenter({
             <label className="text-sm font-bold">Timezone<select name="timezone" className={`${field} mt-1`} defaultValue="America/Chicago"><option value="America/Chicago">Central time</option><option value="America/New_York">Eastern time</option><option value="America/Denver">Mountain time</option><option value="America/Los_Angeles">Pacific time</option></select></label>
             {selectedAccountId ? <label className="text-sm font-bold">Approved client media<select name="assetId" className={`${field} mt-1`} defaultValue=""><option value="">Caption-only draft</option>{selectedAssets.map((asset) => <option key={asset.id} value={asset.id}>{asset.file_name}</option>)}</select></label> : <label className="text-sm font-bold">WOVO-owned media<select name="presetAsset" className={`${field} mt-1`} defaultValue={destination === "instagram" ? "cover" : ""}><option value="">Caption only (Facebook)</option><option value="cover">WOVO social cover</option><option value="editorial">WOVO editorial background</option></select></label>}
           </div>
+          {selectedAccountId ? <div className="mt-4 flex flex-col justify-between gap-3 rounded-xl border border-[#191714]/10 bg-[#f7f2e9] p-4 sm:flex-row sm:items-center"><div><strong className="text-sm">Client Facebook + Instagram</strong><p className="mt-1 text-xs leading-5 text-[#655f56]">{selectedClientConnection?.status === "healthy" ? `${selectedClientConnection.page_name}${selectedClientConnection.instagram_username ? ` · @${selectedClientConnection.instagram_username}` : ""} is connected for this workspace.` : "Connect this client through official Meta authorization before scheduling their posts."}</p></div>{selectedClientConnection?.status === "healthy" ? <Status value="completed" /> : <button type="button" disabled={busy === "connect-client-meta"} className={secondary} onClick={() => void connectClientMeta()}>{busy === "connect-client-meta" ? "Opening Meta…" : "Connect client Meta"}</button>}</div> : null}
           <label className="mt-4 flex items-start gap-3 rounded-xl border border-[#191714]/10 bg-[#f7f2e9] p-3 text-sm"><input required type="checkbox" name="rightsConfirmed" className="mt-1 size-4" /><span><strong>I confirm WOVO or this client owns or may use the selected media.</strong><span className="mt-1 block text-xs leading-5 text-[#655f56]">Any recognizable person must also have consented. Saving creates a private draft only.</span></span></label>
           <div className="mt-5 flex flex-wrap items-center gap-3"><button disabled={busy === "create"} className={primary}>{busy === "create" ? "Saving…" : "Send to verification"}</button><span className="text-xs text-[#756e64]">Scheduling appears only after owner approval.</span></div>
         </form> : null}

@@ -223,7 +223,7 @@ export async function enqueueWovoDailyImagePost(options: { force?: boolean; now?
         created_by: connection.connected_by,
         idempotency_key: idempotencyKey,
         destination,
-        status: "draft",
+        status: "queued",
         source: "scheduled_automation",
         caption: creative.caption,
         topic: creative.campaignKey,
@@ -237,10 +237,10 @@ export async function enqueueWovoDailyImagePost(options: { force?: boolean; now?
         creative_kicker: creative.kicker,
         creative_headline: creative.headline,
         creative_cta: creative.cta,
-        approved_at: null,
-        approved_by: null,
+        approved_at: new Date().toISOString(),
+        approved_by: connection.connected_by,
         rights_confirmed: true,
-        scheduled_for: null,
+        scheduled_for: new Date().toISOString(),
       }),
     });
     const job = created?.[0];
