@@ -10,20 +10,13 @@ function siteUrl(request: Request) {
   return (process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin).replace(/\/$/, "");
 }
 
-async function assertActivePaidWorkspace(context: PortalContext, accountId: string) {
+async function assertWorkspaceAccess(context: PortalContext, accountId: string) {
   await assertPortalAccountAccess(context, accountId);
-  if (context.mode === "staff" && context.staffRole === "owner") {
-    throw new PortalHttpError(400, "Owner test access does not need a paid credit purchase. Use an audited owner grant for testing.");
-  }
-  const rows = await supabaseServiceRoleRequest<Array<{ status: string }>>(
-    `/rest/v1/wovo_portal_subscriptions?select=status&account_id=eq.${encodeURIComponent(accountId)}&status=in.(active,trialing)&limit=1`,
-  ).catch(() => []);
-  if (!rows?.[0]) throw new PortalHttpError(402, "An active paid WOVO workspace is required before purchasing credits.");
 }
 
 export async function startCreditCheckout(request: Request, context: PortalContext, body: Record<string, unknown>) {
   const accountId = requiredString(body.accountId, "Workspace", 80);
-  await assertActivePaidWorkspace(context, accountId);
+  await assertWorkspaceAccess(context, accountId);
   if (!isCreditPackKey(body.packKey)) throw new PortalHttpError(400, "Choose a valid WOVO credit pack.");
   const pack = await getValidatedCreditPack(body.packKey);
   if (!pack) throw new PortalHttpError(503, "Credit purchasing is paused because the Stripe price no longer matches WOVO's server allowlist.");

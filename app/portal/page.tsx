@@ -324,7 +324,7 @@ export default function PortalPage() {
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#f3efe6] text-[#191714]">
       <header className="sticky top-0 z-30 border-b border-[#191714]/10 bg-[#f3efe6]/90 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3 sm:px-6">
+        <div className="mx-auto flex max-w-[1800px] items-center gap-4 px-4 py-3 sm:px-6">
           <WovoLogo variant="full" size={126} className="" />
           <span className="hidden h-6 w-px bg-[#f05a3a]/10 sm:block" />
           <div className="min-w-0 flex-1">
@@ -344,7 +344,7 @@ export default function PortalPage() {
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 pb-28 sm:px-6 sm:pb-6 lg:grid-cols-[220px_minmax(0,1fr)]">
+      <div className="mx-auto grid max-w-[1800px] gap-6 px-4 py-6 pb-28 sm:px-6 sm:pb-6 lg:grid-cols-[220px_minmax(0,1fr)]">
         <aside>
           <nav className="hidden space-y-1 sm:block" aria-label="Portal">
             {tabs.map((item) => <button key={item.value} onClick={() => setTab(item.value)} className={`min-h-11 w-full rounded-xl px-3 text-left text-sm font-medium transition ${tab === item.value ? "bg-[#f05a3a] text-[#191714]" : "text-[#655f56] hover:bg-[#191714]/[.04] hover:text-[#191714]"}`}>{item.label}</button>)}
@@ -381,7 +381,7 @@ export default function PortalPage() {
       </nav>
 
       <footer className="border-t border-[#191714]/10 px-4 py-7 text-sm text-[#7a7369]">
-        <div className="mx-auto flex max-w-7xl flex-col justify-between gap-4 sm:flex-row">
+        <div className="mx-auto flex max-w-[1800px] flex-col justify-between gap-4 sm:flex-row">
           <p>WOVO Media client portal. AI-assisted work is reviewed by people before publishing.</p>
           <div className="flex flex-wrap gap-x-5 gap-y-2">
             <Link href="/terms-of-use" className="hover:text-[#191714]">Terms</Link>
@@ -729,7 +729,7 @@ const CREATOR_MODES: Array<{ value: CreatorMode; label: string; eyebrow: string 
   { value: "video", label: "Video brief", eyebrow: "Storyboard-first workflow" },
 ];
 
-function CreatorWorkbench({ account, items, drafts, assets, creditBalance, paid, aiConfigured, busy, onAction, authedFetch, reload, setError, setNotice }: {
+function CreatorWorkbench({ account, items, drafts, assets, creditBalance, aiConfigured, busy, onAction, authedFetch, reload, setError, setNotice }: {
   account: PortalAccount;
   items: PortalContentItem[];
   drafts: PortalSnapshot["workflowDrafts"];
@@ -750,6 +750,7 @@ function CreatorWorkbench({ account, items, drafts, assets, creditBalance, paid,
   const [channel, setChannel] = useState("instagram");
   const [format, setFormat] = useState("single_post");
   const [aspect, setAspect] = useState("9:16");
+  const [surface, setSurface] = useState<"light" | "dark">("light");
   const imageAssets = assets.filter((asset) => asset.mime_type.startsWith("image/") && asset.rights_confirmed);
   const activeMode = CREATOR_MODES.find((item) => item.value === mode) ?? CREATOR_MODES[0];
   const recentOutputs = [
@@ -760,17 +761,47 @@ function CreatorWorkbench({ account, items, drafts, assets, creditBalance, paid,
   function selectMode(nextMode: CreatorMode) {
     setMode(nextMode);
     if (nextMode === "video") {
+      setChannel("instagram");
       setFormat("vertical_video");
       setAspect("9:16");
     } else if (nextMode === "website") {
+      setChannel("website");
       setFormat("landing_page");
       setAspect("16:9");
     } else if (nextMode === "episode") {
-      setFormat("carousel");
+      setChannel("instagram");
+      setFormat("vertical_episode");
+      setAspect("9:16");
+    } else if (nextMode === "campaign") {
+      setChannel("instagram");
+      setFormat("campaign_plan");
+      setAspect("1:1");
     } else {
+      setChannel("instagram");
       setFormat("single_post");
+      setAspect("1:1");
     }
   }
+
+  const channelChoices = mode === "website"
+    ? [{ value: "website", label: "Website" }]
+    : mode === "video" || mode === "episode"
+      ? [{ value: "instagram", label: "Instagram" }, { value: "facebook", label: "Facebook" }, { value: "tiktok", label: "TikTok" }, { value: "youtube", label: "YouTube" }]
+      : [{ value: "instagram", label: "Instagram" }, { value: "facebook", label: "Facebook" }, { value: "linkedin", label: "LinkedIn" }];
+  const formatChoices = mode === "website"
+    ? [{ value: "landing_page", label: "Landing page" }, { value: "storefront", label: "Storefront" }, { value: "services_site", label: "Services" }, { value: "portfolio", label: "Portfolio" }]
+    : mode === "episode"
+      ? [{ value: "vertical_episode", label: "Vertical episode" }, { value: "storyboard", label: "Storyboard" }, { value: "character_card", label: "Character card" }]
+      : mode === "video"
+        ? [{ value: "vertical_video", label: "Reel / Short" }, { value: "video_ad", label: "Video ad" }, { value: "story_video", label: "Story" }]
+        : mode === "campaign"
+          ? [{ value: "campaign_plan", label: "Campaign plan" }, { value: "launch_sequence", label: "Launch sequence" }, { value: "weekly_series", label: "Weekly series" }]
+          : [{ value: "single_post", label: "Single post" }, { value: "carousel", label: "Carousel" }, { value: "story", label: "Story" }];
+  const aspectChoices = mode === "website"
+    ? [{ value: "16:9", label: "Desktop" }, { value: "9:16", label: "Mobile" }]
+    : mode === "video" || mode === "episode"
+      ? [{ value: "9:16", label: "Vertical" }, { value: "16:9", label: "Landscape" }]
+      : [{ value: "1:1", label: "Square" }, { value: "9:16", label: "Portrait" }, { value: "16:9", label: "Landscape" }];
 
   async function uploadFrame(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -832,7 +863,7 @@ function CreatorWorkbench({ account, items, drafts, assets, creditBalance, paid,
           <p className="mt-2 max-w-2xl text-sm leading-6 text-[#655f56]">Create a private, reviewable draft. Nothing publishes or starts a paid media render from this screen.</p>
         </div>
         <div className="grid grid-cols-2 overflow-hidden rounded-2xl border border-[#191714]/10 bg-[#f7f2e9] lg:min-w-72">
-          <div className="px-4 py-3"><p className="text-[10px] font-bold uppercase tracking-[.12em] text-[#756e64]">Credits</p><p className="mt-1 text-lg font-semibold">{paid ? creditBalance : "—"}</p></div>
+          <div className="px-4 py-3"><p className="text-[10px] font-bold uppercase tracking-[.12em] text-[#756e64]">Credits</p><p className="mt-1 text-lg font-semibold">{creditBalance}</p></div>
           <div className="border-l border-[#191714]/10 px-4 py-3"><p className="text-[10px] font-bold uppercase tracking-[.12em] text-[#756e64]">Draft status</p><p className="mt-1 flex items-center gap-2 text-sm font-semibold"><span className="h-2 w-2 rounded-full bg-[#f05a3a]" />{aiConfigured ? "AI ready" : "Manual"}</p></div>
         </div>
       </header>
@@ -846,9 +877,11 @@ function CreatorWorkbench({ account, items, drafts, assets, creditBalance, paid,
           <div className="grid gap-4 xl:grid-cols-[200px_minmax(0,1fr)_240px]">
             <aside className="order-2 space-y-4 rounded-2xl border border-white/10 bg-[#201d1b] p-3 xl:order-1" aria-label="Project controls">
               <div><p className="text-[10px] font-bold uppercase tracking-[.14em] text-[#ff8c70]">Project setup</p><p className="mt-1 text-xs leading-5 text-white/45">Choose where this draft is designed to work.</p></div>
-              <label className="block text-xs font-semibold text-white/65">Channel<select name="channel" value={channel} onChange={(event) => setChannel(event.target.value)} className={studioFieldClass}><option value="instagram">Instagram</option><option value="facebook">Facebook</option><option value="tiktok">TikTok</option><option value="youtube">YouTube</option><option value="linkedin">LinkedIn</option><option value="website">Website</option></select></label>
-              <label className="block text-xs font-semibold text-white/65">Format<select name="format" value={format} onChange={(event) => setFormat(event.target.value)} className={studioFieldClass}><option value="single_post">Single post</option><option value="carousel">Carousel brief</option><option value="vertical_video">Vertical video brief</option><option value="landing_page">Landing page</option></select></label>
-              <label className="block text-xs font-semibold text-white/65">Canvas<select name="aspect" value={aspect} onChange={(event) => setAspect(event.target.value)} className={studioFieldClass}><option value="9:16">Vertical · 1080×1920</option><option value="16:9">Landscape · 1920×1080</option><option value="1:1">Square · 1080×1080</option></select></label>
+              <input type="hidden" name="channel" value={channel} /><input type="hidden" name="format" value={format} /><input type="hidden" name="aspect" value={aspect} />
+              <fieldset><legend className="text-xs font-semibold text-white/65">Destination</legend><div className="mt-2 flex flex-wrap gap-2">{channelChoices.map((choice) => <button key={choice.value} type="button" aria-pressed={channel === choice.value} onClick={() => setChannel(choice.value)} className={`min-h-10 rounded-xl border px-3 text-xs font-semibold transition ${channel === choice.value ? "border-[#f05a3a] bg-[#f05a3a] text-[#191714]" : "border-white/10 bg-white/[.04] text-white/65 hover:border-white/25"}`}>{choice.label}</button>)}</div></fieldset>
+              <fieldset><legend className="text-xs font-semibold text-white/65">{mode === "website" ? "Site type" : mode === "episode" ? "Episode output" : mode === "campaign" ? "Campaign structure" : "Format"}</legend><div className="mt-2 grid gap-2">{formatChoices.map((choice) => <button key={choice.value} type="button" aria-pressed={format === choice.value} onClick={() => setFormat(choice.value)} className={`min-h-10 rounded-xl border px-3 text-left text-xs font-semibold transition ${format === choice.value ? "border-[#f05a3a] bg-[#f05a3a]/15 text-[#ff9b82]" : "border-white/10 bg-white/[.04] text-white/65 hover:border-white/25"}`}>{choice.label}</button>)}</div></fieldset>
+              <fieldset><legend className="text-xs font-semibold text-white/65">Canvas</legend><div className="mt-2 flex flex-wrap gap-2">{aspectChoices.map((choice) => <button key={choice.value} type="button" aria-pressed={aspect === choice.value} onClick={() => setAspect(choice.value)} className={`min-h-10 rounded-xl border px-3 text-xs font-semibold transition ${aspect === choice.value ? "border-[#f05a3a] bg-[#f05a3a]/15 text-[#ff9b82]" : "border-white/10 bg-white/[.04] text-white/65"}`}>{choice.label}</button>)}</div></fieldset>
+              {mode === "website" ? <fieldset><legend className="text-xs font-semibold text-white/65">Preview theme</legend><div className="mt-2 grid grid-cols-2 gap-2"><button type="button" aria-pressed={surface === "light"} onClick={() => setSurface("light")} className={`min-h-11 rounded-xl border bg-[#fffdf8] text-xs font-bold text-[#191714] ${surface === "light" ? "border-[#f05a3a] ring-2 ring-[#f05a3a]/25" : "border-white/10"}`}>Light</button><button type="button" aria-pressed={surface === "dark"} onClick={() => setSurface("dark")} className={`min-h-11 rounded-xl border bg-[#11100f] text-xs font-bold text-white ${surface === "dark" ? "border-[#f05a3a] ring-2 ring-[#f05a3a]/25" : "border-white/10"}`}>Dark</button></div></fieldset> : null}
               <div className="border-t border-white/10 pt-4"><div className="flex items-center justify-between gap-2"><p className="text-xs font-semibold">Private assets</p><span className="rounded-full bg-[#f05a3a]/15 px-2 py-1 text-[10px] font-bold text-[#ff9b82]">{imageAssets.length}</span></div><div className="mt-3 space-y-2">{imageAssets.slice(0, 3).map((asset) => <div key={asset.id} className="flex min-h-11 items-center gap-2 rounded-xl border border-white/8 bg-white/[.035] p-2"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#f05a3a]/15 text-xs font-bold text-[#ff9b82]">{asset.file_name.slice(0, 1).toUpperCase()}</span><span className="min-w-0 truncate text-xs text-white/65">{asset.file_name}</span></div>)}{!imageAssets.length ? <p className="rounded-xl border border-dashed border-white/12 p-3 text-xs leading-5 text-white/40">No rights-confirmed image references yet.</p> : null}</div></div>
             </aside>
 
@@ -857,7 +890,10 @@ function CreatorWorkbench({ account, items, drafts, assets, creditBalance, paid,
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 px-4 py-3"><div><p className="text-[10px] font-bold uppercase tracking-[.14em] text-[#ff8c70]">{activeMode.label}</p><p className="mt-1 text-xs text-white/45">{activeMode.eyebrow}</p></div><div className="flex items-center gap-2 text-[11px] text-white/50"><span className="rounded-full border border-white/10 px-2.5 py-1">{channel}</span><span className="rounded-full border border-[#f05a3a]/35 bg-[#f05a3a]/10 px-2.5 py-1 text-[#ff9b82]">{aspect}</span></div></div>
                 <div className="grid min-h-[390px] gap-5 p-4 lg:grid-cols-[minmax(0,1fr)_150px] lg:p-6">
                   <label className="flex min-w-0 flex-col text-sm font-semibold text-white">Creative direction<textarea required name="prompt" minLength={10} maxLength={5000} className="mt-3 min-h-56 flex-1 resize-y rounded-2xl border border-white/10 bg-[#171513] p-4 text-base font-normal leading-7 text-white outline-none transition placeholder:text-white/28 focus:border-[#f05a3a] focus:ring-2 focus:ring-[#f05a3a]/15" placeholder={mode === "episode" ? "Introduce the character, setting, episode beats, and approved call to action…" : mode === "website" ? "Describe the offer, audience, hero message, sections, and primary action…" : mode === "video" ? "Describe the opening frame, subject motion, camera movement, scene beats, and ending…" : "Describe the idea, audience, offer, tone, and what should happen next…"} /><span className="mt-2 text-xs font-normal leading-5 text-white/40">Use approved facts and assets only. Adam will save the result for review.</span></label>
-                  <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/12 bg-[#1b1917] p-4 text-center" aria-label={`${aspect} canvas preview`}><div className={`border-2 border-[#f05a3a] bg-[#f05a3a]/8 shadow-[0_0_0_5px_rgba(240,90,58,.08)] ${aspect === "9:16" ? "h-32 w-[72px] rounded-xl" : aspect === "16:9" ? "h-[72px] w-32 rounded-lg" : "h-28 w-28 rounded-xl"}`} /><p className="mt-4 text-xs font-semibold">{aspect} canvas</p><p className="mt-1 text-[10px] leading-4 text-white/35">Format preview only. No media has been rendered.</p></div>
+                  <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/12 bg-[#1b1917] p-4 text-center" aria-label={`${activeMode.label} preview`}>
+                    {mode === "website" ? <div className={`w-full overflow-hidden rounded-lg border border-[#f05a3a]/50 shadow-xl ${surface === "light" ? "bg-[#fffdf8] text-[#191714]" : "bg-[#11100f] text-white"}`}><div className="flex items-center gap-1 border-b border-current/10 px-2 py-1.5"><i className="h-1.5 w-1.5 rounded-full bg-[#f05a3a]" /><i className="h-1.5 w-1.5 rounded-full bg-current/20" /><i className="h-1.5 w-1.5 rounded-full bg-current/20" /></div><div className="p-3 text-left"><div className="h-1.5 w-10 rounded bg-[#f05a3a]" /><div className="mt-2 h-2 w-4/5 rounded bg-current/70" /><div className="mt-1 h-1.5 w-3/5 rounded bg-current/20" /><div className="mt-3 h-12 rounded bg-[#f05a3a]/15" /></div></div> : mode === "episode" ? <div className="relative h-36 w-24 rounded-[20px] border-2 border-[#f05a3a] bg-gradient-to-b from-[#f05a3a]/35 to-[#2a201d] p-2 shadow-xl"><div className="mx-auto mt-3 h-12 w-12 rounded-full border border-white/30 bg-white/10" /><div className="mt-3 h-1.5 rounded bg-white/60" /><div className="mt-1 h-1.5 w-2/3 rounded bg-white/20" /><span className="absolute bottom-2 right-2 rounded-full bg-[#f05a3a] px-1.5 py-0.5 text-[8px] font-bold text-[#191714]">EP 01</span></div> : mode === "video" ? <div className={`relative border-2 border-[#f05a3a] bg-[#2a201d] shadow-xl ${aspect === "9:16" ? "h-36 w-20 rounded-[18px]" : "h-20 w-36 rounded-xl"}`}><span className="absolute left-1/2 top-1/2 grid h-9 w-9 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-[#f05a3a] text-sm text-[#191714]">▶</span><span className="absolute bottom-2 left-2 text-[8px] font-bold text-white/60">START → END</span></div> : mode === "campaign" ? <div className="grid w-full grid-cols-2 gap-2"><div className="col-span-2 h-8 rounded-lg border border-[#f05a3a]/40 bg-[#f05a3a]/15" /><div className="h-16 rounded-lg border border-white/10 bg-white/[.05]" /><div className="h-16 rounded-lg border border-white/10 bg-white/[.05]" /></div> : <div className={`border-2 border-[#f05a3a] bg-[#f05a3a]/8 shadow-[0_0_0_5px_rgba(240,90,58,.08)] ${aspect === "9:16" ? "h-32 w-[72px] rounded-xl" : aspect === "16:9" ? "h-[72px] w-32 rounded-lg" : "h-28 w-28 rounded-xl"}`} />}
+                    <p className="mt-4 text-xs font-semibold">{mode === "website" ? `${surface} ${format.replaceAll("_", " ")}` : `${aspect} ${activeMode.label.toLowerCase()}`}</p><p className="mt-1 text-[10px] leading-4 text-white/35">A layout preview for this specific creation workflow.</p>
+                  </div>
                 </div>
               </div>
 
@@ -875,7 +911,7 @@ function CreatorWorkbench({ account, items, drafts, assets, creditBalance, paid,
 
           <div className="sticky bottom-[4.25rem] z-20 mt-4 flex flex-col gap-3 rounded-2xl border border-white/10 bg-[#171513]/95 p-3 shadow-[0_-12px_35px_rgba(0,0,0,.35)] backdrop-blur-xl sm:bottom-3 sm:flex-row sm:items-center sm:justify-between xl:static xl:bg-transparent xl:p-0 xl:shadow-none">
             <div><p className="text-xs font-semibold">0 credits to save this draft</p><p className="mt-1 text-[11px] text-white/40">Paid provider work always requires a separate server-verified quote.</p></div>
-            <button disabled={!paid || busy === "create_content" || busy === "create_workflow_draft"} className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-[#f05a3a] px-6 text-sm font-bold text-[#191714] shadow-[0_12px_30px_rgba(240,90,58,.24)] transition hover:bg-[#ff7658] focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#171513] disabled:cursor-not-allowed disabled:opacity-45 sm:w-auto">{actionLabel}</button>
+            <button disabled={busy === "create_content" || busy === "create_workflow_draft"} className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-[#f05a3a] px-6 text-sm font-bold text-[#191714] shadow-[0_12px_30px_rgba(240,90,58,.24)] transition hover:bg-[#ff7658] focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#171513] disabled:cursor-not-allowed disabled:opacity-45 sm:w-auto">{actionLabel}</button>
           </div>
         </form>
 
