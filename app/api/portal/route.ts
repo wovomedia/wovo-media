@@ -1911,7 +1911,13 @@ async function createWorkflowDraft(context: PortalContext, body: ActionBody) {
     : numberValue(body.durationSeconds, "Duration", 4, 12);
 
   if (channel && ![...PLATFORM_VALUES, "website"].includes(channel)) throw new PortalHttpError(400, "Invalid creation channel.");
-  if (outputFormat && !["single_post", "carousel", "vertical_video", "landing_page"].includes(outputFormat)) throw new PortalHttpError(400, "Invalid output format.");
+  if (outputFormat && ![
+    "single_post", "carousel", "story",
+    "campaign_plan", "launch_sequence", "weekly_series",
+    "vertical_episode", "storyboard", "character_card",
+    "landing_page", "storefront", "services_site", "portfolio",
+    "vertical_video", "video_ad", "story_video",
+  ].includes(outputFormat)) throw new PortalHttpError(400, "Invalid output format.");
   if (aspect && !["9:16", "16:9", "1:1"].includes(aspect)) throw new PortalHttpError(400, "Invalid output aspect.");
   if (startFrameAssetId) {
     if (!isUuid(startFrameAssetId)) throw new PortalHttpError(400, "Invalid private reference asset.");
