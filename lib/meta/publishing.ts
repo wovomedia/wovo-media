@@ -19,7 +19,7 @@ export type MetaConnection = {
 
 export type MetaPublishJob = {
   id: string; connection_id: string; destination: string; caption: string; media_url: string | null;
-  attempt_count: number; scheduled_for?: string | null; source?: string;
+  attempt_count: number; scheduled_for?: string | null; source?: string; content_format?: string;
 };
 
 const AUTOMATION_DELIVERY_WINDOW_MS = 75 * 60 * 1000;
@@ -100,7 +100,7 @@ export async function publishMetaJob(job: MetaPublishJob, options: { explicitApp
   try {
     let providerPostId: string;
     if (job.destination === "facebook_page") {
-      if (isVideoMediaUrl(job.media_url)) {
+      if (job.content_format === "reel" || isVideoMediaUrl(job.media_url)) {
         providerPostId = await publishFacebookReel(connection, job.media_url!, job.caption, token);
       } else {
         const path = job.media_url ? `${connection.page_id}/photos` : `${connection.page_id}/feed`;
@@ -111,7 +111,7 @@ export async function publishMetaJob(job: MetaPublishJob, options: { explicitApp
       }
     } else {
       if (!connection.instagram_user_id || !job.media_url) throw new Error("META_INSTAGRAM_MEDIA_REQUIRED");
-      const isVideo = isVideoMediaUrl(job.media_url);
+      const isVideo = job.content_format === "reel" || isVideoMediaUrl(job.media_url);
       const fields = new URLSearchParams({ caption: job.caption, access_token: token });
       if (isVideo) {
         fields.set("media_type", "REELS");
@@ -146,7 +146,7 @@ export async function processMetaPublishJobs(limit = 3, options: { now?: Date } 
   // worker from bursting old scheduled posts after an outage. Those items remain
   // visible in the owner ledger for an explicit reschedule or cancellation.
   const jobs = await supabaseServiceRoleRequest<MetaPublishJob[]>(
-    `/rest/v1/wovo_meta_publish_jobs?select=id,connection_id,destination,caption,media_url,attempt_count,scheduled_for,source&connection_id=not.is.null&source=in.(scheduled_automation,manual)&status=eq.queued&scheduled_for=not.is.null&scheduled_for=gte.${encodeURIComponent(recentCutoff)}&scheduled_for=lte.${encodeURIComponent(now)}&order=scheduled_for.asc&limit=${Math.max(1, Math.min(limit, 6))}`,
+    `/rest/v1/wovo_meta_publish_jobs?select=id,connection_id,destination,caption,media_url,attempt_count,scheduled_for,source,content_format&connection_id=not.is.null&source=in.(scheduled_automation,manual)&status=eq.queued&scheduled_for=not.is.null&scheduled_for=gte.${encodeURIComponent(recentCutoff)}&scheduled_for=lte.${encodeURIComponent(now)}&order=scheduled_for.asc&limit=${Math.max(1, Math.min(limit, 6))}`,
   );
   let published = 0;
   const failures: Array<{ jobId: string; code: string }> = [];

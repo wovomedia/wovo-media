@@ -1353,6 +1353,18 @@ async function createContent(context: PortalContext, body: ActionBody) {
   if ((contentType === "property_marketing" || body.assetId) && !rightsConfirmed) {
     throw new PortalHttpError(400, "Confirm that the client has rights to the supplied property or brand assets.");
   }
+  let assetId: string | null = null;
+  if (body.assetId) {
+    if (!isUuid(body.assetId)) throw new PortalHttpError(400, "Choose a valid workspace asset.");
+    const assets = await supabaseServiceRoleRequest<Array<{ id: string; mime_type: string }>>(
+      `/rest/v1/wovo_portal_assets?select=id,mime_type&id=eq.${encodeURIComponent(body.assetId)}&account_id=eq.${encodeURIComponent(accountId)}&rights_confirmed=eq.true&archived_at=is.null&limit=1`,
+    );
+    const asset = assets?.[0];
+    if (!asset || (!asset.mime_type.startsWith("image/") && !asset.mime_type.startsWith("video/"))) {
+      throw new PortalHttpError(409, "Choose a rights-confirmed image or video from this workspace.");
+    }
+    assetId = asset.id;
+  }
   const rows = await supabaseServiceRoleRequest<PortalContentItem[]>("/rest/v1/wovo_portal_content_items", {
     method: "POST",
     headers: { Prefer: "return=representation" },
@@ -1370,7 +1382,7 @@ async function createContent(context: PortalContext, body: ActionBody) {
         ? body.hashtags.filter((item): item is string => typeof item === "string").map((item) => item.trim()).filter(Boolean).slice(0, 30)
         : [],
       timezone: optionalString(body.timezone, 80) ?? "America/Chicago",
-      asset_id: isUuid(body.assetId) ? body.assetId : null,
+      asset_id: assetId,
       source_rights_confirmed: rightsConfirmed,
       ai_generated: false,
     }),

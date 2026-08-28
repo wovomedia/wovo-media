@@ -108,3 +108,14 @@ export function verifyMetaCreativeSignature(jobId: string, signature: string) {
   const actual = Buffer.from(signature, "hex");
   return expected.length === actual.length && timingSafeEqual(expected, actual);
 }
+
+export function signMetaClientMedia(jobId: string) {
+  return createHmac("sha256", signingKey()).update(`wovo-meta-client-media:${jobId}`).digest("hex");
+}
+
+export function verifyMetaClientMediaSignature(jobId: string, signature: string) {
+  if (!/^[a-f0-9]{64}$/i.test(signature)) return false;
+  const expected = Buffer.from(signMetaClientMedia(jobId), "hex");
+  const actual = Buffer.from(signature, "hex");
+  return expected.length === actual.length && timingSafeEqual(expected, actual);
+}

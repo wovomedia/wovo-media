@@ -48,6 +48,7 @@ export type PortalContentItem = {
   creative_brief: string | null;
   hashtags: string[];
   platform_variant: Record<string, unknown>;
+  asset_id: string | null;
   timezone: string;
   series_key: string | null;
   recurrence_rule: string | null;
