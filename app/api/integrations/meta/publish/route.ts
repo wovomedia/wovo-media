@@ -111,7 +111,9 @@ async function deliverApprovedContent(request: Request, context: Awaited<ReturnT
 
 export async function POST(request: Request) {
   try {
-    const context = await requirePortalContext(request.headers.get("authorization"));
+    const authorization = request.headers.get("authorization");
+    if (!authorization) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+    const context = await requirePortalContext(authorization);
     const body = await request.json() as Record<string, unknown>;
     const accountId = typeof body.accountId === "string" ? body.accountId : undefined;
     const ownerScope = !accountId && context.mode === "staff" && context.staffRole === "owner";
