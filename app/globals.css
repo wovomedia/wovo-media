@@ -9,6 +9,10 @@
   --wm-accent: #f05a3a;
   --wm-accent-strong: #d94326;
   --wm-accent-glow: rgba(240, 90, 58, 0.18);
+  --wm-studio: #0d0c0b;
+  --wm-studio-panel: #171513;
+  --wm-studio-raised: #211e1b;
+  --wm-line: rgba(25, 23, 20, 0.12);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -22,7 +26,8 @@ body {
   text-rendering: optimizeLegibility;
 }
 h1, h2, h3, h4, h5, h6 {
-  font-family: "Iowan Old Style", "Baskerville", "Times New Roman", serif;
+  font-family: "Helvetica Neue", "Avenir Next", Arial, sans-serif;
+  letter-spacing: -0.035em;
   text-wrap: balance;
 }
 p { text-wrap: pretty; }

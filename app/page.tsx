@@ -24,6 +24,17 @@ const included = [
   ["Bookings & billing", "Manage service requests, meetings, subscription status, and cancellation."],
 ];
 
+const creationTools = [
+  ["AI Images", "Create campaign art, product images, and social graphics from a prompt or reference."],
+  ["AI Video", "Generate vertical reels, cinematic ads, image-to-video concepts, and story sequences."],
+  ["Cartoon Studio", "Build recurring characters, episode briefs, voice-ready scripts, and animated series."],
+  ["Social Campaigns", "Create captions, hashtags, carousels, posting plans, and approval-ready schedules."],
+  ["Website Builder", "Draft landing pages, storefronts, service sites, and editable section-based concepts."],
+  ["AI Music & Music Video", "Create song concepts, lyrics, visual treatments, and synchronized music-video briefs."],
+  ["Face-to-Motion", "Prepare consent-based face and body references for supported motion workflows."],
+  ["Adam Project Chat", "Open any project, attach a logo, request revisions, and continue the same creative thread."],
+];
+
 export default function HomePage() {
   return (
     <main>
@@ -134,6 +145,10 @@ export default function HomePage() {
             </div>
           </div>
         </div>
+      </section>
+
+      <section className="border-b border-[#191714]/10 bg-[#fffdf8] py-20 sm:py-28">
+        <div className="mx-auto max-w-[1280px] px-5 sm:px-8"><div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end"><div><p className="text-[11px] font-bold uppercase tracking-[.22em] text-[#d94326]">WOVO creation suite</p><h2 className="mt-4 max-w-3xl text-4xl font-medium leading-[.98] sm:text-6xl">One workspace. Every way your brand creates.</h2></div><Link href="/signup?next=/portal" className="inline-flex min-h-12 items-center justify-center rounded-full bg-[#191714] px-6 text-sm font-bold text-white">Open the studio</Link></div><div className="mt-12 grid overflow-hidden rounded-[28px] border border-[#191714]/15 md:grid-cols-2 lg:grid-cols-4">{creationTools.map(([title, copy], index) => <article key={title} className={`min-h-56 p-6 transition hover:bg-[#f8eee5] ${index % 4 ? "lg:border-l lg:border-[#191714]/10" : ""} ${index > 3 ? "border-t border-[#191714]/10" : index ? "border-t border-[#191714]/10 md:border-t-0" : ""}`}><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#f05a3a] text-xs font-black">{String(index + 1).padStart(2, "0")}</span><h3 className="mt-8 text-xl font-bold">{title}</h3><p className="mt-3 text-sm leading-6 text-[#655f56]">{copy}</p></article>)}</div></div>
       </section>
 
       <section className="py-20 sm:py-28">

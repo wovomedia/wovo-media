@@ -62,7 +62,7 @@ export function SiteHeader() {
             href={signedIn ? "/portal" : "/signup?next=/portal"}
             className="inline-flex min-h-11 items-center rounded-full bg-[#191714] px-5 text-[13px] font-bold text-white transition hover:bg-[#f05a3a]"
           >
-            {signedIn ? "Open workspace" : "Start for $15"}
+            {signedIn ? "Open workspace" : "Start free"}
           </Link>
         </div>
         <button
@@ -98,7 +98,7 @@ export function SiteHeader() {
               {signedIn ? "Workspace active" : "Sign in"}
             </Link>
             <Link href={signedIn ? "/portal" : "/signup?next=/portal"} onClick={() => setOpen(false)} className="inline-flex min-h-12 items-center justify-center rounded-full bg-[#191714] px-4 text-center text-sm font-bold text-white">
-              {signedIn ? "Open workspace" : "Start for $15"}
+              {signedIn ? "Open workspace" : "Start free"}
             </Link>
           </div>
         </div>

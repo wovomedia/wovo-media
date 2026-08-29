@@ -35,6 +35,17 @@ const tabs: Array<{ value: Tab; label: string; mark: string }> = [
   { value: "services", label: "Settings", mark: "S" },
 ];
 
+const WOVO_PRODUCTS: Array<{ label: string; detail: string; target: Tab; mark: string }> = [
+  { label: "AI Images", detail: "Generate and revise", target: "queue", mark: "I" },
+  { label: "AI Video", detail: "Reels, ads, cinematic", target: "queue", mark: "V" },
+  { label: "Cartoon Studio", detail: "Characters and episodes", target: "queue", mark: "C" },
+  { label: "Social Campaigns", detail: "Captions, carousels, plans", target: "queue", mark: "S" },
+  { label: "Website Builder", detail: "Pages and storefronts", target: "studio", mark: "W" },
+  { label: "AI Music", detail: "Songs and music-video briefs", target: "studio", mark: "M" },
+  { label: "Projects", detail: "Media, drafts, revisions", target: "studio", mark: "P" },
+  { label: "Publish", detail: "Approve and schedule", target: "calendar", mark: "→" },
+];
+
 const CLIENT_CREDIT_PACKS = [
   { key: "small", units: 50, price: "$5" },
   { key: "growth", units: 110, price: "$10" },
@@ -630,11 +641,11 @@ export default function PortalPage() {
   }
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-[#f3efe6] text-[#191714]">
-      <header className="sticky top-0 z-30 border-b border-[#191714]/10 bg-[#f3efe6]/90 backdrop-blur-xl">
+    <main className="min-h-screen overflow-x-hidden bg-[#0d0c0b] text-[#191714]">
+      <header className="sticky top-0 z-30 border-b border-white/10 bg-[#0d0c0b]/92 text-white backdrop-blur-xl">
         <div className="mx-auto flex max-w-[1800px] items-center gap-4 px-4 py-3 sm:px-6">
           <WovoLogo variant="full" size={126} className="" />
-          <span className="hidden h-6 w-px bg-[#f05a3a]/10 sm:block" />
+          <span className="hidden h-6 w-px bg-white/10 sm:block" />
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold">
               {snapshot.mode === "staff"
@@ -642,7 +653,7 @@ export default function PortalPage() {
                   "Administrative workspace inspection")
                 : account?.business_name}
             </p>
-            <p className="truncate text-xs text-[#7a7369]">
+            <p className="truncate text-xs text-white/45">
               {snapshot.mode === "staff"
                 ? "Explicit client workspace inspection"
                 : "Client marketing workspace"}
@@ -684,7 +695,7 @@ export default function PortalPage() {
             </div>
           ) : null}
           <button
-            className="min-h-11 rounded-xl border border-[#191714]/10 px-3 text-sm text-[#5f574e] hover:text-[#191714]"
+            className="min-h-11 rounded-xl border border-white/10 px-3 text-sm text-white/65 hover:border-[#f05a3a]/50 hover:text-white"
             onClick={() => void signOut()}
           >
             Sign out
@@ -692,17 +703,17 @@ export default function PortalPage() {
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-[1800px] gap-6 px-4 py-6 pb-28 sm:px-6 sm:pb-6 lg:grid-cols-[220px_minmax(0,1fr)]">
-        <aside>
+      <div className="mx-auto grid max-w-[1900px] gap-4 px-3 py-4 pb-28 sm:px-4 sm:pb-4 lg:grid-cols-[268px_minmax(0,1fr)]">
+        <aside className="rounded-2xl border border-white/10 bg-[#171513] p-3 text-white lg:sticky lg:top-20 lg:h-[calc(100vh-6rem)] lg:overflow-y-auto">
           <nav className="hidden space-y-1 sm:block" aria-label="Portal">
             {tabs.map((item) => (
               <button
                 key={item.value}
                 onClick={() => setTab(item.value)}
-                className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-medium transition ${tab === item.value ? "bg-[#191714] text-white shadow-sm" : "text-[#655f56] hover:bg-[#191714]/[.04] hover:text-[#191714]"}`}
+                className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-medium transition ${tab === item.value ? "bg-[#f05a3a] text-[#191714] shadow-sm" : "text-white/55 hover:bg-white/[.06] hover:text-white"}`}
               >
                 <span
-                  className={`inline-flex h-7 w-7 items-center justify-center rounded-lg text-[10px] font-black ${tab === item.value ? "bg-[#f05a3a] text-[#191714]" : "bg-[#191714]/[.06]"}`}
+                  className={`inline-flex h-7 w-7 items-center justify-center rounded-lg text-[10px] font-black ${tab === item.value ? "bg-[#191714] text-white" : "bg-white/[.07]"}`}
                 >
                   {item.mark}
                 </span>
@@ -710,6 +721,7 @@ export default function PortalPage() {
               </button>
             ))}
           </nav>
+          <div className="mt-5 hidden border-t border-white/10 pt-4 sm:block"><p className="px-2 text-[10px] font-bold uppercase tracking-[.18em] text-white/30">WOVO creation tools</p><div className="mt-2 space-y-1">{WOVO_PRODUCTS.map((product) => <button key={product.label} type="button" onClick={() => setTab(product.target)} className="group flex w-full items-center gap-3 rounded-xl px-2 py-2.5 text-left transition hover:bg-white/[.06]"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-white/10 bg-white/[.04] text-[10px] font-black text-[#ff8c70] group-hover:border-[#f05a3a]/50">{product.mark}</span><span className="min-w-0"><span className="block truncate text-xs font-semibold text-white/75 group-hover:text-white">{product.label}</span><span className="mt-0.5 block truncate text-[10px] text-white/30">{product.detail}</span></span></button>)}</div></div>
           {snapshot.mode === "staff" ? (
             <div className="mt-5 hidden rounded-2xl border border-[#191714]/10 bg-white/70 p-4 text-xs leading-5 text-[#655f56] sm:block">
               <p className="font-semibold text-[#191714]">Need help?</p>
@@ -727,7 +739,7 @@ export default function PortalPage() {
           ) : null}
         </aside>
 
-        <section className="min-w-0">
+        <section className="min-w-0 rounded-2xl bg-[#f3efe6] p-3 sm:p-5">
           {snapshot.mode === "staff" && snapshot.staffRole === "owner" ? (
             <button
               className={`${secondaryButton} mb-4 w-full sm:hidden`}
