@@ -29,10 +29,11 @@ export async function GET(request: Request) {
     const grantedScopes = permissions.data?.filter((item) => item.status === "granted").map((item) => item.permission) ?? [];
     const pages = await metaGraph<{ data: PageRow[] }>(`me/accounts?fields=id,name,access_token,instagram_business_account{id,username}&access_token=${encodeURIComponent(token.access_token)}`, token.access_token);
     if (!pages.data?.length) throw new Error("META_NO_MANAGED_PAGE");
-    const page = pages.data.find((item) => item.instagram_business_account) ?? pages.data[0];
-    const encrypted = encryptMetaToken(page.access_token);
-    await supabaseServiceRoleRequest("/rest/v1/wovo_meta_connections?on_conflict=account_id,owner_scope", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ account_id: record.account_id, owner_scope: record.owner_scope, connected_by: record.user_id, app_id: getEnv("META_APP_ID"), status: "healthy", action_policy: "approve_each", page_id: page.id, page_name: page.name, instagram_user_id: page.instagram_business_account?.id ?? null, instagram_username: page.instagram_business_account?.username ?? null, granted_scopes: grantedScopes, token_ciphertext: encrypted.ciphertext, token_iv: encrypted.iv, token_tag: encrypted.tag, token_expires_at: token.expires_in ? new Date(Date.now() + token.expires_in * 1000).toISOString() : null, kill_switch: true, last_checked_at: new Date().toISOString(), revoked_at: null, updated_at: new Date().toISOString() }) });
-    return NextResponse.redirect(`${siteUrl}/portal?meta=connected`);
+    await Promise.all(pages.data.map(async (page) => {
+      const encrypted = encryptMetaToken(page.access_token);
+      await supabaseServiceRoleRequest("/rest/v1/wovo_meta_connections?on_conflict=account_id,owner_scope,page_id", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ account_id: record.account_id, owner_scope: record.owner_scope, connected_by: record.user_id, app_id: getEnv("META_APP_ID"), status: "healthy", action_policy: "approve_each", page_id: page.id, page_name: page.name, instagram_user_id: page.instagram_business_account?.id ?? null, instagram_username: page.instagram_business_account?.username ?? null, granted_scopes: grantedScopes, token_ciphertext: encrypted.ciphertext, token_iv: encrypted.iv, token_tag: encrypted.tag, token_expires_at: token.expires_in ? new Date(Date.now() + token.expires_in * 1000).toISOString() : null, kill_switch: true, last_checked_at: new Date().toISOString(), revoked_at: null, updated_at: new Date().toISOString() }) });
+    }));
+    return NextResponse.redirect(`${siteUrl}/portal?meta=connected&count=${pages.data.length}`);
   } catch (error) {
     console.error("Meta OAuth callback failed", { message: error instanceof Error ? error.message.slice(0, 160) : "Unknown" });
     return NextResponse.redirect(`${siteUrl}/portal?meta=failed`);

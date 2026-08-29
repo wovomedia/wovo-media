@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { signMetaClientMedia } from "@/lib/meta/creative";
-import { enqueueWovoDailyImagePost, loadMetaConnection, processMetaPublishJobs, publishMetaJob } from "@/lib/meta/publishing";
+import { enqueueWovoDailyImagePost, loadMetaConnection, loadMetaConnections, processMetaPublishJobs, publishMetaJob } from "@/lib/meta/publishing";
 import { assertPortalAccountAccess, isUuid, parseIsoDate, PortalHttpError, requiredString, requirePortalContext } from "@/lib/portal/server";
 import { supabaseServiceRoleRequest } from "@/lib/supabase/server";
 
@@ -42,7 +42,9 @@ async function deliverApprovedContent(request: Request, context: Awaited<ReturnT
   if (item.status !== "approved" || !item.approved_snapshot_id) throw new PortalHttpError(409, "Approve the exact post version before publishing or scheduling it.");
   const destination = item.platform === "facebook" ? "facebook_page" : item.platform === "instagram" ? "instagram" : null;
   if (!destination) throw new PortalHttpError(400, "Only Facebook and Instagram drafts can use this Meta connection.");
-  const connection = await loadMetaConnection({ accountId, ownerScope: false });
+  const connections = await loadMetaConnections({ accountId, ownerScope: false });
+  const requestedConnectionId = typeof body.connectionId === "string" ? body.connectionId : "";
+  const connection = requestedConnectionId ? connections.find((item) => item.id === requestedConnectionId) : connections[0];
   if (!connection || connection.status !== "healthy") throw new PortalHttpError(409, "Connect this workspace to Meta before scheduling posts.");
   if (connection.kill_switch || connection.action_policy === "draft_only") throw new PortalHttpError(409, "Enable approved Meta scheduling in Profile before sending posts.");
   if (destination === "instagram" && (!connection.instagram_user_id || !connection.instagram_username)) throw new PortalHttpError(409, "The connected Page does not include an Instagram professional account.");
@@ -132,7 +134,8 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Approve and publish one real test through this workspace connection before enabling automatic publishing." }, { status: 409 });
       }
       const now = new Date().toISOString();
-      await supabaseServiceRoleRequest(`/rest/v1/wovo_meta_connections?id=eq.${encodeURIComponent(connection.id)}`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ action_policy: actionPolicy, kill_switch: body.killSwitch !== false, auto_publish_opted_in_at: actionPolicy === "scheduled_auto_publish" && body.killSwitch === false ? now : null, updated_at: now }) });
+      const policyFilter = ownerScope ? "owner_scope=eq.true&account_id=is.null" : `owner_scope=eq.false&account_id=eq.${encodeURIComponent(accountId!)}`;
+      await supabaseServiceRoleRequest(`/rest/v1/wovo_meta_connections?${policyFilter}&status=eq.healthy`, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ action_policy: actionPolicy, kill_switch: body.killSwitch !== false, auto_publish_opted_in_at: actionPolicy === "scheduled_auto_publish" && body.killSwitch === false ? now : null, updated_at: now }) });
       return NextResponse.json({ saved: true });
     }
 

@@ -35,6 +35,12 @@ export async function loadMetaConnection(options: { accountId?: string; ownerSco
   return rows?.[0] ?? null;
 }
 
+export async function loadMetaConnections(options: { accountId?: string; ownerScope?: boolean }) {
+  const filter = options.ownerScope ? "owner_scope=eq.true&account_id=is.null" : `owner_scope=eq.false&account_id=eq.${encodeURIComponent(options.accountId || "")}`;
+  const rows = await supabaseServiceRoleRequest<MetaConnection[]>(`/rest/v1/wovo_meta_connections?select=*&${filter}&status=eq.healthy&revoked_at=is.null&order=created_at.desc&limit=100`).catch(() => []);
+  return rows ?? [];
+}
+
 async function waitForInstagramContainer(containerId: string, token: string) {
   for (let attempt = 0; attempt < 30; attempt += 1) {
     const status = await metaGraph<{ status_code?: string }>(`${containerId}?fields=status_code&access_token=${encodeURIComponent(token)}`, token);

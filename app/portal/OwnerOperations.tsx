@@ -10,13 +10,14 @@ import type {
   PortalSnapshot,
 } from "@/lib/portal/types";
 
-type OwnerSection = "adam" | "operations" | "clients" | "inbox" | "content" | "services" | "billing" | "settings";
+type OwnerSection = "adam" | "operations" | "create" | "clients" | "inbox" | "content" | "services" | "billing" | "settings";
 
 type OwnerAction = (payload: Record<string, unknown>, success: string) => Promise<unknown>;
 
 const sections: Array<{ value: OwnerSection; label: string; short: string }> = [
   { value: "adam", label: "Adam Operations", short: "Adam" },
   { value: "operations", label: "Operations", short: "Overview" },
+  { value: "create", label: "Create", short: "Create" },
   { value: "clients", label: "Clients / Workspaces", short: "Clients" },
   { value: "inbox", label: "Team Inbox", short: "Inbox" },
   { value: "content", label: "Content Calendar / Queue", short: "Content" },
@@ -331,6 +332,26 @@ export default function OwnerOperations({
           ) : null}
 
           {section === "adam" ? <AdamOperations /> : null}
+
+          {section === "create" ? (
+            <div className="space-y-6">
+              <SectionHeading eyebrow="Owner creative studio" title="Choose a brand, then create" copy="Your verified owner role is never charged WOVO credits. Every draft, asset, approval, and Meta destination stays inside the client workspace you select." />
+              <section className={`${surface} overflow-hidden`}>
+                <div className="grid xl:grid-cols-[.72fr_1.28fr]">
+                  <div className="bg-[#191714] p-6 text-white sm:p-8">
+                    <p className="text-xs font-bold uppercase tracking-[.16em] text-[#ff8c70]">Owner access</p>
+                    <h2 className="mt-3 text-3xl font-medium tracking-[-.04em]">Unlimited internal creation. Tenant-safe delivery.</h2>
+                    <p className="mt-4 text-sm leading-6 text-white/65">Select the business whose facts, logos, characters, approvals, and connected social accounts should be used. WOVO records the selected workspace on every result.</p>
+                    <div className="mt-6 rounded-2xl border border-white/10 bg-white/[.06] p-4"><p className="text-sm font-bold">Credits</p><p className="mt-1 text-3xl font-semibold text-[#ff8c70]">∞</p><p className="mt-1 text-xs leading-5 text-white/50">Server-verified owner exemption. Customer balances are unchanged.</p></div>
+                  </div>
+                  <div className="p-5 sm:p-7">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-bold uppercase tracking-[.14em] text-[#d94326]">Client workspaces</p><h3 className="mt-2 text-2xl font-semibold">Open a focused studio</h3></div><input aria-label="Search brands to create for" value={search} onChange={(event) => setSearch(event.target.value)} className={`${field} sm:max-w-72`} placeholder="Search business or email" /></div>
+                    <div className="mt-5 grid gap-3 md:grid-cols-2">{filteredAccounts.map((account) => <article key={account.id} className="rounded-2xl border border-[#191714]/10 bg-[#f7f2e9] p-4"><p className="text-xs font-bold uppercase tracking-[.12em] text-[#a9341f]">{account.business_type}</p><h4 className="mt-2 text-lg font-bold">{account.business_name}</h4><p className="mt-1 truncate text-xs text-[#756e64]">{account.contact_email}</p><button type="button" className={`${primary} mt-4 w-full`} onClick={() => onInspectWorkspace(account, "queue")}>Create for this brand</button></article>)}{!filteredAccounts.length ? <div className="md:col-span-2"><Empty title="No matching workspace" copy="Create or restore a client workspace before producing tenant-scoped work." /></div> : null}</div>
+                  </div>
+                </div>
+              </section>
+            </div>
+          ) : null}
 
           {section === "clients" ? (
             <div className="space-y-6">

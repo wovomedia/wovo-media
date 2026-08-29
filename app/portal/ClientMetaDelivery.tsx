@@ -5,7 +5,8 @@ import type { PortalContentItem } from "@/lib/portal/types";
 import { getActiveSession } from "@/lib/supabase/session-client";
 
 type Delivery = { id: string; source_content_item_id: string; destination: string; status: string; scheduled_for: string | null; provider_post_id: string | null; published_at: string | null; last_error_summary: string | null };
-type Status = { connection: null | { status: string; pageName: string; instagramUsername: string | null; actionPolicy: string; killSwitch: boolean }; deliveries: Delivery[] };
+type MetaDestination = { id: string; status: string; pageName: string; instagramUsername: string | null; actionPolicy: string; killSwitch: boolean };
+type Status = { connection: MetaDestination | null; connections: MetaDestination[]; deliveries: Delivery[] };
 
 function localDate(value: string | null) {
   if (!value) return "";
@@ -19,6 +20,7 @@ export default function ClientMetaDelivery({ accountId, items }: { accountId: st
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [connectionId, setConnectionId] = useState("");
   const approved = useMemo(() => items.filter((item) => item.status === "approved" && item.approved_snapshot_id && ["facebook", "instagram"].includes(item.platform)), [items]);
 
   const request = useCallback(async (url: string, init?: RequestInit) => {
@@ -37,7 +39,7 @@ export default function ClientMetaDelivery({ accountId, items }: { accountId: st
   async function act(item: PortalContentItem, action: "schedule_content" | "publish_content", scheduledFor?: string) {
     setBusy(`${action}:${item.id}`); setError(""); setNotice("");
     try {
-      const response = await request("/api/integrations/meta/publish", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, accountId, contentId: item.id, scheduledFor: scheduledFor ? new Date(scheduledFor).toISOString() : undefined }) });
+      const response = await request("/api/integrations/meta/publish", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, accountId, contentId: item.id, connectionId, scheduledFor: scheduledFor ? new Date(scheduledFor).toISOString() : undefined }) });
       const payload = await response.json() as { error?: string };
       if (!response.ok) throw new Error(payload.error || "Meta did not accept this delivery.");
       setNotice(action === "publish_content" ? "Meta confirmed the post. Its provider receipt is recorded." : "The exact approved version is scheduled.");
@@ -46,10 +48,11 @@ export default function ClientMetaDelivery({ accountId, items }: { accountId: st
     finally { setBusy(""); }
   }
 
-  const connection = status?.connection;
+  const connections = status?.connections ?? (status?.connection ? [status.connection] : []);
+  const connection = connections.find((item) => item.id === connectionId) ?? connections[0] ?? null;
   if (!connection || connection.status !== "healthy") return null;
   return <section className="rounded-[24px] border border-[#191714]/10 bg-[#191714] p-5 text-white shadow-[0_18px_50px_rgba(25,23,20,.12)] sm:p-6">
-    <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-[11px] font-bold uppercase tracking-[.16em] text-[#ff8c70]">Connected publishing</p><h2 className="mt-2 text-2xl font-semibold">Choose the account, then schedule.</h2><p className="mt-2 text-sm text-white/60">Facebook: {connection.pageName}{connection.instagramUsername ? ` · Instagram: @${connection.instagramUsername}` : ""}</p></div><span className="rounded-full border border-white/10 bg-white/[.06] px-3 py-1.5 text-xs font-bold">Approval required</span></div>
+    <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-[11px] font-bold uppercase tracking-[.16em] text-[#ff8c70]">Connected publishing</p><h2 className="mt-2 text-2xl font-semibold">Choose the account, then schedule.</h2><p className="mt-2 text-sm text-white/60">{connections.length} authorized destination{connections.length === 1 ? "" : "s"}</p></div><label className="min-w-64 text-xs font-semibold text-white/60">Publish to<select value={connection.id} onChange={(event) => setConnectionId(event.target.value)} className="mt-2 min-h-12 w-full rounded-xl border border-white/12 bg-[#11100f] px-3 text-sm text-white">{connections.map((item) => <option key={item.id} value={item.id}>{item.pageName}{item.instagramUsername ? ` · @${item.instagramUsername}` : ""}</option>)}</select></label></div>
     {connection.killSwitch || connection.actionPolicy === "draft_only" ? <p className="mt-5 rounded-xl border border-[#f05a3a]/30 bg-[#f05a3a]/10 p-4 text-sm text-[#ffc0b0]">Enable approved scheduling under Profile before sending anything to Meta.</p> : null}
     <div className="mt-5 space-y-3">{approved.map((item) => {
       const delivery = status?.deliveries?.find((entry) => entry.source_content_item_id === item.id);
