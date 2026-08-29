@@ -824,7 +824,6 @@ export default function PortalPage() {
               }
               paid={isPaid}
               staff={snapshot.mode === "staff"}
-              aiConfigured={snapshot.setup.aiConfigured}
               busy={busy}
               onAction={action}
               authedFetch={authedFetch}
@@ -3112,7 +3111,6 @@ function CreatorWorkbench({
   assets,
   creditBalance,
   ownerExempt,
-  aiConfigured,
   busy,
   onAction,
   authedFetch,
@@ -3127,7 +3125,6 @@ function CreatorWorkbench({
   creditBalance: number;
   ownerExempt: boolean;
   paid: boolean;
-  aiConfigured: boolean;
   busy: string;
   onAction: (
     payload: Record<string, unknown>,
@@ -3578,7 +3575,7 @@ function CreatorWorkbench({
             </p>
             <p className="mt-1 flex items-center gap-2 text-sm font-semibold">
               <span className="h-2 w-2 rounded-full bg-[#f05a3a]" />
-              {aiConfigured ? "AI ready" : "Manual"}
+              Review first
             </p>
           </div>
         </div>
@@ -4437,7 +4434,6 @@ function Queue({
   ownerExempt,
   paid,
   staff,
-  aiConfigured,
   busy,
   onAction,
   authedFetch,
@@ -4453,7 +4449,6 @@ function Queue({
   ownerExempt: boolean;
   paid: boolean;
   staff: boolean;
-  aiConfigured: boolean;
   busy: string;
   onAction: (
     payload: Record<string, unknown>,
@@ -4487,7 +4482,6 @@ function Queue({
         creditBalance={creditBalance}
         ownerExempt={ownerExempt}
         paid={paid}
-        aiConfigured={aiConfigured}
         busy={busy}
         onAction={onAction}
         authedFetch={authedFetch}

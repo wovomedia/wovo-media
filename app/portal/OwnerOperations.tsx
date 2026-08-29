@@ -178,6 +178,15 @@ export default function OwnerOperations({
   }, [snapshot.publicInquiries]);
 
   function choose(next: OwnerSection) {
+    if (next === "create" && activeAccounts.length > 0) {
+      // Creation needs a tenant boundary for assets, connected destinations,
+      // approvals, and audit records. Open the real Studio immediately and
+      // keep the workspace switcher available in its header.
+      onInspectWorkspace(activeAccounts[0], "queue");
+      setDrawerOpen(false);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
     setSection(next);
     setDrawerOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -335,13 +344,13 @@ export default function OwnerOperations({
 
           {section === "create" ? (
             <div className="space-y-6">
-              <SectionHeading eyebrow="Owner creative studio" title="Choose a brand, then create" copy="Your verified owner role is never charged WOVO credits. Every draft, asset, approval, and Meta destination stays inside the client workspace you select." />
+              <SectionHeading eyebrow="Owner creative studio" title="No active client workspace" copy="Create or restore a workspace before opening the Studio. Creation always records which client owns its assets, approvals, and publishing destinations." />
               <section className={`${surface} overflow-hidden`}>
                 <div className="grid xl:grid-cols-[.72fr_1.28fr]">
                   <div className="bg-[#191714] p-6 text-white sm:p-8">
                     <p className="text-xs font-bold uppercase tracking-[.16em] text-[#ff8c70]">Owner access</p>
                     <h2 className="mt-3 text-3xl font-medium tracking-[-.04em]">Unlimited internal creation. Tenant-safe delivery.</h2>
-                    <p className="mt-4 text-sm leading-6 text-white/65">Select the business whose facts, logos, characters, approvals, and connected social accounts should be used. WOVO records the selected workspace on every result.</p>
+                    <p className="mt-4 text-sm leading-6 text-white/65">The Create tab opens the full Studio as soon as an active client workspace exists.</p>
                     <div className="mt-6 rounded-2xl border border-white/10 bg-white/[.06] p-4"><p className="text-sm font-bold">Credits</p><p className="mt-1 text-3xl font-semibold text-[#ff8c70]">∞</p><p className="mt-1 text-xs leading-5 text-white/50">Server-verified owner exemption. Customer balances are unchanged.</p></div>
                   </div>
                   <div className="p-5 sm:p-7">
