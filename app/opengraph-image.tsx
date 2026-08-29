@@ -39,7 +39,7 @@ export default function OpenGraphImage() {
           </div>
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 18, color: "#655f56" }}>
-          <span>Plans from $15/month</span>
+          <span>Start free · plans or one-time credits</span>
           <span>Serving businesses worldwide</span>
         </div>
         <div style={{ position: "absolute", right: 78, top: 72, width: 82, height: 82, borderRadius: 999, background: "#f05a3a" }} />

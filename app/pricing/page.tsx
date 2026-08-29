@@ -9,9 +9,10 @@ export const metadata: Metadata = {
 };
 
 const periods = [
-  { name: "Monthly", due: "$15", cadence: "every month", effective: "$15/month", savings: "Flexible billing", badge: "" },
-  { name: "Every 3 months", due: "$36", cadence: "every 3 months", effective: "$12/month", savings: "Save 20%", badge: "SAVE 20%" },
-  { name: "Yearly", due: "$120", cadence: "every year", effective: "$10/month", savings: "Save 33%", badge: "BEST DEAL" },
+  { name: "Monthly", due: "$44.99", cadence: "every month", effective: "$44.99/month", savings: "Flexible billing", badge: "" },
+  { name: "Every 3 months", due: "$119.97", cadence: "every 3 months", effective: "$39.99/month", savings: "Save $15 each term", badge: "SAVE 11%" },
+  { name: "Every 6 months", due: "$209.94", cadence: "every 6 months", effective: "$34.99/month", savings: "Save $60 each term", badge: "SAVE 22%" },
+  { name: "Yearly", due: "$359.88", cadence: "every year", effective: "$29.99/month", savings: "Save $180 each year", badge: "BEST DEAL" },
 ];
 
 const included = [
@@ -35,7 +36,7 @@ export default function PricingPage() {
   return <main>
     <DealCapture />
     <Link href="#plans" className="flex min-h-12 items-center justify-center bg-[#f2563d] px-5 text-center text-xs font-black uppercase tracking-[.14em] text-[#191714] hover:bg-[#df432d]">
-      Best deal going on now — yearly saves 33% and includes every WOVO tool →
+      Best deal going on now — yearly saves $180 and includes every WOVO tool →
     </Link>
     <section className="border-b border-[#191714]/10 py-16 sm:py-24">
       <div className="mx-auto max-w-[1180px] px-5 sm:px-8">
@@ -53,7 +54,7 @@ export default function PricingPage() {
             <div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#ff8c70]">WOVO Workspace</p><h2 className="mt-2 text-3xl font-medium tracking-[-.035em]">Everything included. Usage stays predictable.</h2></div>
             <p className="mt-4 max-w-md text-sm leading-6 text-white/65 lg:mt-0">Each paid workspace receives 100 creation credits every seven days. Unused weekly subscription credits do not accumulate.</p>
           </div>
-          <div className="grid lg:grid-cols-3">
+          <div className="grid lg:grid-cols-4">
             {periods.map((period, index) => <article key={period.name} className={`relative p-5 sm:p-7 ${index ? "border-t border-[#191714]/10 lg:border-l lg:border-t-0" : ""} ${period.badge === "BEST DEAL" ? "bg-[#f8eee5]" : ""}`}>
               {period.badge && <span className="absolute right-5 top-5 rounded-full bg-[#f2563d] px-3 py-1 text-[10px] font-black tracking-[.12em] text-[#191714]">{period.badge}</span>}
               <p className="pr-28 text-sm font-bold">{period.name}</p>

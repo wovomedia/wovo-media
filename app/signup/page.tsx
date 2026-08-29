@@ -58,7 +58,7 @@ export default function SignupPage() {
     <AuthFrame
       eyebrow="Create your workspace"
       title="Start with a verified account."
-      description="Account creation is free. After private setup, choose $15 monthly, $36 every three months, or $120 yearly before Stripe checkout."
+      description="Account creation is free. Preview your workspace, then choose monthly, 3-month, 6-month, or yearly billing—or buy one-time credits."
     >
       <div className="mb-6" aria-label="Account setup progress">
         <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[.14em] text-[#81796f]"><span className="text-[#d94326]">1 · Account</span><span>2 · Brand setup</span><span>3 · Preview</span></div>

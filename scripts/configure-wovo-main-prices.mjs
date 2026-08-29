@@ -14,15 +14,15 @@ if (!legacyPriceId) {
   const prices = await stripe("/prices?active=true&type=recurring&limit=100&expand[]=data.product");
   const candidates = (prices.data ?? []).filter((price) => {
     const productName = typeof price.product === "object" ? price.product?.name ?? "" : "";
-    return price.livemode && price.currency === "usd" && price.unit_amount === 3999 && price.recurring?.interval === "month" && price.recurring?.interval_count === 1 && /wovo/i.test(productName);
+    return price.livemode && price.currency === "usd" && price.unit_amount === 3999 && price.recurring?.interval === "month" && price.recurring?.interval_count === 1 && productName === "WOVO Workspace";
   });
-  if (candidates.length !== 1) throw new Error(`Expected exactly one live WOVO $39.99 monthly price; found ${candidates.length}.`);
+  if (candidates.length !== 1) throw new Error(`Expected exactly one live WOVO recurring price; found ${candidates.length}.`);
   legacyPriceId = candidates[0].id;
 }
 
 const legacy = await stripe(`/prices/${encodeURIComponent(legacyPriceId)}?expand[]=product`);
-if (!legacy.livemode || legacy.currency !== "usd" || legacy.unit_amount !== 3999 || legacy.recurring?.interval !== "month" || legacy.recurring?.interval_count !== 1) {
-  throw new Error("The current WOVO price is not the expected live $39.99 monthly grandfathered price.");
+if (!legacy.livemode || legacy.currency !== "usd" || legacy.recurring?.interval !== "month" || legacy.recurring?.interval_count !== 1) {
+  throw new Error("The current WOVO price is not a live monthly recurring price.");
 }
 const productId = typeof legacy.product === "string" ? legacy.product : legacy.product?.id;
 if (!productId) throw new Error("The current WOVO price has no reusable Stripe product.");
@@ -37,9 +37,10 @@ await stripe(`/products/${encodeURIComponent(productId)}`, {
 });
 
 const definitions = [
-  { key: "wovo_workspace_monthly_1500_v1", amount: 1500, interval: "month", count: 1, env: "WOVO_PORTAL_MONTHLY_PRICE_ID" },
-  { key: "wovo_workspace_quarterly_3600_v1", amount: 3600, interval: "month", count: 3, env: "WOVO_PORTAL_QUARTERLY_PRICE_ID" },
-  { key: "wovo_workspace_yearly_12000_v1", amount: 12000, interval: "year", count: 1, env: "WOVO_PORTAL_YEARLY_PRICE_ID" },
+  { key: "wovo_workspace_monthly_4499_v2", amount: 4499, interval: "month", count: 1, env: "WOVO_PORTAL_MONTHLY_PRICE_ID" },
+  { key: "wovo_workspace_quarterly_11997_v2", amount: 11997, interval: "month", count: 3, env: "WOVO_PORTAL_QUARTERLY_PRICE_ID" },
+  { key: "wovo_workspace_semiannual_20994_v2", amount: 20994, interval: "month", count: 6, env: "WOVO_PORTAL_SEMIANNUAL_PRICE_ID" },
+  { key: "wovo_workspace_yearly_35988_v2", amount: 35988, interval: "year", count: 1, env: "WOVO_PORTAL_YEARLY_PRICE_ID" },
 ];
 
 const result = {};
@@ -59,7 +60,7 @@ for (const definition of definitions) {
       "recurring[interval_count]": String(definition.count),
       lookup_key: definition.key,
       "metadata[wovo_product]": "workspace",
-      "metadata[wovo_price_version]": "2026-08-04",
+      "metadata[wovo_price_version]": "2026-08-29",
     });
     price = await stripe("/prices", { method: "POST", body });
   }

@@ -1,7 +1,7 @@
 import { getEnv } from "@/lib/env";
 import { retrievePrice } from "@/lib/stripe";
 
-export type PortalBillingFrequency = "monthly" | "quarterly" | "yearly";
+export type PortalBillingFrequency = "monthly" | "quarterly" | "semiannual" | "yearly";
 
 export type PortalBillingOption = {
   frequency: PortalBillingFrequency;
@@ -10,7 +10,7 @@ export type PortalBillingOption = {
   currency: "usd";
   interval: "month" | "year";
   intervalCount: number;
-  monthsCovered: 1 | 3 | 12;
+  monthsCovered: 1 | 3 | 6 | 12;
   effectiveMonthlyCents: number;
   savingsCents: number;
   savingsPercent: number;
@@ -18,40 +18,49 @@ export type PortalBillingOption = {
 };
 
 const BILLING_CONFIG: Record<PortalBillingFrequency, {
-  env: "WOVO_PORTAL_MONTHLY_PRICE_ID" | "WOVO_PORTAL_QUARTERLY_PRICE_ID" | "WOVO_PORTAL_YEARLY_PRICE_ID";
+  env: "WOVO_PORTAL_MONTHLY_PRICE_ID" | "WOVO_PORTAL_QUARTERLY_PRICE_ID" | "WOVO_PORTAL_SEMIANNUAL_PRICE_ID" | "WOVO_PORTAL_YEARLY_PRICE_ID";
   label: string;
   amountCents: number;
   interval: "month" | "year";
   intervalCount: number;
-  monthsCovered: 1 | 3 | 12;
+  monthsCovered: 1 | 3 | 6 | 12;
   renewalLabel: string;
 }> = {
   monthly: {
     env: "WOVO_PORTAL_MONTHLY_PRICE_ID",
     label: "Monthly",
-    amountCents: 1500,
+    amountCents: 4499,
     interval: "month",
     intervalCount: 1,
     monthsCovered: 1,
-    renewalLabel: "$15 every month",
+    renewalLabel: "$44.99 every month",
   },
   quarterly: {
     env: "WOVO_PORTAL_QUARTERLY_PRICE_ID",
     label: "Every 3 months",
-    amountCents: 3600,
+    amountCents: 11997,
     interval: "month",
     intervalCount: 3,
     monthsCovered: 3,
-    renewalLabel: "$36 every 3 months",
+    renewalLabel: "$119.97 every 3 months",
+  },
+  semiannual: {
+    env: "WOVO_PORTAL_SEMIANNUAL_PRICE_ID",
+    label: "Every 6 months",
+    amountCents: 20994,
+    interval: "month",
+    intervalCount: 6,
+    monthsCovered: 6,
+    renewalLabel: "$209.94 every 6 months",
   },
   yearly: {
     env: "WOVO_PORTAL_YEARLY_PRICE_ID",
     label: "Yearly",
-    amountCents: 12000,
+    amountCents: 35988,
     interval: "year",
     intervalCount: 1,
     monthsCovered: 12,
-    renewalLabel: "$120 every year",
+    renewalLabel: "$359.88 every year",
   },
 };
 
@@ -92,7 +101,7 @@ export async function getValidatedPortalBillingOption(frequency: PortalBillingFr
     || (price.recurring.interval_count ?? 1) !== expected.intervalCount
   ) return null;
 
-  const monthlyBaselineCents = 1500 * expected.monthsCovered;
+  const monthlyBaselineCents = 4499 * expected.monthsCovered;
   const savingsCents = Math.max(0, monthlyBaselineCents - expected.amountCents);
   return {
     frequency,

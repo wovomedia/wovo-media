@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Weekly Marketing Workspace for Independent Businesses",
-  description: "Turn your business context into a clear weekly content plan, approval queue, private asset library, and organized WOVO support. Plans start at $15/month.",
+  description: "Create videos, images, cartoons, websites, and campaigns in one WOVO workspace. Plans start at $44.99/month or use one-time credits.",
   alternates: { canonical: "/" },
 };
 
@@ -39,7 +39,7 @@ export default function HomePage() {
             </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               <Link href="/signup?next=/portal" className="inline-flex min-h-13 items-center justify-center rounded-full bg-[#191714] px-7 text-sm font-bold text-white transition hover:bg-[#f05a3a]">
-                Start for $15/month
+                Start free
               </Link>
               <Link href="/product" className="inline-flex min-h-13 items-center justify-center rounded-full border border-[#191714]/25 px-7 text-sm font-bold text-[#191714] transition hover:bg-white/55">
                 See the workspace
@@ -178,7 +178,7 @@ export default function HomePage() {
           <h2 className="mx-auto mt-5 max-w-3xl text-4xl font-medium leading-[1] tracking-[-0.045em] sm:text-6xl">Give your marketing a place to go next.</h2>
           <p className="mx-auto mt-5 max-w-2xl text-sm leading-6 text-[#191714]/70">Create an account, verify your email, and subscribe securely through Stripe to open the private client workspace.</p>
           <Link href="/signup?next=/portal" className="mt-8 inline-flex min-h-13 items-center justify-center rounded-full bg-[#191714] px-7 text-sm font-bold text-white transition hover:bg-white hover:text-[#191714]">
-            Start for $15/month
+            Start free
           </Link>
         </div>
       </section>

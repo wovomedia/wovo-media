@@ -28,7 +28,7 @@ export default function ProductPage() {
           <div>
             <p className="max-w-2xl text-lg leading-8 text-[#655f56]">WOVO turns approved business context into an organized marketing week: a visible plan, a review queue, private assets, bookings, billing, and a shared support path.</p>
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-              <Link href="/signup?next=/portal" className="inline-flex min-h-12 items-center justify-center rounded-full bg-[#191714] px-6 text-sm font-bold text-white transition hover:bg-[#f05a3a] hover:text-[#191714]">Start for $15/month</Link>
+              <Link href="/signup?next=/portal" className="inline-flex min-h-12 items-center justify-center rounded-full bg-[#191714] px-6 text-sm font-bold text-white transition hover:bg-[#f05a3a] hover:text-[#191714]">Start free</Link>
               <Link href="/workflow" className="inline-flex min-h-12 items-center justify-center rounded-full border border-[#191714]/25 px-6 text-sm font-bold">See the workflow</Link>
             </div>
           </div>

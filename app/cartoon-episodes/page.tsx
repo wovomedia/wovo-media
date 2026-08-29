@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { getValidatedCartoonSeriesPrice } from "@/lib/portal/cartoon-series";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Custom Cartoon Episodes for Your Business — $39.99/Month",
+  title: "Custom Cartoon Episodes for Your Business — Included in WOVO",
   description: "Turn an original business character into three short vertical cartoon episode drafts each week with private review and rights-first production.",
   alternates: { canonical: "/cartoon-episodes" },
   openGraph: {
@@ -24,9 +22,6 @@ const steps = [
 ];
 
 export default async function CartoonEpisodesPage() {
-  const price = await getValidatedCartoonSeriesPrice();
-  if (!price) notFound();
-
   return <main>
     <section className="overflow-hidden border-b border-[#191714]/10">
       <div className="mx-auto grid max-w-[1280px] lg:grid-cols-[1.1fr_.9fr]">
@@ -63,7 +58,7 @@ export default async function CartoonEpisodesPage() {
     <section className="bg-[#e9e2d6] py-16 sm:py-20">
       <div className="mx-auto grid max-w-[1180px] gap-8 px-5 sm:px-8 lg:grid-cols-[1fr_.85fr] lg:items-center">
         <div><p className="text-[11px] font-bold uppercase tracking-[.2em] text-[#d94326]">What the subscription includes</p><h2 className="mt-4 text-4xl font-medium tracking-[-.04em]">A real production queue—not an unlimited-generation promise.</h2><ul className="mt-6 grid gap-x-7 sm:grid-cols-2">{["Three episode drafts per week", "Original character continuity", "Eight-second vertical video", "Caption with each episode", "Private tenant-scoped storage", "Human review before publishing", "Pause control", "Rights and likeness confirmation"].map((item) => <li key={item} className="flex min-h-12 items-center gap-3 border-b border-[#191714]/10 text-sm"><span className="h-1.5 w-1.5 rounded-full bg-[#f05a3a]" />{item}</li>)}</ul></div>
-        <div className="rounded-[28px] bg-[#fffdf8] p-6 shadow-[0_24px_70px_rgba(25,23,20,.12)] sm:p-8"><p className="text-xs font-bold uppercase tracking-[.16em] text-[#d94326]">Cartoon Episodes add-on</p><p className="mt-4 text-6xl font-medium tracking-[-.06em]">$39.99</p><p className="mt-1 text-sm text-[#655f56]">every month until canceled</p><p className="mt-6 border-t border-[#191714]/10 pt-5 text-sm leading-6 text-[#655f56]">Requires an active WOVO Workspace subscription, available from $15/month. The separate total is shown before Stripe checkout. Human custom editing, paid ads, and platform publishing are not included.</p><Link href="/signup?next=/portal" className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-[#f05a3a] px-5 text-sm font-bold text-[#191714]">Start setup</Link><div className="mt-4 flex flex-wrap gap-x-4 text-xs font-bold text-[#655f56]"><Link href="/cancellation-refund-policy" className="inline-flex min-h-10 items-center underline underline-offset-4">Cancellation terms</Link><Link href="/terms-of-use" className="inline-flex min-h-10 items-center underline underline-offset-4">Terms</Link></div></div>
+        <div className="rounded-[28px] bg-[#fffdf8] p-6 shadow-[0_24px_70px_rgba(25,23,20,.12)] sm:p-8"><p className="text-xs font-bold uppercase tracking-[.16em] text-[#d94326]">Included with WOVO</p><p className="mt-4 text-5xl font-medium tracking-[-.06em]">No separate cartoon plan.</p><p className="mt-6 border-t border-[#191714]/10 pt-5 text-sm leading-6 text-[#655f56]">Cartoons use the same creation credits as images and videos. Choose a recurring workspace or purchase one-time credits without a subscription.</p><Link href="/signup?next=/portal" className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-[#f05a3a] px-5 text-sm font-bold text-[#191714]">Start free</Link><div className="mt-4 flex flex-wrap gap-x-4 text-xs font-bold text-[#655f56]"><Link href="/pricing" className="inline-flex min-h-10 items-center underline underline-offset-4">See pricing</Link><Link href="/terms-of-use" className="inline-flex min-h-10 items-center underline underline-offset-4">Terms</Link></div></div>
       </div>
     </section>
   </main>;

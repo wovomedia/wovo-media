@@ -42,7 +42,7 @@ export default function ServicesPage() {
             <p className="mt-3 max-w-2xl text-sm leading-6 text-white/55">Request optional services later from the private booking area or contact WOVO for a scoped project.</p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
-            <Link href="/signup?next=/portal" className="inline-flex min-h-12 items-center justify-center rounded-full bg-[#f05a3a] px-6 text-sm font-bold text-[#191714]">Start for $15/month</Link>
+            <Link href="/signup?next=/portal" className="inline-flex min-h-12 items-center justify-center rounded-full bg-[#f05a3a] px-6 text-sm font-bold text-[#191714]">Start free</Link>
             <Link href="/contact" className="inline-flex min-h-12 items-center justify-center rounded-full border border-white/25 px-6 text-sm font-bold">Contact WOVO</Link>
           </div>
         </div>

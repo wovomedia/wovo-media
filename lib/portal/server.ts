@@ -134,10 +134,11 @@ export function parseIsoDate(value: unknown, label: string): string {
   return new Date(time).toISOString();
 }
 
-export function getPortalPriceId(kind: "monthly" | "quarterly" | "yearly" | "nonprofit" | "website" | "ad_video" | "shoot" | "drone" | "extra_participant"): string {
+export function getPortalPriceId(kind: "monthly" | "quarterly" | "semiannual" | "yearly" | "nonprofit" | "website" | "ad_video" | "shoot" | "drone" | "extra_participant"): string {
   const keyMap = {
     monthly: "WOVO_PORTAL_MONTHLY_PRICE_ID",
     quarterly: "WOVO_PORTAL_QUARTERLY_PRICE_ID",
+    semiannual: "WOVO_PORTAL_SEMIANNUAL_PRICE_ID",
     yearly: "WOVO_PORTAL_YEARLY_PRICE_ID",
     nonprofit: "WOVO_PORTAL_NONPROFIT_PRICE_ID",
     website: "WOVO_PORTAL_WEBSITE_PRICE_ID",

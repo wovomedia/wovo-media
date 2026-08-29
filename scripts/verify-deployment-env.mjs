@@ -24,9 +24,10 @@ const stripeKey = required("STRIPE_SECRET_KEY");
 required("STRIPE_WEBHOOK_SECRET");
 const ownerEmail = required("WOVO_OWNER_EMAIL").toLowerCase();
 const portalPrices = [
-  ["WOVO_PORTAL_MONTHLY_PRICE_ID", 1500, "month", 1],
-  ["WOVO_PORTAL_QUARTERLY_PRICE_ID", 3600, "month", 3],
-  ["WOVO_PORTAL_YEARLY_PRICE_ID", 12000, "year", 1],
+  ["WOVO_PORTAL_MONTHLY_PRICE_ID", 4499, "month", 1],
+  ["WOVO_PORTAL_QUARTERLY_PRICE_ID", 11997, "month", 3],
+  ["WOVO_PORTAL_SEMIANNUAL_PRICE_ID", 20994, "month", 6],
+  ["WOVO_PORTAL_YEARLY_PRICE_ID", 35988, "year", 1],
 ];
 const operatorCheckoutEnabled = process.env.WOVO_AI_OPERATOR_CHECKOUT_ENABLED?.trim() === "true";
 const operatorPrices = operatorCheckoutEnabled
@@ -113,4 +114,4 @@ for (const [name, amount, interval, intervalCount] of [...portalPrices, ...opera
   }
 }
 
-console.log(`Production environment preflight passed: Supabase server access, canonical URL, Stripe live mode, webhook secret, all three approved WOVO billing periods${operatorCheckoutEnabled ? ", all three approved AI Operator billing periods" : ""}${cartoonCheckoutEnabled ? ", the approved $39.99 Cartoon Episodes price" : ""}${outreachEnabled ? ", and the complete Adam outreach safety gate" : ""}.`);
+console.log(`Production environment preflight passed: Supabase server access, canonical URL, Stripe live mode, webhook secret, all four approved WOVO billing periods${operatorCheckoutEnabled ? ", approved AI Operator billing periods" : ""}${cartoonCheckoutEnabled ? ", legacy Cartoon Episodes billing compatibility" : ""}${outreachEnabled ? ", and the complete Adam outreach safety gate" : ""}.`);

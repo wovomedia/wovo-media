@@ -534,7 +534,10 @@ type AdamUsageRow = { input_tokens: number | null; output_tokens: number | null;
 
 function priceMonthlyEquivalent(priceId: string | null): number {
   if (!priceId) return 0;
-  if (priceId === getEnv("WOVO_PORTAL_MONTHLY_PRICE_ID")) return 1500;
+  if (priceId === getEnv("WOVO_PORTAL_MONTHLY_PRICE_ID")) return 4499;
+  if (priceId === getEnv("WOVO_PORTAL_QUARTERLY_PRICE_ID")) return 3999;
+  if (priceId === getEnv("WOVO_PORTAL_SEMIANNUAL_PRICE_ID")) return 3499;
+  if (priceId === getEnv("WOVO_PORTAL_YEARLY_PRICE_ID")) return 2999;
   if (priceId === getEnv("WOVO_PORTAL_QUARTERLY_PRICE_ID")) return 1200;
   if (priceId === getEnv("WOVO_PORTAL_YEARLY_PRICE_ID")) return 1000;
   if (getEnv("WOVO_PORTAL_GRANDFATHERED_PRICE_IDS").split(",").map((item) => item.trim()).includes(priceId)) return 3999;
