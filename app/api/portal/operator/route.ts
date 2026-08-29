@@ -74,6 +74,12 @@ async function requireBaseAccess(context: PortalContext, accountId: string) {
 
 async function hasOperatorAccess(context: PortalContext, accountId: string) {
   if (context.mode === "staff" && context.staffRole === "owner") return true;
+  const now = new Date().toISOString();
+  const [subscriptions, grants] = await Promise.all([
+    supabaseServiceRoleRequest<Array<{ status: string }>>(`/rest/v1/wovo_portal_subscriptions?select=status&account_id=eq.${encodeURIComponent(accountId)}&status=in.(active,trialing)&limit=1`).catch(() => []),
+    supabaseServiceRoleRequest<Array<{ id: string }>>(`/rest/v1/wovo_portal_access_grants?select=id&account_id=eq.${encodeURIComponent(accountId)}&revoked_at=is.null&starts_at=lte.${encodeURIComponent(now)}&expires_at=gt.${encodeURIComponent(now)}&limit=1`).catch(() => []),
+  ]);
+  if (subscriptions?.[0] || grants?.[0]) return true;
   const rows = await supabaseServiceRoleRequest<Array<{ status: string; current_period_end: string | null }>>(`/rest/v1/wovo_portal_entitlements?select=status,current_period_end&account_id=eq.${encodeURIComponent(accountId)}&entitlement_key=eq.ai_operator&status=in.(active,canceling)&limit=1`).catch(() => []);
   const row = rows?.[0];
   if (!row) return false;
@@ -102,7 +108,7 @@ async function ensureOperatorUsagePolicy(context: PortalContext, accountId: stri
   await supabaseServiceRoleRequest("/rest/v1/wovo_ai_usage_policies?on_conflict=account_id", {
     method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({
       account_id: accountId, enabled, plan_key: "ai_operator",
-      daily_unit_limit: 40, weekly_unit_limit: 100, monthly_included_units: 300,
+      daily_unit_limit: 40, weekly_unit_limit: 100, monthly_included_units: 500,
       requests_per_minute: 2, monthly_provider_cost_cap_micros: 3000000,
       provider_ready: Boolean(getEnv("OPENAI_API_KEY")), moderation_ready: true, telemetry_ready: true,
       code_sandbox_ready: false, advanced_mode_selection: false,
