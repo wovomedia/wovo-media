@@ -60,6 +60,10 @@ export default function SignupPage() {
       title="Start with a verified account."
       description="Account creation is free. After private setup, choose $15 monthly, $36 every three months, or $120 yearly before Stripe checkout."
     >
+      <div className="mb-6" aria-label="Account setup progress">
+        <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[.14em] text-[#81796f]"><span className="text-[#d94326]">1 · Account</span><span>2 · Brand setup</span><span>3 · Preview</span></div>
+        <div className="mt-3 h-1 overflow-hidden rounded-full bg-[#191714]/10"><div className="h-full w-1/3 rounded-full bg-[#f05a3a]" /></div>
+      </div>
       <form onSubmit={(event) => void onSignup(event)}>
         <label className="block text-sm font-semibold text-[#3f3b35]">
           Full name

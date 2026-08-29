@@ -9,21 +9,35 @@ type AuthFrameProps = {
   children: ReactNode;
 };
 
-const workflow = [
-  ["Set the context", "Brand, audience, goals"],
-  ["Shape the week", "Draft, review, schedule"],
-  ["Keep it moving", "Support in one place"],
+const previewItems = [
+  ["Launch-week carousel", "Instagram", "Review"],
+  ["Founder story", "Short video", "Ready"],
+  ["Weekend offer", "Facebook", "Draft"],
 ];
 
 export function AuthFrame({ eyebrow, title, description, children }: AuthFrameProps) {
   return <main className="min-h-screen bg-[#eee8dd] text-[#191714] lg:grid lg:grid-cols-[minmax(360px,.82fr)_minmax(540px,1.18fr)]">
     <aside className="relative hidden min-h-screen overflow-hidden bg-[#191714] px-10 py-9 text-white lg:flex lg:flex-col">
       <WovoLogo variant="full" size={128} className="relative z-10 brightness-0 invert" />
-      <div className="my-auto max-w-md py-14">
+      <div className="my-auto max-w-[520px] py-12">
         <p className="text-[10px] font-bold uppercase tracking-[.22em] text-[#ff8c70]">Private WOVO workspace</p>
-        <h2 className="mt-5 text-[3.5rem] font-medium leading-[.96] tracking-[-.055em]">One place for the work behind the week.</h2>
-        <div className="relative mt-10 border-l border-white/20 pl-7">
-          {workflow.map(([title, detail], index) => <div key={title} className={`${index ? "mt-8" : ""} relative`}><span className="absolute -left-[31px] top-1 h-2 w-2 bg-[#f05a3a]" /><p className="text-sm font-semibold">{title}</p><p className="mt-1 text-xs text-white/45">{detail}</p></div>)}
+        <h2 className="mt-5 text-[3.35rem] font-medium leading-[.94] tracking-[-.055em]">A clear place to make the next thing.</h2>
+        <div className="mt-9 overflow-hidden rounded-[26px] border border-white/12 bg-white/[.055] shadow-[0_26px_70px_rgba(0,0,0,.28)]">
+          <div className="border-b border-white/10 p-4">
+            <p className="text-[9px] font-bold uppercase tracking-[.18em] text-white/40">Ask Adam</p>
+            <div className="mt-3 rounded-2xl bg-[#fffdf8] p-4 text-[#191714]">
+              <p className="text-sm font-medium">What should WOVO create next?</p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {["Post", "Video", "Cartoon", "Website"].map((item, index) => <span key={item} className={`rounded-full px-3 py-1.5 text-[10px] font-bold ${index === 1 ? "bg-[#f05a3a] text-[#191714]" : "bg-[#191714]/[.06] text-[#655f56]"}`}>{item}</span>)}
+              </div>
+            </div>
+          </div>
+          <div className="p-4">
+            <div className="flex items-center justify-between"><p className="text-[9px] font-bold uppercase tracking-[.18em] text-white/40">This week</p><span className="text-[10px] text-white/35">3 projects</span></div>
+            <div className="mt-3 space-y-2">
+              {previewItems.map(([name, channel, status]) => <div key={name} className="grid grid-cols-[1fr_auto] items-center gap-3 rounded-2xl border border-white/8 bg-black/15 px-4 py-3"><div><p className="text-xs font-semibold">{name}</p><p className="mt-1 text-[10px] text-white/38">{channel}</p></div><span className={`rounded-full px-2.5 py-1 text-[9px] font-bold ${status === "Review" ? "bg-[#f05a3a] text-[#191714]" : "bg-white/10 text-white/60"}`}>{status}</span></div>)}
+            </div>
+          </div>
         </div>
       </div>
       <div className="grid grid-cols-[1fr_auto] items-end gap-8 border-t border-white/15 pt-5 pr-5">

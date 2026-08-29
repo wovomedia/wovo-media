@@ -75,6 +75,13 @@ export default function HomePage() {
                     </div>
                     <span className="rounded-full border border-white/10 px-3 py-2 text-[10px] font-semibold text-white/55">3 items</span>
                   </div>
+                  <div className="mt-6 rounded-2xl border border-white/10 bg-white/[.055] p-3.5">
+                    <p className="text-sm font-medium text-white/85">Describe what you want Adam to create…</p>
+                    <div className="mt-4 flex flex-wrap items-center gap-2">
+                      {["Post", "Video", "Cartoon", "Website"].map((item, index) => <span key={item} className={`rounded-full px-3 py-1.5 text-[9px] font-bold ${index === 0 ? "bg-[#f05a3a] text-[#191714]" : "border border-white/10 text-white/55"}`}>{item}</span>)}
+                      <span className="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#f05a3a] text-sm font-black text-[#191714]">→</span>
+                    </div>
+                  </div>
                   <div className="mt-7 grid grid-cols-3 gap-2">
                     {[["3", "Planned"], ["1", "Review"], ["1", "Ready"]].map(([value, label]) => (
                       <div key={label} className="rounded-2xl border border-white/8 bg-white/[.055] p-3">
