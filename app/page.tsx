@@ -66,7 +66,7 @@ export default function HomePage() {
           <div id="product" className="relative scroll-mt-28">
             <div className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-[#f05a3a]/20 blur-3xl" />
             <div className="relative min-h-[610px] overflow-hidden rounded-[34px] border border-black/15 bg-[#0d0c0b] text-white shadow-[0_38px_100px_rgba(25,23,20,.32)]">
-              <Image src="/wovo-creator-hero.png" alt="WOVO creator suite showing animation, food advertising, real estate, music, and vertical video" fill priority className="object-cover object-center opacity-95" />
+              <Image src="/wovo-creator-hero.png" alt="WOVO creator suite showing animation, food advertising, real estate, music, and vertical video" fill priority sizes="(max-width: 1024px) 100vw, 58vw" className="object-cover object-center opacity-95" />
               <div className="absolute inset-0 bg-gradient-to-t from-black via-black/5 to-black/40" />
               <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
                 <div className="flex items-center gap-2">
