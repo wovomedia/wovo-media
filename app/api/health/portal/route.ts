@@ -9,7 +9,7 @@ export async function GET() {
   try {
     await supabaseServiceRoleRequest("/rest/v1/wovo_portal_accounts?select=id&limit=1");
     const billingOptions = await getValidatedPortalBillingOptions();
-    const stripeReady = billingOptions.length === 3;
+    const stripeReady = billingOptions.length === 4;
     if (!stripeReady) throw new Error("Portal price failed validation.");
     return NextResponse.json(
       { ok: true, database: "ready", billing: "ready", billingPeriods: billingOptions.map((option) => option.frequency) },
