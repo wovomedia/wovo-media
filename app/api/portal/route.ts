@@ -1918,6 +1918,7 @@ async function createWorkflowDraft(context: PortalContext, body: ActionBody) {
   const aspect = optionalString(body.aspect, 10);
   const style = optionalString(body.style, 80);
   const startFrameAssetId = optionalString(body.startFrameAssetId, 80);
+  const destinationConnectionId = optionalString(body.destinationConnectionId, 80);
   const durationSeconds = body.durationSeconds === undefined || body.durationSeconds === null || body.durationSeconds === ""
     ? null
     : numberValue(body.durationSeconds, "Duration", 4, 12);
@@ -1937,6 +1938,13 @@ async function createWorkflowDraft(context: PortalContext, body: ActionBody) {
       `/rest/v1/wovo_portal_assets?select=id&id=eq.${encodeURIComponent(startFrameAssetId)}&account_id=eq.${encodeURIComponent(accountId)}&rights_confirmed=eq.true&archived_at=is.null&limit=1`,
     ).catch(() => []);
     if (!frameAssets?.[0]) throw new PortalHttpError(400, "The selected reference frame is not available in this workspace.");
+  }
+  if (destinationConnectionId) {
+    if (!isUuid(destinationConnectionId)) throw new PortalHttpError(400, "Invalid publishing destination.");
+    const destinations = await supabaseServiceRoleRequest<Array<{ id: string }>>(
+      `/rest/v1/wovo_meta_connections?select=id&id=eq.${encodeURIComponent(destinationConnectionId)}&account_id=eq.${encodeURIComponent(accountId)}&status=eq.healthy&limit=1`,
+    ).catch(() => []);
+    if (!destinations?.[0]) throw new PortalHttpError(400, "The selected Facebook or Instagram destination is not connected to this workspace.");
   }
 
   if (sourceUrl) {
@@ -1983,6 +1991,7 @@ async function createWorkflowDraft(context: PortalContext, body: ActionBody) {
         style,
         duration_seconds: durationSeconds,
         start_frame_asset_id: startFrameAssetId,
+        destination_connection_id: destinationConnectionId,
       },
       provider_status: ["call_agent", "booking_request", "meeting"].includes(workflowType) ? "provider_required" : "not_started",
     }),

@@ -878,6 +878,7 @@ export default function PortalPage() {
               account={account}
               orders={orders}
               addons={snapshot.setup.addonsConfigured}
+              ownerProtected={snapshot.mode === "staff" && snapshot.staffRole === "owner"}
               busy={busy}
               onAction={action}
             />
@@ -3140,7 +3141,7 @@ function CreatorWorkbench({
   const [mode, setMode] = useState<CreatorMode>("post");
   const [advanced, setAdvanced] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [channel, setChannel] = useState("instagram");
+  const [channel, setChannel] = useState("download");
   const [format, setFormat] = useState("single_post");
   const [aspect, setAspect] = useState("9:16");
   const [surface, setSurface] = useState<"light" | "dark">("light");
@@ -3154,10 +3155,11 @@ function CreatorWorkbench({
     name: string;
   } | null>(null);
   const [projectBusy, setProjectBusy] = useState(false);
-  const [metaDestination, setMetaDestination] = useState<{
+  const [metaDestinations, setMetaDestinations] = useState<Array<{
+    id: string;
     pageName: string;
     instagramUsername: string | null;
-  } | null>(null);
+  }>>([]);
   const imageAssets = assets.filter(
     (asset) => asset.mime_type.startsWith("image/") && asset.rights_confirmed,
   );
@@ -3190,7 +3192,7 @@ function CreatorWorkbench({
 
   async function uploadProjectAttachment(file: File) {
     if (!file.type.startsWith("image/"))
-      throw new Error("Drop a JPG, PNG, or WebP logo/reference.");
+      throw new Error("Paste or choose a JPG, PNG, or WebP logo/reference.");
     const metadata = {
       accountId: account.id,
       fileName: file.name,
@@ -3284,20 +3286,12 @@ function CreatorWorkbench({
       .then(async (response) =>
         response.ok
           ? (response.json() as Promise<{
-              connection?: {
-                status: string;
-                pageName: string;
-                instagramUsername: string | null;
-              };
+              connections?: Array<{ id: string; status: string; pageName: string; instagramUsername: string | null }>;
             }>)
           : null,
       )
       .then((payload) => {
-        if (active && payload?.connection?.status === "healthy")
-          setMetaDestination({
-            pageName: payload.connection.pageName,
-            instagramUsername: payload.connection.instagramUsername,
-          });
+        if (active) setMetaDestinations((payload?.connections ?? []).filter((item) => item.status === "healthy"));
       })
       .catch(() => null);
     return () => {
@@ -3308,7 +3302,7 @@ function CreatorWorkbench({
   function selectMode(nextMode: CreatorMode) {
     setMode(nextMode);
     if (nextMode === "video") {
-      setChannel("instagram");
+      setChannel("download");
       setFormat("vertical_video");
       setAspect("9:16");
     } else if (nextMode === "website") {
@@ -3316,55 +3310,29 @@ function CreatorWorkbench({
       setFormat("landing_page");
       setAspect("16:9");
     } else if (nextMode === "episode") {
-      setChannel("instagram");
+      setChannel("download");
       setFormat("vertical_episode");
       setAspect("9:16");
     } else if (nextMode === "campaign") {
-      setChannel("instagram");
+      setChannel("download");
       setFormat("campaign_plan");
       setAspect("1:1");
     } else {
-      setChannel("instagram");
+      setChannel("download");
       setFormat("single_post");
       setAspect("1:1");
     }
   }
 
-  const channelChoices =
-    mode === "website"
-      ? [{ value: "website", label: "Website" }]
-      : mode === "video" || mode === "episode"
-        ? [
-            {
-              value: "instagram",
-              label: metaDestination?.instagramUsername
-                ? `Instagram · @${metaDestination.instagramUsername}`
-                : "Instagram",
-            },
-            {
-              value: "facebook",
-              label: metaDestination?.pageName
-                ? `Facebook · ${metaDestination.pageName}`
-                : "Facebook",
-            },
-            { value: "tiktok", label: "TikTok" },
-            { value: "youtube", label: "YouTube" },
-          ]
-        : [
-            {
-              value: "instagram",
-              label: metaDestination?.instagramUsername
-                ? `Instagram · @${metaDestination.instagramUsername}`
-                : "Instagram",
-            },
-            {
-              value: "facebook",
-              label: metaDestination?.pageName
-                ? `Facebook · ${metaDestination.pageName}`
-                : "Facebook",
-            },
-            { value: "linkedin", label: "LinkedIn" },
-          ];
+  const connectedChannelChoices = metaDestinations.flatMap((connection) => [
+    ...(connection.instagramUsername
+      ? [{ value: `instagram:${connection.id}`, label: `Instagram · @${connection.instagramUsername}` }]
+      : []),
+    { value: `facebook:${connection.id}`, label: `Facebook · ${connection.pageName}` },
+  ]);
+  const channelChoices = mode === "website"
+    ? [{ value: "website", label: "Website preview" }]
+    : [{ value: "download", label: "Download only" }, ...connectedChannelChoices];
   const formatChoices =
     mode === "website"
       ? [
@@ -3505,7 +3473,8 @@ function CreatorWorkbench({
             accountId: account.id,
             title,
             prompt,
-            platform: channel,
+            platform: channel.startsWith("facebook:") ? "facebook" : "instagram",
+            destinationConnectionId: channel.includes(":") ? channel.split(":")[1] : null,
             aspect,
             scheduledFor: data.get("scheduledFor"),
             rightsConfirmed,
@@ -3555,7 +3524,10 @@ function CreatorWorkbench({
         voiceConsentConfirmed: data.get("voiceConsentConfirmed") === "on",
         cadence: data.get("cadence"),
         mode,
-        channel: data.get("channel"),
+        channel: String(data.get("channel") ?? "download").split(":")[0],
+        destinationConnectionId: String(data.get("channel") ?? "").includes(":")
+          ? String(data.get("channel")).split(":")[1]
+          : null,
         outputFormat: data.get("format"),
         aspect: data.get("aspect"),
         style: data.get("style"),
@@ -3572,8 +3544,8 @@ function CreatorWorkbench({
   const actionLabel =
     mode === "post" ? "Generate post + image" : "Generate draft";
   return (
-    <section className="overflow-hidden rounded-[28px] border border-[#191714]/15 bg-[#fffdf8] shadow-[0_28px_90px_rgba(25,23,20,.16)]">
-      <header className="flex flex-col gap-4 border-b border-[#191714]/10 px-4 py-5 sm:px-6 lg:flex-row lg:items-end lg:justify-between">
+    <section className="overflow-hidden rounded-[28px] border border-white/10 bg-[#0f0e0d] text-white shadow-[0_28px_90px_rgba(0,0,0,.35)]">
+      <header className="flex flex-col gap-4 border-b border-white/10 bg-[#0f0e0d] px-4 py-5 sm:px-6 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[.18em] text-[#d94326]">
             WOVO Creative Studio
@@ -3581,14 +3553,14 @@ function CreatorWorkbench({
           <h1 className="mt-2 text-3xl font-medium tracking-[-.04em] sm:text-[2.7rem]">
             Describe what you want Adam to create.
           </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-[#655f56]">
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-white/50">
             Create a private, reviewable draft. Nothing publishes or starts a
             paid media render from this screen.
           </p>
         </div>
-        <div className="grid grid-cols-2 overflow-hidden rounded-2xl border border-[#191714]/10 bg-[#f7f2e9] lg:min-w-72">
+        <div className="grid grid-cols-2 overflow-hidden rounded-2xl border border-white/10 bg-white/[.045] lg:min-w-72">
           <div className="px-4 py-3">
-            <p className="text-[10px] font-bold uppercase tracking-[.12em] text-[#756e64]">
+            <p className="text-[10px] font-bold uppercase tracking-[.12em] text-white/40">
               Credits
             </p>
             <p className="mt-1 text-lg font-semibold">
@@ -3600,8 +3572,8 @@ function CreatorWorkbench({
               </p>
             ) : null}
           </div>
-          <div className="border-l border-[#191714]/10 px-4 py-3">
-            <p className="text-[10px] font-bold uppercase tracking-[.12em] text-[#756e64]">
+          <div className="border-l border-white/10 px-4 py-3">
+            <p className="text-[10px] font-bold uppercase tracking-[.12em] text-white/40">
               Draft status
             </p>
             <p className="mt-1 flex items-center gap-2 text-sm font-semibold">
@@ -4355,22 +4327,15 @@ function ProjectWorkspace({
           <div className="mt-7 rounded-2xl border border-white/10 bg-black/25 p-5">
             {urls.map((url) =>
               /\.(mp4|webm|mov)(\?|$)/i.test(url) ? (
-                <video
-                  key={url}
-                  controls
-                  className="mb-4 max-h-[520px] w-full rounded-xl bg-black"
-                  src={url}
-                />
+                <div key={url} className="mb-4">
+                  <video controls playsInline className="max-h-[520px] w-full rounded-xl bg-black" src={url} />
+                  <a href={url} download className="mt-3 inline-flex min-h-10 items-center rounded-xl border border-white/15 px-4 text-xs font-bold text-white hover:border-[#f05a3a]">Download video</a>
+                </div>
               ) : (
-                <Image
-                  key={url}
-                  unoptimized
-                  width={960}
-                  height={960}
-                  alt="Generated project media"
-                  className="mb-4 max-h-[520px] w-full rounded-xl object-contain"
-                  src={url}
-                />
+                <div key={url} className="mb-4">
+                  <Image unoptimized width={960} height={960} alt="Generated project media" className="max-h-[520px] w-full rounded-xl object-contain" src={url} />
+                  <a href={url} download className="mt-3 inline-flex min-h-10 items-center rounded-xl border border-white/15 px-4 text-xs font-bold text-white hover:border-[#f05a3a]">Download image</a>
+                </div>
               ),
             )}
             {!urls.length ? (
@@ -4406,20 +4371,26 @@ function ProjectWorkspace({
               {reply}
             </div>
           ) : null}
-          <form className="mt-5" onSubmit={onAsk}>
-            <label
-              onDragOver={(event) => event.preventDefault()}
-              onDrop={(event) => {
+          <form
+            className="mt-5"
+            onSubmit={onAsk}
+            onPaste={(event) => {
+              const pasted = Array.from(event.clipboardData.items)
+                .find((item) => item.type.startsWith("image/"))
+                ?.getAsFile();
+              if (pasted) {
                 event.preventDefault();
-                const file = event.dataTransfer.files[0];
-                if (file) onFile(file);
-              }}
-              className="block rounded-2xl border border-dashed border-white/15 bg-white/[.035] p-4 text-sm text-white/55"
+                onFile(new File([pasted], pasted.name || `pasted-reference-${Date.now()}.png`, { type: pasted.type || "image/png" }));
+              }
+            }}
+          >
+            <label
+              className="block rounded-2xl border border-white/15 bg-white/[.035] p-4 text-sm text-white/55 focus-within:border-[#f05a3a]"
             >
               <span>
                 {attachment
                   ? `Attached: ${attachment.name}`
-                  : "Drag and drop a logo/reference here, or choose a file"}
+                  : "Paste an image here with Ctrl+V, or choose one from your device"}
               </span>
               <input
                 type="file"
@@ -6138,12 +6109,14 @@ function Services({
   account,
   orders,
   addons,
+  ownerProtected,
   busy,
   onAction,
 }: {
   account: PortalAccount;
   orders: PortalOrder[];
   addons: PortalSnapshot["setup"]["addonsConfigured"];
+  ownerProtected: boolean;
   busy: string;
   onAction: (
     payload: Record<string, unknown>,
@@ -6168,6 +6141,18 @@ function Services({
   }
   return (
     <div className="space-y-5">
+      {ownerProtected ? (
+        <section className="rounded-[24px] border border-[#f05a3a]/30 bg-[#171513] p-5 text-white shadow-xl">
+          <p className="text-[10px] font-bold uppercase tracking-[.18em] text-[#ff8c70]">Owner-protected settings</p>
+          <div className="mt-3 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+            <div>
+              <h2 className="text-xl font-semibold">Studio preview and cross-client controls</h2>
+              <p className="mt-1 text-sm leading-6 text-white/50">Available only to the authenticated WOVO owner role. Client users cannot see or open these controls.</p>
+            </div>
+            <span className="w-fit rounded-full border border-white/15 px-3 py-2 text-xs font-bold text-white/70">Account protected</span>
+          </div>
+        </section>
+      ) : null}
       <div>
         <p className="text-xs font-semibold uppercase tracking-[.16em] text-[#d94326]">
           Workspace settings
