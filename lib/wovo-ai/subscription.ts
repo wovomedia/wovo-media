@@ -17,11 +17,13 @@ function toStatusPayload(profile: ProfileRow | null, status?: string | null, isA
   const monthlyUsed = profile?.monthly_used ?? 0;
   const extraCredits = profile?.extra_credits ?? 0;
   const creditsRemaining = Math.max(monthlyLimit + extraCredits - monthlyUsed, 0);
-  const active = isAutoPro || isPaidStatus(status);
+  const recurringActive = isAutoPro || isPaidStatus(status);
+  const creditOnlyActive = extraCredits > 0;
+  const active = recurringActive || creditOnlyActive;
   return {
     status: active ? "active" : "inactive", plan: plan as PlanName | "none",
     remaining: { monthly_limit: monthlyLimit, monthly_used: monthlyUsed, extra_credits: extraCredits, credits_remaining: creditsRemaining },
-    has_access: active, requires_subscription: !active, can_generate: active && creditsRemaining > 0,
+    has_access: active, requires_subscription: !recurringActive && !creditOnlyActive, can_generate: creditsRemaining > 0,
   };
 }
 

@@ -754,10 +754,9 @@ function CreatorWorkbench({ account, items, drafts, assets, creditBalance, owner
   const [format, setFormat] = useState("single_post");
   const [aspect, setAspect] = useState("9:16");
   const [surface, setSurface] = useState<"light" | "dark">("light");
-  const [selectedAssetId, setSelectedAssetId] = useState("");
+  const [generatingPost, setGeneratingPost] = useState(false);
   const [metaDestination, setMetaDestination] = useState<{ pageName: string; instagramUsername: string | null } | null>(null);
   const imageAssets = assets.filter((asset) => asset.mime_type.startsWith("image/") && asset.rights_confirmed);
-  const publishableAssets = assets.filter((asset) => (asset.mime_type.startsWith("image/") || asset.mime_type.startsWith("video/")) && asset.rights_confirmed);
   const activeMode = CREATOR_MODES.find((item) => item.value === mode) ?? CREATOR_MODES[0];
   const recentOutputs = [
     ...items.slice(0, 4).map((item) => ({ id: item.id, title: item.title, kind: item.platform, status: item.status, date: item.created_at })),
@@ -855,9 +854,15 @@ function CreatorWorkbench({ account, items, drafts, assets, creditBalance, owner
     const title = String(data.get("title") ?? "").trim() || `${CREATOR_MODES.find((item) => item.value === mode)?.label ?? "Creative"} · ${prompt.slice(0, 64)}`;
     const rightsConfirmed = data.get("rightsConfirmed") === "on";
     if (mode === "post") {
-      const tags = String(data.get("hashtags") ?? "").split(/[\s,]+/).map((tag) => tag.replace(/^#+/, "").trim()).filter(Boolean).slice(0, 20);
-      const result = await onAction({ action: "create_content", accountId: account.id, title, caption: prompt, platform: data.get("channel"), contentType: "social_post", scheduledFor: data.get("scheduledFor"), assetId: selectedAssetId || null, hashtags: tags, rightsConfirmed }, "Post draft added to the private review queue. Nothing was published.");
-      if (result) form.reset();
+      setError(""); setNotice("Writing the caption and rendering an original image…"); setGeneratingPost(true);
+      try {
+        const response = await authedFetch("/api/portal/generate-post", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ accountId: account.id, title, prompt, platform: channel, aspect, scheduledFor: data.get("scheduledFor"), rightsConfirmed }) });
+        const payload = await response.json() as { error?: string; previewUrl?: string | null };
+        if (!response.ok) throw new Error(payload.error ?? "The post could not be generated.");
+        setNotice("Caption and image created together. Review the exact post before approving or scheduling it.");
+        form.reset(); await reload();
+      } catch (reason) { setNotice(""); setError(reason instanceof Error ? reason.message : "The post could not be generated."); }
+      finally { setGeneratingPost(false); }
       return;
     }
     const workflowType = mode === "campaign" ? "post_plan" : mode === "episode" ? "mascot_series" : mode === "website" ? "website_site" : "ugc_ad";
@@ -869,7 +874,7 @@ function CreatorWorkbench({ account, items, drafts, assets, creditBalance, owner
     if (result) form.reset();
   }
 
-  const actionLabel = "Generate draft";
+  const actionLabel = mode === "post" ? "Generate post + image" : "Generate draft";
   return (
     <section className="overflow-hidden rounded-[28px] border border-[#191714]/15 bg-[#fffdf8] shadow-[0_28px_90px_rgba(25,23,20,.16)]">
       <header className="flex flex-col gap-4 border-b border-[#191714]/10 px-4 py-5 sm:px-6 lg:flex-row lg:items-end lg:justify-between">
@@ -893,12 +898,12 @@ function CreatorWorkbench({ account, items, drafts, assets, creditBalance, owner
           <div className="grid gap-4 xl:grid-cols-[200px_minmax(0,1fr)_240px]">
             <aside className="order-2 space-y-4 rounded-2xl border border-white/10 bg-[#201d1b] p-3 xl:order-1" aria-label="Project controls">
               <div><p className="text-[10px] font-bold uppercase tracking-[.14em] text-[#ff8c70]">Project setup</p><p className="mt-1 text-xs leading-5 text-white/45">Choose where this draft is designed to work.</p></div>
-              <input type="hidden" name="channel" value={channel} /><input type="hidden" name="format" value={format} /><input type="hidden" name="aspect" value={aspect} /><input type="hidden" name="assetId" value={selectedAssetId} />
+              <input type="hidden" name="channel" value={channel} /><input type="hidden" name="format" value={format} /><input type="hidden" name="aspect" value={aspect} />
               <fieldset><legend className="text-xs font-semibold text-white/65">Destination</legend><div className="mt-2 flex flex-wrap gap-2">{channelChoices.map((choice) => <button key={choice.value} type="button" aria-pressed={channel === choice.value} onClick={() => setChannel(choice.value)} className={`min-h-10 rounded-xl border px-3 text-xs font-semibold transition ${channel === choice.value ? "border-[#f05a3a] bg-[#f05a3a] text-[#191714]" : "border-white/10 bg-white/[.04] text-white/65 hover:border-white/25"}`}>{choice.label}</button>)}</div></fieldset>
               <fieldset><legend className="text-xs font-semibold text-white/65">{mode === "website" ? "Site type" : mode === "episode" ? "Episode output" : mode === "campaign" ? "Campaign structure" : "Format"}</legend><div className="mt-2 grid gap-2">{formatChoices.map((choice) => <button key={choice.value} type="button" aria-pressed={format === choice.value} onClick={() => setFormat(choice.value)} className={`min-h-10 rounded-xl border px-3 text-left text-xs font-semibold transition ${format === choice.value ? "border-[#f05a3a] bg-[#f05a3a]/15 text-[#ff9b82]" : "border-white/10 bg-white/[.04] text-white/65 hover:border-white/25"}`}>{choice.label}</button>)}</div></fieldset>
               <fieldset><legend className="text-xs font-semibold text-white/65">Canvas</legend><div className="mt-2 flex flex-wrap gap-2">{aspectChoices.map((choice) => <button key={choice.value} type="button" aria-pressed={aspect === choice.value} onClick={() => setAspect(choice.value)} className={`min-h-10 rounded-xl border px-3 text-xs font-semibold transition ${aspect === choice.value ? "border-[#f05a3a] bg-[#f05a3a]/15 text-[#ff9b82]" : "border-white/10 bg-white/[.04] text-white/65"}`}>{choice.label}</button>)}</div></fieldset>
               {mode === "website" ? <fieldset><legend className="text-xs font-semibold text-white/65">Preview theme</legend><div className="mt-2 grid grid-cols-2 gap-2"><button type="button" aria-pressed={surface === "light"} onClick={() => setSurface("light")} className={`min-h-11 rounded-xl border bg-[#fffdf8] text-xs font-bold text-[#191714] ${surface === "light" ? "border-[#f05a3a] ring-2 ring-[#f05a3a]/25" : "border-white/10"}`}>Light</button><button type="button" aria-pressed={surface === "dark"} onClick={() => setSurface("dark")} className={`min-h-11 rounded-xl border bg-[#11100f] text-xs font-bold text-white ${surface === "dark" ? "border-[#f05a3a] ring-2 ring-[#f05a3a]/25" : "border-white/10"}`}>Dark</button></div></fieldset> : null}
-              <div className="border-t border-white/10 pt-4"><div className="flex items-center justify-between gap-2"><p className="text-xs font-semibold">Media for this post</p><span className="rounded-full bg-[#f05a3a]/15 px-2 py-1 text-[10px] font-bold text-[#ff9b82]">{publishableAssets.length}</span></div><div className="mt-3 space-y-2"><button type="button" onClick={() => setSelectedAssetId("")} aria-pressed={!selectedAssetId} className={`flex min-h-11 w-full items-center rounded-xl border p-2 text-left text-xs ${!selectedAssetId ? "border-[#f05a3a] bg-[#f05a3a]/12 text-[#ff9b82]" : "border-white/8 bg-white/[.035] text-white/60"}`}>Text only</button>{publishableAssets.slice(0, 6).map((asset) => <button type="button" key={asset.id} onClick={() => setSelectedAssetId(asset.id)} aria-pressed={selectedAssetId === asset.id} className={`flex min-h-11 w-full items-center gap-2 rounded-xl border p-2 text-left ${selectedAssetId === asset.id ? "border-[#f05a3a] bg-[#f05a3a]/12" : "border-white/8 bg-white/[.035]"}`}><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#f05a3a]/15 text-[10px] font-bold text-[#ff9b82]">{asset.mime_type.startsWith("video/") ? "VIDEO" : "IMAGE"}</span><span className="min-w-0 truncate text-xs text-white/65">{asset.file_name}</span></button>)}{!publishableAssets.length ? <p className="rounded-xl border border-dashed border-white/12 p-3 text-xs leading-5 text-white/40">Upload a rights-confirmed image or video in Workspace before scheduling Instagram.</p> : null}</div></div>
+              <div className="border-t border-white/10 pt-4"><div className="flex items-center justify-between gap-2"><p className="text-xs font-semibold">Media source</p><span className="rounded-full bg-[#f05a3a]/15 px-2 py-1 text-[10px] font-bold text-[#ff9b82]">fal.ai</span></div><p className="mt-2 text-xs leading-5 text-white/45">Every new post includes an original generated image. The image is saved privately with the caption for approval.</p><div className="mt-3 flex min-h-11 items-center rounded-xl border border-[#f05a3a] bg-[#f05a3a]/12 p-3 text-xs font-semibold text-[#ff9b82]">Generate a new image</div></div>
             </aside>
 
             <div className="order-1 min-w-0 xl:order-2">
@@ -927,8 +932,8 @@ function CreatorWorkbench({ account, items, drafts, assets, creditBalance, owner
           </div>
 
           <div className="sticky bottom-[4.25rem] z-20 mt-4 flex flex-col gap-3 rounded-2xl border border-white/10 bg-[#171513]/95 p-3 shadow-[0_-12px_35px_rgba(0,0,0,.35)] backdrop-blur-xl sm:bottom-3 sm:flex-row sm:items-center sm:justify-between xl:static xl:bg-transparent xl:p-0 xl:shadow-none">
-            <div><p className="text-xs font-semibold">0 credits to save this draft</p><p className="mt-1 text-[11px] text-white/40">Paid provider work always requires a separate server-verified quote.</p></div>
-            <button disabled={busy === "create_content" || busy === "create_workflow_draft"} className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-[#f05a3a] px-6 text-sm font-bold text-[#191714] shadow-[0_12px_30px_rgba(240,90,58,.24)] transition hover:bg-[#ff7658] focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#171513] disabled:cursor-not-allowed disabled:opacity-45 sm:w-auto">{actionLabel}</button>
+            <div><p className="text-xs font-semibold">{mode === "post" ? "12 credits · caption + original image" : "0 credits to save this draft"}</p><p className="mt-1 text-[11px] text-white/40">Credits are reserved server-side and automatically returned if generation fails.</p></div>
+            <button disabled={generatingPost || busy === "create_content" || busy === "create_workflow_draft"} className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-[#f05a3a] px-6 text-sm font-bold text-[#191714] shadow-[0_12px_30px_rgba(240,90,58,.24)] transition hover:bg-[#ff7658] focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#171513] disabled:cursor-not-allowed disabled:opacity-45 sm:w-auto">{generatingPost ? "Creating caption + image…" : actionLabel}</button>
           </div>
         </form>
 
