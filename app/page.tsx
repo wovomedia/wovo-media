@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 
 export const metadata: Metadata = {
@@ -6,14 +7,6 @@ export const metadata: Metadata = {
   description: "Create videos, images, cartoons, websites, and campaigns in one WOVO workspace. Plans start at $44.99/month or use one-time credits.",
   alternates: { canonical: "/" },
 };
-
-const productSections = ["This week", "Content", "Calendar", "Support", "Bookings"];
-
-const queue = [
-  { day: "Tue", title: "Weekend offer", channel: "Social post", status: "Needs approval" },
-  { day: "Thu", title: "Project update", channel: "Social post", status: "Ready to post" },
-  { day: "Sat", title: "Behind the scenes", channel: "Story idea", status: "Draft" },
-];
 
 const included = [
   ["Brand profile", "Business context, audience, offers, voice, and approved source material."],
@@ -34,6 +27,17 @@ const creationTools = [
   ["Face-to-Motion", "Prepare consent-based face and body references for supported motion workflows."],
   ["Adam Project Chat", "Open any project, attach a logo, request revisions, and continue the same creative thread."],
 ];
+
+const creationVisuals = [
+  ["/wovo-product-scenes-2.png", "0% 0%"],
+  ["/wovo-product-scenes-2.png", "100% 0%"],
+  ["/wovo-product-scenes.png", "0% 0%"],
+  ["/wovo-product-scenes.png", "100% 100%"],
+  ["/wovo-product-scenes.png", "0% 100%"],
+  ["/wovo-product-scenes.png", "100% 0%"],
+  ["/wovo-product-scenes-2.png", "0% 100%"],
+  ["/wovo-product-scenes-2.png", "100% 100%"],
+] as const;
 
 export default function HomePage() {
   return (
@@ -61,7 +65,9 @@ export default function HomePage() {
 
           <div id="product" className="relative scroll-mt-28">
             <div className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-[#f05a3a]/20 blur-3xl" />
-            <div className="relative overflow-hidden rounded-[30px] border border-black/15 bg-[#141310] text-white shadow-[0_38px_100px_rgba(25,23,20,.24)]">
+            <div className="relative min-h-[610px] overflow-hidden rounded-[34px] border border-black/15 bg-[#0d0c0b] text-white shadow-[0_38px_100px_rgba(25,23,20,.32)]">
+              <Image src="/wovo-creator-hero.png" alt="WOVO creator suite showing animation, food advertising, real estate, music, and vertical video" fill priority className="object-cover object-center opacity-95" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/5 to-black/40" />
               <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
                 <div className="flex items-center gap-2">
                   <span className="h-2.5 w-2.5 rounded-full bg-[#f05a3a]" />
@@ -69,54 +75,15 @@ export default function HomePage() {
                 </div>
                 <span className="rounded-full border border-white/10 bg-white/[.06] px-3 py-1.5 text-[10px] font-bold text-white/65">Private workspace</span>
               </div>
-              <div className="grid min-h-[460px] sm:grid-cols-[145px_1fr]">
-                <aside className="hidden border-r border-white/10 bg-black/20 p-4 sm:block">
-                  <p className="mb-4 text-[9px] font-bold uppercase tracking-[0.2em] text-white/35">Create</p>
-                  {productSections.map((item, index) => (
-                    <div key={item} className={`mb-1 rounded-xl px-3 py-2.5 text-xs font-semibold ${index === 0 ? "bg-[#f2563d] text-[#191714]" : "text-white/48"}`}>
-                      {item}
-                    </div>
-                  ))}
-                </aside>
-                <div className="p-5 sm:p-7">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#d94326]">This week</p>
-                      <h2 className="mt-2 text-3xl font-medium tracking-[-0.035em]">Your week, ready to review</h2>
-                    </div>
-                    <span className="rounded-full border border-white/10 px-3 py-2 text-[10px] font-semibold text-white/55">3 items</span>
-                  </div>
-                  <div className="mt-6 rounded-2xl border border-white/10 bg-white/[.055] p-3.5">
-                    <p className="text-sm font-medium text-white/85">Describe what you want Adam to create…</p>
-                    <div className="mt-4 flex flex-wrap items-center gap-2">
-                      {["Post", "Video", "Cartoon", "Website"].map((item, index) => <span key={item} className={`rounded-full px-3 py-1.5 text-[9px] font-bold ${index === 0 ? "bg-[#f05a3a] text-[#191714]" : "border border-white/10 text-white/55"}`}>{item}</span>)}
-                      <span className="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#f05a3a] text-sm font-black text-[#191714]">→</span>
-                    </div>
-                  </div>
-                  <div className="mt-7 grid grid-cols-3 gap-2">
-                    {[["3", "Planned"], ["1", "Review"], ["1", "Ready"]].map(([value, label]) => (
-                      <div key={label} className="rounded-2xl border border-white/8 bg-white/[.055] p-3">
-                        <p className="text-2xl font-medium">{value}</p>
-                        <p className="mt-1 text-[10px] font-semibold text-white/40">{label}</p>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-6 space-y-2">
-                    {queue.map((item) => (
-                      <div key={item.title} className="grid grid-cols-[38px_1fr] gap-3 rounded-2xl border border-white/10 bg-white/[.045] p-3 sm:grid-cols-[38px_1fr_auto] sm:items-center">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-[10px] font-bold text-white">{item.day}</div>
-                        <div>
-                          <p className="text-xs font-bold">{item.title}</p>
-                          <p className="mt-1 text-[10px] text-white/40">{item.channel}</p>
-                        </div>
-                        <span className="col-start-2 w-fit rounded-full bg-[#f6ded6] px-2.5 py-1 text-[9px] font-bold text-[#a9341f] sm:col-auto">{item.status}</span>
-                      </div>
-                    ))}
-                  </div>
+              <div className="absolute inset-x-4 bottom-4 z-10 rounded-[24px] border border-white/15 bg-[#171513]/90 p-3 shadow-2xl backdrop-blur-xl sm:inset-x-8 sm:bottom-7 sm:p-4">
+                <p className="px-2 py-3 text-sm font-medium text-white/80">Describe the video, image, cartoon, song, or campaign you want to make…</p>
+                <div className="flex flex-wrap items-center gap-2 border-t border-white/10 pt-3">
+                  {["Video", "Image", "Cartoon", "Music"].map((item, index) => <span key={item} className={`rounded-xl px-3 py-2 text-[10px] font-bold ${index === 0 ? "bg-[#f05a3a] text-[#191714]" : "bg-white/[.07] text-white/65"}`}>{item}</span>)}
+                  <span className="rounded-xl bg-white/[.07] px-3 py-2 text-[10px] font-bold text-white/65">9:16</span>
+                  <span className="ml-auto inline-flex min-h-10 items-center justify-center rounded-xl bg-[#f05a3a] px-5 text-xs font-black text-[#191714]">Generate →</span>
                 </div>
               </div>
             </div>
-            <p className="mt-4 text-center text-[10px] font-semibold uppercase tracking-[0.16em] text-[#7e776d]">Product preview based on the live WOVO workspace</p>
           </div>
         </div>
       </section>
@@ -148,7 +115,7 @@ export default function HomePage() {
       </section>
 
       <section className="border-b border-[#191714]/10 bg-[#fffdf8] py-20 sm:py-28">
-        <div className="mx-auto max-w-[1280px] px-5 sm:px-8"><div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end"><div><p className="text-[11px] font-bold uppercase tracking-[.22em] text-[#d94326]">WOVO creation suite</p><h2 className="mt-4 max-w-3xl text-4xl font-medium leading-[.98] sm:text-6xl">One workspace. Every way your brand creates.</h2></div><Link href="/signup?next=/portal" className="inline-flex min-h-12 items-center justify-center rounded-full bg-[#191714] px-6 text-sm font-bold text-white">Open the studio</Link></div><div className="mt-12 grid overflow-hidden rounded-[28px] border border-[#191714]/15 md:grid-cols-2 lg:grid-cols-4">{creationTools.map(([title, copy], index) => <article key={title} className={`min-h-56 p-6 transition hover:bg-[#f8eee5] ${index % 4 ? "lg:border-l lg:border-[#191714]/10" : ""} ${index > 3 ? "border-t border-[#191714]/10" : index ? "border-t border-[#191714]/10 md:border-t-0" : ""}`}><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#f05a3a] text-xs font-black">{String(index + 1).padStart(2, "0")}</span><h3 className="mt-8 text-xl font-bold">{title}</h3><p className="mt-3 text-sm leading-6 text-[#655f56]">{copy}</p></article>)}</div></div>
+        <div className="mx-auto max-w-[1280px] px-5 sm:px-8"><div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end"><div><p className="text-[11px] font-bold uppercase tracking-[.22em] text-[#d94326]">WOVO creation suite</p><h2 className="mt-4 max-w-3xl text-4xl font-medium leading-[.98] sm:text-6xl">One workspace. Every way your brand creates.</h2></div><Link href="/signup?next=/portal" className="inline-flex min-h-12 items-center justify-center rounded-full bg-[#191714] px-6 text-sm font-bold text-white">Open the studio</Link></div><div className="mt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-4">{creationTools.map(([title, copy], index) => { const visual = creationVisuals[index]; const moving = index === 1 || index === 5; return <article key={title} className="group overflow-hidden rounded-[24px] border border-[#191714]/12 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl"><div className="relative h-44 overflow-hidden bg-[#171513]"><div className={`absolute -inset-3 bg-[length:200%_200%] transition duration-700 ${moving ? "wm-media-drift" : "group-hover:scale-110"}`} style={{backgroundImage: `url('${visual[0]}')`, backgroundPosition: visual[1]}} /><div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" /><span className="absolute left-4 top-4 grid h-9 w-9 place-items-center rounded-xl bg-[#f05a3a] text-xs font-black">{String(index + 1).padStart(2, "0")}</span>{moving ? <span className="absolute bottom-4 right-4 flex items-center gap-2 rounded-full bg-black/70 px-3 py-2 text-[9px] font-bold uppercase tracking-[.12em] text-white backdrop-blur"><span className="h-2 w-2 animate-pulse rounded-full bg-[#f05a3a]" /> Moving preview</span> : null}</div><div className="p-5"><h3 className="text-lg font-bold">{title}</h3><p className="mt-2 text-sm leading-6 text-[#655f56]">{copy}</p></div></article>})}</div></div>
       </section>
 
       <section className="py-20 sm:py-28">

@@ -678,13 +678,13 @@ export default function PortalPage() {
                 value={staffSearch}
                 onChange={(event) => setStaffSearch(event.target.value)}
                 placeholder="Search client, email, case"
-                className="min-h-11 w-52 rounded-xl border border-[#191714]/10 bg-[#fffdf8] px-3 text-sm"
+                className="min-h-11 w-52 rounded-xl border border-white/10 bg-white/[.07] px-3 text-sm text-white placeholder:text-white/35"
               />
               <select
                 aria-label="Select client"
                 value={accountId}
                 onChange={(event) => setAccountId(event.target.value)}
-                className="min-h-11 max-w-52 rounded-xl border border-[#191714]/10 bg-[#fffdf8] px-3 text-sm"
+                className="min-h-11 max-w-52 rounded-xl border border-white/10 bg-[#211e1b] px-3 text-sm text-white"
               >
                 {staffAccounts.map((item) => (
                   <option key={item.id} value={item.id}>
@@ -721,7 +721,7 @@ export default function PortalPage() {
               </button>
             ))}
           </nav>
-          <div className="mt-5 hidden border-t border-white/10 pt-4 sm:block"><p className="px-2 text-[10px] font-bold uppercase tracking-[.18em] text-white/30">WOVO creation tools</p><div className="mt-2 space-y-1">{WOVO_PRODUCTS.map((product) => <button key={product.label} type="button" onClick={() => setTab(product.target)} className="group flex w-full items-center gap-3 rounded-xl px-2 py-2.5 text-left transition hover:bg-white/[.06]"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-white/10 bg-white/[.04] text-[10px] font-black text-[#ff8c70] group-hover:border-[#f05a3a]/50">{product.mark}</span><span className="min-w-0"><span className="block truncate text-xs font-semibold text-white/75 group-hover:text-white">{product.label}</span><span className="mt-0.5 block truncate text-[10px] text-white/30">{product.detail}</span></span></button>)}</div></div>
+          <div className="mt-5 hidden border-t border-white/10 pt-4 sm:block"><p className="px-2 text-[10px] font-bold uppercase tracking-[.18em] text-white/30">WOVO creation tools</p><div className="mt-2 space-y-1">{WOVO_PRODUCTS.map((product, index) => <button key={product.label} type="button" onClick={() => setTab(product.target)} className="group flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition hover:bg-white/[.07]"><span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-[#211e1b]"><span className="absolute inset-0 bg-[url('/wovo-product-scenes.png')] bg-[length:200%_200%] opacity-80 transition group-hover:scale-110 group-hover:opacity-100" style={{backgroundPosition: `${index % 2 ? 100 : 0}% ${Math.floor(index / 2) % 2 ? 100 : 0}%`}} /><span className="absolute bottom-1 right-1 grid h-4 w-4 place-items-center rounded bg-black/75 text-[7px] font-black text-[#ff8c70]">{product.mark}</span></span><span className="min-w-0"><span className="block truncate text-xs font-semibold text-white/80 group-hover:text-white">{product.label}</span><span className="mt-0.5 block truncate text-[10px] text-white/35">{product.detail}</span></span></button>)}</div></div>
           {snapshot.mode === "staff" ? (
             <div className="mt-5 hidden rounded-2xl border border-[#191714]/10 bg-white/70 p-4 text-xs leading-5 text-[#655f56] sm:block">
               <p className="font-semibold text-[#191714]">Need help?</p>

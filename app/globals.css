@@ -25,6 +25,20 @@ body {
   font-family: "Helvetica Neue", "Avenir Next", Arial, sans-serif;
   text-rendering: optimizeLegibility;
 }
+
+@keyframes wm-media-drift {
+  0%, 100% { transform: scale(1.08) translate3d(-1.5%, -1%, 0); }
+  50% { transform: scale(1.16) translate3d(1.5%, 1%, 0); }
+}
+
+.wm-media-drift {
+  animation: wm-media-drift 8s ease-in-out infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wm-media-drift { animation: none; }
+}
 h1, h2, h3, h4, h5, h6 {
   font-family: "Helvetica Neue", "Avenir Next", Arial, sans-serif;
   letter-spacing: -0.035em;
