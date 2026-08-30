@@ -7,7 +7,7 @@
     "build": "node scripts/verify-deployment-env.mjs && next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test tests/trusted-authorization.test.mts tests/provider-models.test.mts tests/signup-credit-grant.test.mts"
+    "test": "node --test tests/trusted-authorization.test.mts tests/provider-models.test.mts tests/signup-credit-grant.test.mts tests/video-ledger.test.mts"
   },
   "dependencies": {
     "@fal-ai/client": "^1.10.1",

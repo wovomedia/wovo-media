@@ -307,7 +307,7 @@ export type PortalAiUsageRequest = {
   id: string;
   account_id: string;
   actor_user_id: string;
-  feature: "chat" | "image_visual" | "website_page" | "product_page" | "code";
+  feature: "chat" | "image_visual" | "video" | "website_page" | "product_page" | "code";
   mode: "fast" | "balanced" | "premium";
   status: "reserved" | "completed" | "failed" | "released";
   estimated_units: number;

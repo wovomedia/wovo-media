@@ -678,7 +678,7 @@ Before changing prices, add a simulator with assumptions for utilization, output
 - introduce provider/model/cost registry (**completed locally August 30, 2026; image/video model IDs, pricing versions, customer-credit quotes, and provider-cost estimates are centralized; pending deployment**);
 - define canonical generation job and asset lineage;
 - create idempotent signup grant (**completed locally August 30, 2026; pending migration/deployment**);
-- move video reservation/refund into the portal ledger;
+- move video reservation/refund into the portal ledger (**completed locally August 30, 2026 for the client-polled legacy fal endpoint; pending migration/deployment, a background reconciler, and live provider canary**);
 - add unit/database tests for roles, grants, reservations, refunds, and cross-tenant access.
 
 **Exit gate:** all billable image/video jobs use one ledger and state machine; no role is derived from user metadata; free credit replay and cross-tenant tests pass.
@@ -745,6 +745,15 @@ The following contained Phase 1 slice established the signup credit grant:
 - onboarding applies the grant only after workspace membership exists and deletes the incomplete workspace if the grant fails;
 - account deletion preserves the user-level grant marker, preventing delete-and-recreate credit farming;
 - three source-level grant invariants cover the user uniqueness, fixed 10-credit value, browser-role revocation, RLS, and onboarding order.
+
+The following contained Phase 1 slice moved paid fal video onto the canonical tenant ledger:
+
+- credit-only customers are no longer blocked behind the retired legacy Pro-plan check;
+- every paid request requires an explicit workspace and atomically binds one 24-credit reservation to one durable video job before fal submission;
+- provider completion finalizes usage only after the MP4 is in private storage;
+- submission failure, or provider failure observed during authenticated polling, calls an idempotent database release, while complimentary one-per-workspace previews remain unbilled and watermarked;
+- five video-ledger regression tests cover reserve order, durable bindings, service-only RPCs, private-storage-before-finalize, and failure release;
+- no provider render was submitted during this implementation; a background reconciler and live canary remain deployment exit gates so jobs do not depend on an open browser.
 
 ## Source references
 

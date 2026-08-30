@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
-import { guardAiRequest, toAiGuardErrorResponse } from "@/lib/wovo-ai/request-guard";
 import { createFalVideoJob } from "@/lib/wovo-ai/fal-video";
 import { requireServerUser, supabaseServiceRoleRequest } from "@/lib/supabase/server";
 import { asRecord, asString, isUuid } from "@/lib/wovo-ai/feed-utils";
-import { resolveUserEmail } from "@/lib/wovo-ai/admin";
-import { getSubscriptionStatus } from "@/lib/wovo-ai/subscription";
 import { getEnv } from "@/lib/env";
+import { quoteShortVideo } from "@/lib/ai/provider-models";
+import { checkAiRateLimit } from "@/lib/wovo-ai/rate-limit";
 
 type CreateVideoBody = {
   prompt?: string;
@@ -20,6 +19,8 @@ type CreateVideoBody = {
 
 type VideoJobRow = {
   id: string;
+  account_id: string | null;
+  usage_request_id: string | null;
   status: string;
   provider: string;
   provider_job_id: string | null;
@@ -31,23 +32,23 @@ type VideoRemixMode = "standard" | "animate_image" | "replace_dance";
 
 export async function POST(request: Request) {
   let pendingJobId: string | null = null;
+  let pendingActorUserId: string | null = null;
+  let pendingPaidReservation = false;
+  let pendingWasPreview = false;
   try {
     const { user } = await requireServerUser(request.headers.get("authorization"));
+    pendingActorUserId = user.id;
     const body = (await request.json().catch(() => ({}))) as CreateVideoBody;
     const isWorkspacePreview = body.preview === true;
-    const subscription = await getSubscriptionStatus(user.id, resolveUserEmail(user));
-    const effectivePlan = (subscription.effective_plan ?? subscription.plan ?? "none").toString().toLowerCase();
-    const hasProFeatureAccess =
-      subscription.admin_access === true ||
-      subscription.user_role === "admin" ||
-      effectivePlan === "pro" ||
-      effectivePlan === "business";
+    pendingWasPreview = isWorkspacePreview;
+    const accountId = body.accountId?.trim() ?? "";
+    if (!isUuid(accountId)) {
+      return NextResponse.json({ error: "Select a valid workspace before creating video." }, { status: 400 });
+    }
 
-    if (!hasProFeatureAccess && !isWorkspacePreview) {
-      return NextResponse.json(
-        { error: "AI Video Ad Studio and Dance Remix are Pro features. Upgrade to Pro to unlock video generation." },
-        { status: 402 },
-      );
+    const rateLimit = checkAiRateLimit(user.id, "video");
+    if (!rateLimit.allowed) {
+      return NextResponse.json({ error: "You're sending requests too quickly. Please wait a few minutes and try again." }, { status: 429 });
     }
 
     if (getEnv("WOVO_VIDEO_GENERATION_ENABLED") !== "true") {
@@ -57,11 +58,8 @@ export async function POST(request: Request) {
       );
     }
 
-    let billingSource = "workspace_preview";
-    let remainingTrialUses = 0;
+    const billingSource = isWorkspacePreview ? "workspace_preview" : "workspace_credits";
     if (isWorkspacePreview) {
-      const accountId = body.accountId?.trim() ?? "";
-      if (!isUuid(accountId)) return NextResponse.json({ error: "A valid workspace is required." }, { status: 400 });
       const accounts = await supabaseServiceRoleRequest<Array<{ id: string; owner_user_id: string }>>(
         `/rest/v1/wovo_portal_accounts?select=id,owner_user_id&id=eq.${encodeURIComponent(accountId)}&owner_user_id=eq.${encodeURIComponent(user.id)}&archived_at=is.null&limit=1`,
       );
@@ -70,22 +68,20 @@ export async function POST(request: Request) {
       const priorJobs = await supabaseServiceRoleRequest<Array<{ id: string; status: string; result_payload: Record<string, unknown> | null }>>(
         `/rest/v1/video_jobs?select=id,status,result_payload&user_id=eq.${encodeURIComponent(user.id)}&order=created_at.desc&limit=100`,
       );
-      const priorPreview = (priorJobs ?? []).find((job) => asString(asRecord(job.result_payload).previewAccountId) === accountId);
+      const priorPreview = (priorJobs ?? []).find(
+        (job) => job.status !== "failed" && asString(asRecord(job.result_payload).previewAccountId) === accountId,
+      );
       if (priorPreview) {
         return NextResponse.json(
           { error: "This workspace already used its complimentary video preview.", existingJobId: priorPreview.id },
           { status: 409 },
         );
       }
-    } else {
-      const guard = await guardAiRequest(request.headers.get("authorization"), "video");
-      billingSource = guard.billingSource;
-      remainingTrialUses = guard.remainingTrialUses;
     }
     const prompt = body.prompt?.trim() ?? "";
 
-    if (!prompt) {
-      return NextResponse.json({ error: "Prompt is required." }, { status: 400 });
+    if (prompt.length < 3 || prompt.length > 6000) {
+      return NextResponse.json({ error: "Describe the video in 3 to 6,000 characters." }, { status: 400 });
     }
 
     const remixModeRaw = (body.remixMode ?? "standard").trim().toLowerCase();
@@ -107,30 +103,63 @@ export async function POST(request: Request) {
 
     const jobId = randomUUID();
     pendingJobId = jobId;
-    const rows = await supabaseServiceRoleRequest<VideoJobRow[]>("/rest/v1/video_jobs?select=id,status,provider,provider_job_id,result_url,created_at", {
-      method: "POST",
-      headers: { Prefer: "return=representation" },
-      body: JSON.stringify({
-        id: jobId,
-        user_id: user.id,
-        provider: "fal",
-        provider_job_id: null,
-        prompt,
-        status: "queued",
-        result_url: null,
-        result_payload: {
-          remixMode,
-          sourceOutputId: sourceOutputId || null,
-          sourceVideoJobId: null,
-          hasInputReferenceImage: remixMode === "animate_image" ? Boolean(inputReferenceImage) : false,
-          workspacePreview: isWorkspacePreview,
-          previewAccountId: isWorkspacePreview ? body.accountId?.trim() : null,
-          previewWatermarkRequired: isWorkspacePreview,
+    const quote = quoteShortVideo(remixMode === "animate_image");
+    const initialPayload = {
+      model: quote.models[0]?.modelId ?? null,
+      modelPricingVersion: quote.models[0]?.pricingVersion ?? null,
+      modelRegistryVersion: quote.registryVersion,
+      estimatedProviderCostMicros: quote.estimatedProviderCostMicros,
+      quotedCredits: quote.customerCredits,
+      remixMode,
+      sourceOutputId: sourceOutputId || null,
+      sourceVideoJobId: null,
+      hasInputReferenceImage: remixMode === "animate_image" ? Boolean(inputReferenceImage) : false,
+      workspacePreview: isWorkspacePreview,
+      previewAccountId: isWorkspacePreview ? accountId : null,
+      previewWatermarkRequired: isWorkspacePreview,
+    };
+    let createdJob: VideoJobRow | null = null;
+    if (isWorkspacePreview) {
+      const rows = await supabaseServiceRoleRequest<VideoJobRow[]>(
+        "/rest/v1/video_jobs?select=id,account_id,usage_request_id,status,provider,provider_job_id,result_url,created_at",
+        {
+          method: "POST",
+          headers: { Prefer: "return=representation" },
+          body: JSON.stringify({
+            id: jobId,
+            user_id: user.id,
+            account_id: accountId,
+            provider: "fal",
+            provider_job_id: null,
+            prompt,
+            status: "queued",
+            result_url: null,
+            result_payload: initialPayload,
+          }),
         },
-      }),
-    });
+      );
+      createdJob = rows?.[0] ?? null;
+    } else {
+      const reserved = await supabaseServiceRoleRequest<VideoJobRow | VideoJobRow[]>(
+        "/rest/v1/rpc/wovo_video_create_reserved_job",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            p_job_id: jobId,
+            p_account_id: accountId,
+            p_actor_user_id: user.id,
+            p_prompt: prompt,
+            p_estimated_units: quote.customerCredits,
+            p_estimated_provider_cost_micros: quote.estimatedProviderCostMicros,
+            p_payload: initialPayload,
+          }),
+        },
+      );
+      createdJob = Array.isArray(reserved) ? reserved[0] ?? null : reserved;
+      pendingPaidReservation = Boolean(createdJob?.usage_request_id);
+    }
 
-    if (!rows?.[0]) throw new Error("VIDEO_LEDGER_CREATE_FAILED");
+    if (!createdJob) throw new Error("VIDEO_LEDGER_CREATE_FAILED");
 
     const falJob = await createFalVideoJob({
       prompt,
@@ -139,7 +168,7 @@ export async function POST(request: Request) {
     });
 
     const updatedRows = await supabaseServiceRoleRequest<VideoJobRow[]>(
-      `/rest/v1/video_jobs?id=eq.${encodeURIComponent(jobId)}&user_id=eq.${encodeURIComponent(user.id)}&select=id,status,provider,provider_job_id,result_url,created_at`,
+      `/rest/v1/video_jobs?id=eq.${encodeURIComponent(jobId)}&user_id=eq.${encodeURIComponent(user.id)}&select=id,account_id,usage_request_id,status,provider,provider_job_id,result_url,created_at`,
       {
         method: "PATCH",
         headers: { Prefer: "return=representation" },
@@ -153,6 +182,7 @@ export async function POST(request: Request) {
             modelRegistryVersion: falJob.registryVersion,
             estimatedProviderCostMicros: falJob.estimatedProviderCostMicros,
             quotedCredits: falJob.quotedCredits,
+            usageRequestId: createdJob.usage_request_id,
             durationSeconds: falJob.seconds,
             remixMode,
             sourceOutputId: sourceOutputId || null,
@@ -172,29 +202,38 @@ export async function POST(request: Request) {
     return NextResponse.json({
       job: created,
       billing_source: billingSource,
-      trial_uses_remaining: remainingTrialUses,
+      reserved_credits: isWorkspacePreview ? 0 : quote.customerCredits,
       warning: null,
     });
   } catch (error) {
-    if (pendingJobId) {
+    if (pendingJobId && pendingActorUserId) {
       const failureCode = error instanceof Error && /^[A-Z0-9_]+$/.test(error.message)
         ? error.message
         : "VIDEO_PROVIDER_SUBMISSION_FAILED";
-      await supabaseServiceRoleRequest(
-        `/rest/v1/video_jobs?id=eq.${encodeURIComponent(pendingJobId)}`,
-        {
-          method: "PATCH",
-          headers: { Prefer: "return=minimal" },
+      if (pendingPaidReservation) {
+        await supabaseServiceRoleRequest("/rest/v1/rpc/wovo_video_fail_job", {
+          method: "POST",
           body: JSON.stringify({
-            status: "failed",
-            error: failureCode,
-            updated_at: new Date().toISOString(),
+            p_job_id: pendingJobId,
+            p_actor_user_id: pendingActorUserId,
+            p_error_code: failureCode,
           }),
-        },
-      ).catch(() => undefined);
+        }).catch(() => undefined);
+      } else {
+        await supabaseServiceRoleRequest(
+          `/rest/v1/video_jobs?id=eq.${encodeURIComponent(pendingJobId)}`,
+          {
+            method: "PATCH",
+            headers: { Prefer: "return=minimal" },
+            body: JSON.stringify({
+              status: "failed",
+              error: failureCode,
+              updated_at: new Date().toISOString(),
+            }),
+          },
+        ).catch(() => undefined);
+      }
     }
-    const guardResponse = toAiGuardErrorResponse(error);
-    if (guardResponse) return guardResponse;
     const message = error instanceof Error ? error.message : "";
     console.error("wovo_video_create_failed", {
       code: /^[A-Z0-9_]+$/.test(message) ? message : "VIDEO_CREATE_FAILED",
@@ -203,9 +242,24 @@ export async function POST(request: Request) {
     if (message.includes("video_jobs_workspace_preview_unique_idx")) {
       return NextResponse.json({ error: "This workspace already used its complimentary video preview." }, { status: 409 });
     }
+    if (message.includes("Insufficient AI credits")) {
+      return NextResponse.json({ error: "This workspace does not have enough credits for the video quote." }, { status: 402 });
+    }
+    if (message.includes("AI rate limit reached")) {
+      return NextResponse.json({ error: "You're sending requests too quickly. Please wait a few minutes and try again." }, { status: 429 });
+    }
+    if (message.includes("WOVO AI is not enabled") || message.includes("AI spend cap reached") || message.includes("AI allowance reached")) {
+      return NextResponse.json({ error: "Video creation is not enabled for this workspace right now." }, { status: 503 });
+    }
+    if (message.includes("not authorized for this account")) {
+      return NextResponse.json({ error: "You do not have access to that workspace." }, { status: 403 });
+    }
+    if (message.includes("Video workspace is unavailable")) {
+      return NextResponse.json({ error: "That workspace is unavailable." }, { status: 404 });
+    }
     const safeMessage = message.startsWith("FAL_") || message.startsWith("VIDEO_")
       ? "The video provider is temporarily unavailable. Please try again shortly."
-      : "Unable to create the preview right now. Please try again.";
+      : `Unable to create the ${pendingWasPreview ? "preview" : "video"} right now. Please try again.`;
     return NextResponse.json({ error: safeMessage }, { status: 500 });
   }
 }

@@ -1,0 +1,70 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import test from "node:test";
+
+const migrationUrl = new URL(
+  "../supabase/migrations/20260830213324_wovo_video_canonical_usage.sql",
+  import.meta.url,
+);
+
+test("paid video atomically binds a durable job to canonical usage", async () => {
+  const sql = await readFile(migrationUrl, "utf8");
+
+  assert.match(sql, /add column if not exists account_id uuid references public\.wovo_portal_accounts/);
+  assert.match(sql, /add column if not exists usage_request_id uuid references public\.wovo_ai_usage_requests/);
+  assert.match(sql, /private\.wovo_ai_reserve_usage\([\s\S]*'video',[\s\S]*'balanced'/);
+  assert.match(sql, /'video-job:' \|\| p_job_id::text/);
+  assert.match(sql, /insert into public\.video_jobs\([\s\S]*usage_request_id/);
+  assert.match(sql, /status <> 'failed'/);
+  assert.match(sql, /account\.archived_at is null/);
+});
+
+test("video completion finalizes and failure releases the same reservation", async () => {
+  const sql = await readFile(migrationUrl, "utf8");
+
+  assert.match(sql, /function public\.wovo_video_fail_job[\s\S]*private\.wovo_ai_release_usage\(/);
+  assert.match(sql, /function public\.wovo_video_complete_job[\s\S]*private\.wovo_ai_finalize_usage\(/);
+  assert.match(sql, /if v_job\.status = 'completed' then return v_job; end if;/);
+  assert.match(sql, /if v_job\.status = 'failed' then raise exception 'Failed video job cannot be completed'; end if;/);
+});
+
+test("video metering RPCs are service-only", async () => {
+  const sql = await readFile(migrationUrl, "utf8");
+
+  for (const signature of [
+    "wovo_video_create_reserved_job\\(uuid, uuid, uuid, text, integer, bigint, jsonb\\)",
+    "wovo_video_fail_job\\(uuid, uuid, text\\)",
+    "wovo_video_complete_job\\(uuid, uuid, text, jsonb\\)",
+  ]) {
+    assert.match(sql, new RegExp(`revoke all on function public\\.${signature}[\\s\\S]*?from public, anon, authenticated;`));
+    assert.match(sql, new RegExp(`grant execute on function public\\.${signature}[\\s\\S]*?to service_role;`));
+  }
+});
+
+test("the paid endpoint reserves before calling fal and no longer requires a subscription", async () => {
+  const source = await readFile(
+    new URL("../app/api/wovo/video/route.ts", import.meta.url),
+    "utf8",
+  );
+
+  const reserveIndex = source.indexOf('"/rest/v1/rpc/wovo_video_create_reserved_job"');
+  const providerIndex = source.indexOf("await createFalVideoJob(");
+  assert.ok(reserveIndex >= 0 && providerIndex > reserveIndex);
+  assert.match(source, /Select a valid workspace before creating video/);
+  assert.match(source, /prompt\.length < 3 \|\| prompt\.length > 6000/);
+  assert.match(source, /reserved_credits: isWorkspacePreview \? 0 : quote\.customerCredits/);
+  assert.match(source, /job\.status !== "failed"/);
+  assert.doesNotMatch(source, /getSubscriptionStatus|guardAiRequest|Pro features/);
+});
+
+test("provider polling persists output before finalizing or releases on failure", async () => {
+  const source = await readFile(
+    new URL("../app/api/wovo/video/[jobId]/route.ts", import.meta.url),
+    "utf8",
+  );
+
+  const uploadIndex = source.indexOf('.storage.from("wovo-portal-assets").upload(');
+  const completeIndex = source.indexOf('"/rest/v1/rpc/wovo_video_complete_job"');
+  assert.ok(uploadIndex >= 0 && completeIndex > uploadIndex);
+  assert.match(source, /"\/rest\/v1\/rpc\/wovo_video_fail_job"/);
+});
