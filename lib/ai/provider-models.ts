@@ -1,4 +1,6 @@
-export const AI_MODEL_REGISTRY_VERSION = "2026-08-30.1";
+export const AI_MODEL_REGISTRY_VERSION = "2026-08-30.2";
+export const AI_RETAIL_CREDIT_FLOOR_MICROS = 83_333;
+export const AI_MIN_DIRECT_PROVIDER_MARGIN_BPS = 8_000;
 
 export type AiModelKey =
   | "caption.default"
@@ -123,6 +125,19 @@ function modelSnapshot(model: ResolvedAiModel): GenerationQuote["models"][number
   };
 }
 
+export function directProviderMarginBps(quote: Pick<GenerationQuote, "customerCredits" | "estimatedProviderCostMicros">): number {
+  const revenueMicros = quote.customerCredits * AI_RETAIL_CREDIT_FLOOR_MICROS;
+  if (revenueMicros <= 0) return -1;
+  return Math.floor(((revenueMicros - quote.estimatedProviderCostMicros) * 10_000) / revenueMicros);
+}
+
+function economicallySafe<T extends GenerationQuote>(quote: T): T {
+  if (directProviderMarginBps(quote) < AI_MIN_DIRECT_PROVIDER_MARGIN_BPS) {
+    throw new Error(`Unsafe ${quote.workflow} credit quote for the current provider-cost snapshot.`);
+  }
+  return quote;
+}
+
 export function quoteSocialPostImage(): GenerationQuote {
   const caption = resolveAiModel("caption.default");
   const image = resolveAiModel("image.default");
@@ -130,23 +145,23 @@ export function quoteSocialPostImage(): GenerationQuote {
     inputTokens: 3_000,
     outputTokens: 450,
   });
-  return {
+  return economicallySafe({
     registryVersion: AI_MODEL_REGISTRY_VERSION,
     workflow: "social_post_image",
-    customerCredits: 12,
+    customerCredits: 4,
     estimatedProviderCostMicros:
       captionBudgetMicros + (image.outputPricing?.estimatedMicrosPerOutput ?? 0),
     models: [modelSnapshot(caption), modelSnapshot(image)],
-  };
+  });
 }
 
 export function quoteShortVideo(hasReferenceImage: boolean): GenerationQuote {
   const model = resolveAiModel(hasReferenceImage ? "video.image.default" : "video.text.default");
-  return {
+  return economicallySafe({
     registryVersion: AI_MODEL_REGISTRY_VERSION,
     workflow: "short_video",
-    customerCredits: 24,
+    customerCredits: 35,
     estimatedProviderCostMicros: model.outputPricing?.estimatedMicrosPerOutput ?? 0,
     models: [modelSnapshot(model)],
-  };
+  });
 }

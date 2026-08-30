@@ -379,7 +379,7 @@ The third system is the V2 foundation.
 - Current public plans promise 100 credits every seven days for each billing period.
 - Current standalone packs are 50 credits for $5, 110 for $10, and 300 for $25.
 - Packs do not require an active subscription in the newer checkout code.
-- The current post + image path charges 12 credits.
+- The current post + image path charges 4 credits, so the promised 10-credit starter grant can produce two lower-cost image workflows.
 - Owner interfaces visibly represent unlimited/exempt usage, contrary to the V2 owner-visibility requirement.
 
 ### Required fixes
@@ -584,8 +584,8 @@ At 100 credits every seven days, full usage is about 434.5 credits per average m
 
 Illustrative current economics before Stripe fees, storage/egress, support, refunds, tax, moderation, and infrastructure:
 
-- 12-credit image + caption at a conservative $0.05 provider cost has roughly $0.83–$1.24 of credit value depending on plan/pack.
-- A $0.10 video needs at least 8 credits at the annual full-use rate to keep 80% direct provider margin; 16–24 credits provides more room for storage, retries, moderation, and price changes.
+- A 4-credit image + caption at a conservative $0.05068 provider estimate has at least $0.33 of retail credit value at the current best-value one-time pack, retaining more than 80% direct provider margin.
+- A 35-credit short video at a conservative $0.10 provider estimate has at least $2.91 of retail credit value at that same floor; it intentionally costs more than the 10-credit starter grant.
 - A future expensive model cannot be included at the same credit price without a versioned multiplier.
 
 ### Pricing recommendation
@@ -732,11 +732,11 @@ The first implementation slice should be deliberately small:
 The next contained Phase 1 slice also established a code-level provider/model registry:
 
 - OpenAI caption and fal image/video model IDs now resolve from one versioned registry;
-- social image posts snapshot both model IDs, pricing versions, registry version, estimated provider cost, and 12-credit quote before reservation;
+- social image posts snapshot both model IDs, pricing versions, registry version, estimated provider cost, and 4-credit quote before reservation;
 - completed caption token usage is included in the reconciled provider-cost estimate;
-- video job metadata snapshots the model, pricing version, registry version, estimated provider cost, and proposed 24-credit quote without changing the legacy video debit path;
+- video job metadata snapshots the model, pricing version, registry version, estimated provider cost, and 35-credit quote;
 - unpriced generic model overrides no longer silently inherit another model's cost;
-- four provider-registry tests pass, for nine Phase 1 tests total.
+- five provider-registry tests pass, including the 80% direct-provider margin floor and the starter-credit usability check.
 
 The following contained Phase 1 slice established the signup credit grant:
 
@@ -749,7 +749,7 @@ The following contained Phase 1 slice established the signup credit grant:
 The following contained Phase 1 slice moved paid fal video onto the canonical tenant ledger:
 
 - credit-only customers are no longer blocked behind the retired legacy Pro-plan check;
-- every paid request requires an explicit workspace and atomically binds one 24-credit reservation to one durable video job before fal submission;
+- every paid request requires an explicit workspace and atomically binds one 35-credit reservation to one durable video job before fal submission;
 - provider completion finalizes usage only after the MP4 is in private storage;
 - submission failure, or provider failure observed during authenticated polling, calls an idempotent database release, while complimentary one-per-workspace previews remain unbilled and watermarked;
 - five video-ledger regression tests cover reserve order, durable bindings, service-only RPCs, private-storage-before-finalize, and failure release;

@@ -4123,7 +4123,7 @@ function CreatorWorkbench({
             <div>
               <p className="text-xs font-semibold">
                 {mode === "post"
-                  ? "12 credits · caption + original image"
+                  ? "4 credits · caption + original image"
                   : "0 credits to save this draft"}
               </p>
               <p className="mt-1 text-[11px] text-white/40">
