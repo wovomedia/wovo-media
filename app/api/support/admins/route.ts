@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { listAuthAdminUsers, requireServerUser, type AuthUser, supabaseServiceRoleRequest } from "@/lib/supabase/server";
 import { normalizeUsername } from "@/lib/wovo-ai/profile-utils";
-import { resolveEffectiveRole, resolveUserEmail } from "@/lib/wovo-ai/admin";
+import { resolveEffectiveRole, resolveTrustedAuthRole, resolveUserEmail } from "@/lib/wovo-ai/admin";
 
 type ProfileRow = {
   user_id: string;
@@ -26,12 +26,6 @@ function shouldRetryProfileQuery(error: unknown): boolean {
     (message.includes("could not find the") && message.includes("column") && message.includes("profiles") && message.includes("schema cache")) ||
     (message.includes("permission denied") && message.includes("profiles"))
   );
-}
-
-function readRoleCandidate(user: AuthUser): string | null {
-  const appRole = typeof user.app_metadata?.role === "string" ? user.app_metadata.role : null;
-  const userRole = typeof user.user_metadata?.role === "string" ? user.user_metadata.role : null;
-  return appRole ?? userRole;
 }
 
 function fallbackUsername(seed: string): string {
@@ -61,7 +55,7 @@ async function listAdminAuthUsers(): Promise<AuthUser[]> {
 
   return Array.from(deduped.values()).filter((user) => {
     const email = resolveUserEmail(user);
-    const role = readRoleCandidate(user);
+    const role = resolveTrustedAuthRole(user);
     return resolveEffectiveRole({ role, email }) === "admin";
   });
 }
@@ -90,7 +84,7 @@ export async function GET(request: Request) {
   try {
     const { user } = await requireServerUser(request.headers.get("authorization"));
     const viewerEmail = resolveUserEmail(user);
-    const viewerRole = readRoleCandidate(user);
+    const viewerRole = resolveTrustedAuthRole(user);
     const viewerIsAdmin = resolveEffectiveRole({ role: viewerRole, email: viewerEmail }) === "admin";
     const adminUsers = await listAdminAuthUsers();
     const profileRows = await loadProfiles(adminUsers.map((row) => row.id));

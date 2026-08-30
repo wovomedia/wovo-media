@@ -54,12 +54,11 @@ export async function POST(request: Request) {
     const authTarget = await getAuthAdminUserById(target.id).catch(() => null);
     if (authTarget?.id) {
       const currentAppMetadata = asRecord(authTarget.app_metadata);
-      const currentUserMetadata = asRecord(authTarget.user_metadata);
       const currentBanned = Boolean(
-        currentAppMetadata.wovo_moderation_banned ?? currentUserMetadata.wovo_moderation_banned ?? false,
+        currentAppMetadata.wovo_moderation_banned ?? false,
       );
       const currentFeedDisabled = Boolean(
-        currentAppMetadata.wovo_feed_posting_disabled ?? currentUserMetadata.wovo_feed_posting_disabled ?? false,
+        currentAppMetadata.wovo_feed_posting_disabled ?? false,
       );
 
       let nextBanned = currentBanned;
@@ -86,10 +85,6 @@ export async function POST(request: Request) {
       await updateAuthUserById(authTarget.id, {
         app_metadata: {
           ...currentAppMetadata,
-          ...moderationPayload,
-        },
-        user_metadata: {
-          ...currentUserMetadata,
           ...moderationPayload,
         },
       }).catch(() => undefined);

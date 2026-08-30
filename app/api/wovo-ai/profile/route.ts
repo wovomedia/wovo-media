@@ -7,7 +7,7 @@ import {
   updateAuthUserMetadataById,
 } from "@/lib/supabase/server";
 import { ensureProfileForUser } from "@/lib/wovo-ai/profile-bootstrap";
-import { normalizeRole, resolveEffectiveRole, resolveRoleForEmail, resolveUserEmail } from "@/lib/wovo-ai/admin";
+import { normalizeRole, resolveEffectiveRole, resolveRoleForEmail, resolveTrustedAuthRole, resolveUserEmail } from "@/lib/wovo-ai/admin";
 import { normalizeUsername } from "@/lib/wovo-ai/profile-utils";
 import { resolveBadgeForUser } from "@/lib/wovo-ai/badges";
 import { getModerationStateForUser } from "@/lib/wovo-ai/moderation";
@@ -151,13 +151,9 @@ export async function GET(request: Request) {
     } catch {
       userRoleFromTable = null;
     }
-    const metadataRole =
-      (typeof user.app_metadata?.role === "string" ? user.app_metadata.role : null) ??
-      (typeof user.user_metadata?.role === "string" ? user.user_metadata.role : null);
-
     const role = resolveEffectiveRole({
-      role: normalizeRole(userRoleFromTable ?? metadataRole),
-      email: profile?.email ?? resolvedUserEmail,
+      role: normalizeRole(userRoleFromTable ?? resolveTrustedAuthRole(user)),
+      email: resolvedUserEmail,
     });
     const profileComplete = Boolean((profile?.full_name ?? "").trim() && resolvedUsername);
     const creditsRemaining = Math.max(
@@ -267,7 +263,7 @@ export async function POST(request: Request) {
     const normalizedEmail = body.email?.trim().toLowerCase() ?? "";
     const existingEmail = existingProfile?.email?.trim().toLowerCase() ?? "";
     const resolvedEmail = normalizedEmail || existingEmail || resolvedUserEmail || null;
-    const resolvedRole = resolveRoleForEmail(resolvedEmail);
+    const resolvedRole = resolveRoleForEmail(resolvedUserEmail);
     const fullName = mergeTextField(body.full_name, existingProfile?.full_name);
     let metadataUsernameNormalized = "";
     try {

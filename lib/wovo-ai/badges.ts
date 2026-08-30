@@ -1,6 +1,6 @@
 import { listAdminActions } from "@/lib/admin/audit-log";
 import { listAuthAdminUsers, supabaseServiceRoleRequest } from "@/lib/supabase/server";
-import { isAdminProEmail } from "@/lib/wovo-ai/admin";
+import { isAdminProEmail, resolveTrustedAuthRole } from "@/lib/wovo-ai/admin";
 import { isPaidStatus } from "@/lib/wovo-ai/plans";
 
 export type BadgeKind = "none" | "verified" | "gold";
@@ -22,7 +22,6 @@ type AuthUserLite = {
   id: string;
   email?: string;
   app_metadata?: Record<string, unknown>;
-  user_metadata?: Record<string, unknown>;
 };
 
 export function isMissingVerifiedSubscriptionsTableError(error: unknown): boolean {
@@ -53,10 +52,6 @@ function asRecord(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
-function asString(value: unknown): string {
-  return typeof value === "string" ? value : "";
-}
-
 function readBooleanFlag(value: unknown): boolean | null {
   if (typeof value === "boolean") return value;
   if (typeof value === "number") return value === 1 ? true : value === 0 ? false : null;
@@ -81,7 +76,6 @@ async function loadAuthUsersMap(userIds: string[]): Promise<Map<string, AuthUser
       id: user.id,
       email: user.email,
       app_metadata: asRecord(user.app_metadata),
-      user_metadata: asRecord(user.user_metadata),
     });
   }
   return map;
@@ -105,9 +99,7 @@ async function loadAdminUsers(userIds: string[]): Promise<Set<string>> {
 
   const authUsers = await loadAuthUsersMap(userIds);
   for (const authUser of authUsers.values()) {
-    const appRole = asString(asRecord(authUser.app_metadata).role).trim().toLowerCase();
-    const userRole = asString(asRecord(authUser.user_metadata).role).trim().toLowerCase();
-    if (appRole === "admin" || userRole === "admin" || isAdminProEmail(authUser.email)) {
+    if (resolveTrustedAuthRole(authUser) === "admin" || isAdminProEmail(authUser.email)) {
       adminUsers.add(authUser.id);
     }
   }
@@ -172,10 +164,7 @@ async function loadManualBadgeOverrides(userIds: string[]): Promise<Map<string, 
   for (const authUser of authUsers.values()) {
     if (overrides.has(authUser.id)) continue;
     const appMetadata = asRecord(authUser.app_metadata);
-    const userMetadata = asRecord(authUser.user_metadata);
-    const metadataOverride =
-      readBooleanFlag(appMetadata.wovo_verified_badge_override) ??
-      readBooleanFlag(userMetadata.wovo_verified_badge_override);
+    const metadataOverride = readBooleanFlag(appMetadata.wovo_verified_badge_override);
     if (metadataOverride === null) continue;
     overrides.set(authUser.id, metadataOverride);
   }

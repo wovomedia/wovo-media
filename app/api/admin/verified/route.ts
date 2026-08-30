@@ -64,7 +64,6 @@ export async function POST(request: Request) {
     const authTarget = await getAuthAdminUserById(target.id).catch(() => null);
     if (authTarget?.id) {
       const currentAppMetadata = asRecord(authTarget.app_metadata);
-      const currentUserMetadata = asRecord(authTarget.user_metadata);
       const badgePayload = {
         wovo_verified_badge_override: shouldVerify,
         wovo_verified_badge_override_updated_at: nowIso,
@@ -73,10 +72,6 @@ export async function POST(request: Request) {
       await updateAuthUserById(authTarget.id, {
         app_metadata: {
           ...currentAppMetadata,
-          ...badgePayload,
-        },
-        user_metadata: {
-          ...currentUserMetadata,
           ...badgePayload,
         },
       }).catch(() => undefined);

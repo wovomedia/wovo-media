@@ -3,6 +3,7 @@ import { requireAdminUser } from "@/lib/admin/require-admin";
 import { listAuthAdminUsers, supabaseServiceRoleRequest, type AuthUser } from "@/lib/supabase/server";
 import { getPlanConfig } from "@/lib/wovo-ai/plans";
 import { listAdminActions, listAdminNotifications } from "@/lib/admin/audit-log";
+import { resolveTrustedAuthRole } from "@/lib/wovo-ai/admin";
 
 type AdminDashboardUser = {
   id: string;
@@ -85,10 +86,7 @@ function asString(value: unknown): string {
 }
 
 function metadataRole(user: AuthUser): "admin" | "user" {
-  const appRole = asString(asRecord(user.app_metadata).role).trim().toLowerCase();
-  if (appRole === "admin") return "admin";
-  const userRole = asString(asRecord(user.user_metadata).role).trim().toLowerCase();
-  return userRole === "admin" ? "admin" : "user";
+  return resolveTrustedAuthRole(user);
 }
 
 function metadataEmail(user: AuthUser): string {
@@ -275,12 +273,11 @@ export async function GET(request: Request) {
 
     for (const authUser of authUsers) {
       if (!authUser?.id) continue;
-      const userMetadata = asRecord(authUser.user_metadata);
       const appMetadata = asRecord(authUser.app_metadata);
-      const forcedStatus = asString(userMetadata.forced_subscription_status || appMetadata.forced_subscription_status)
+      const forcedStatus = asString(appMetadata.forced_subscription_status)
         .trim()
         .toLowerCase();
-      const forcedPlan = asString(userMetadata.forced_plan || appMetadata.forced_plan)
+      const forcedPlan = asString(appMetadata.forced_plan)
         .trim()
         .toLowerCase();
       if (!forcedStatus && !forcedPlan) continue;

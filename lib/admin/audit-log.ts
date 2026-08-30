@@ -6,7 +6,7 @@ import {
   updateAuthUserById,
   type AuthUser,
 } from "@/lib/supabase/server";
-import { isAdminProEmail } from "@/lib/wovo-ai/admin";
+import { isAdminProEmail, resolveTrustedAuthRole } from "@/lib/wovo-ai/admin";
 
 export type AdminActionEntry = {
   id: string;
@@ -150,9 +150,7 @@ async function updateAdminMetadataLists(
 
 function isAdminAuthUser(user: AuthUser): boolean {
   const email = (user.email ?? "").trim().toLowerCase();
-  const appRole = asString(asRecord(user.app_metadata).role).trim().toLowerCase();
-  const userRole = asString(asRecord(user.user_metadata).role).trim().toLowerCase();
-  return appRole === "admin" || userRole === "admin" || isAdminProEmail(email);
+  return resolveTrustedAuthRole(user) === "admin" || isAdminProEmail(email);
 }
 
 export async function resolveAdminRecipientIds(): Promise<string[]> {

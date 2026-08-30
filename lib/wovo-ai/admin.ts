@@ -24,6 +24,12 @@ export function normalizeRole(value: unknown): "admin" | "user" {
   return typeof value === "string" && value.trim().toLowerCase() === "admin" ? "admin" : "user";
 }
 
+export function resolveTrustedAuthRole(
+  user?: { app_metadata?: Record<string, unknown> | null } | null,
+): "admin" | "user" {
+  return normalizeRole(user?.app_metadata?.role);
+}
+
 export function resolveRoleForEmail(email?: string | null): "admin" | "user" {
   return isAdminProEmail(email) ? "admin" : "user";
 }
@@ -32,9 +38,7 @@ export function resolveEffectiveRole(input: { role?: unknown; email?: string | n
   return normalizeRole(input.role) === "admin" || resolveRoleForEmail(input.email) === "admin" ? "admin" : "user";
 }
 
-export function resolveUserEmail(user?: { email?: string | null; user_metadata?: Record<string, unknown> | null } | null): string | null {
+export function resolveUserEmail(user?: { email?: string | null } | null): string | null {
   const direct = user?.email?.trim().toLowerCase();
-  if (direct) return direct;
-  const metadataEmail = user?.user_metadata?.email;
-  return typeof metadataEmail === "string" && metadataEmail.trim() ? metadataEmail.trim().toLowerCase() : null;
+  return direct || null;
 }

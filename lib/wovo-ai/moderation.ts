@@ -71,14 +71,9 @@ async function loadMetadataModerationMap(userIds: string[]): Promise<Map<string,
   for (const authUser of authUsers) {
     if (!authUser?.id || !userIdSet.has(authUser.id)) continue;
     const appMetadata = asRecord(authUser.app_metadata);
-    const userMetadata = asRecord(authUser.user_metadata);
 
-    const bannedFlag =
-      readBooleanFlag(appMetadata.wovo_moderation_banned) ??
-      readBooleanFlag(userMetadata.wovo_moderation_banned);
-    const feedDisabledFlag =
-      readBooleanFlag(appMetadata.wovo_feed_posting_disabled) ??
-      readBooleanFlag(userMetadata.wovo_feed_posting_disabled);
+    const bannedFlag = readBooleanFlag(appMetadata.wovo_moderation_banned);
+    const feedDisabledFlag = readBooleanFlag(appMetadata.wovo_feed_posting_disabled);
 
     if (bannedFlag === null && feedDisabledFlag === null) continue;
     result.set(authUser.id, {

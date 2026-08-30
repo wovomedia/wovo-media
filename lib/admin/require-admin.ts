@@ -1,5 +1,5 @@
 import { requireServerUser, supabaseServiceRoleRequest } from "@/lib/supabase/server";
-import { isAdminProEmail } from "@/lib/wovo-ai/admin";
+import { isAdminProEmail, resolveTrustedAuthRole } from "@/lib/wovo-ai/admin";
 
 type AdminUserRow = {
   id: string;
@@ -9,11 +9,7 @@ type AdminUserRow = {
 export async function requireAdminUser(authHeader: string | null) {
   const { user } = await requireServerUser(authHeader);
   const email = user.email?.trim().toLowerCase() ?? "";
-  const metadataRole =
-    (typeof user.app_metadata?.role === "string" ? user.app_metadata.role : null) ??
-    (typeof user.user_metadata?.role === "string" ? user.user_metadata.role : null) ??
-    "";
-  if (metadataRole.trim().toLowerCase() === "admin") {
+  if (resolveTrustedAuthRole(user) === "admin") {
     return user;
   }
 

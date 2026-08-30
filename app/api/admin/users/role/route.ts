@@ -64,13 +64,8 @@ export async function POST(request: Request) {
 
     const authTarget = await getAuthAdminUserById(target.id).catch(() => null);
     if (authTarget?.id) {
-      const currentUserMetadata = (authTarget.user_metadata ?? {}) as Record<string, unknown>;
       const currentAppMetadata = (authTarget.app_metadata ?? {}) as Record<string, unknown>;
       await updateAuthUserById(authTarget.id, {
-        user_metadata: {
-          ...currentUserMetadata,
-          role: normalizedRole,
-        },
         app_metadata: {
           ...currentAppMetadata,
           role: normalizedRole,

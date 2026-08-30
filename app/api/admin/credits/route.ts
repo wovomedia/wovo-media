@@ -89,19 +89,11 @@ export async function POST(request: Request) {
 
     const authTarget = await getAuthAdminUserById(body.userId).catch(() => null);
     if (authTarget?.id) {
-      const currentUserMetadata =
-        typeof authTarget.user_metadata === "object" && authTarget.user_metadata !== null
-          ? (authTarget.user_metadata as Record<string, unknown>)
-          : {};
       const currentAppMetadata =
         typeof authTarget.app_metadata === "object" && authTarget.app_metadata !== null
           ? (authTarget.app_metadata as Record<string, unknown>)
           : {};
       await updateAuthUserById(authTarget.id, {
-        user_metadata: {
-          ...currentUserMetadata,
-          forced_extra_credits: nextProfileCredits,
-        },
         app_metadata: {
           ...currentAppMetadata,
           forced_extra_credits: nextProfileCredits,

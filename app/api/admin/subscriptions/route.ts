@@ -145,15 +145,8 @@ export async function POST(request: Request) {
 
     const authTarget = await getAuthAdminUserById(body.userId).catch(() => null);
     if (authTarget?.id) {
-      const currentUserMetadata = (authTarget.user_metadata ?? {}) as Record<string, unknown>;
       const currentAppMetadata = (authTarget.app_metadata ?? {}) as Record<string, unknown>;
       await updateAuthUserById(authTarget.id, {
-        user_metadata: {
-          ...currentUserMetadata,
-          forced_plan: normalizedPlan,
-          forced_subscription_status: normalizedStatus,
-          forced_monthly_limit: monthlyLimit,
-        },
         app_metadata: {
           ...currentAppMetadata,
           forced_plan: normalizedPlan,
