@@ -68,3 +68,27 @@ test("provider polling persists output before finalizing or releases on failure"
   assert.ok(uploadIndex >= 0 && completeIndex > uploadIndex);
   assert.match(source, /"\/rest\/v1\/rpc\/wovo_video_fail_job"/);
 });
+
+test("video cron is secret-protected and only reconciles recent submitted jobs", async () => {
+  const [route, worker, config] = await Promise.all([
+    readFile(new URL("../app/api/cron/video-jobs/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/wovo-ai/video-reconciler.ts", import.meta.url), "utf8"),
+    readFile(new URL("../vercel.json", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(route, /CRON_SECRET/);
+  assert.match(route, /timingSafeEqual/);
+  assert.match(worker, /provider=eq\.fal/);
+  assert.match(worker, /provider_job_id=not\.is\.null/);
+  assert.match(worker, /created_at=gte\./);
+  assert.match(worker, /created_at=lt\./);
+  assert.match(worker, /video_reconciliation_window_expired/);
+  assert.match(worker, /6 \* 60 \* 60 \* 1000/);
+  assert.match(worker, /wovo_video_complete_job/);
+  assert.match(worker, /wovo_video_fail_job/);
+  assert.doesNotMatch(worker, /createFalVideoJob/);
+  assert.deepEqual(
+    JSON.parse(config).crons.find((cron: { path: string }) => cron.path === "/api/cron/video-jobs"),
+    { path: "/api/cron/video-jobs", schedule: "5 * * * *" },
+  );
+});

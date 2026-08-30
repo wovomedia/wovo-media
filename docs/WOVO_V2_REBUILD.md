@@ -678,7 +678,7 @@ Before changing prices, add a simulator with assumptions for utilization, output
 - introduce provider/model/cost registry (**completed locally August 30, 2026; image/video model IDs, pricing versions, customer-credit quotes, and provider-cost estimates are centralized; pending deployment**);
 - define canonical generation job and asset lineage;
 - create idempotent signup grant (**completed locally August 30, 2026; pending migration/deployment**);
-- move video reservation/refund into the portal ledger (**completed locally August 30, 2026 for the client-polled legacy fal endpoint; pending migration/deployment, a background reconciler, and live provider canary**);
+- move video reservation/refund into the portal ledger (**completed locally August 30, 2026 for the legacy fal endpoint and six-hour-window background reconciler; pending migration/deployment and live provider canary**);
 - add unit/database tests for roles, grants, reservations, refunds, and cross-tenant access.
 
 **Exit gate:** all billable image/video jobs use one ledger and state machine; no role is derived from user metadata; free credit replay and cross-tenant tests pass.
@@ -753,7 +753,9 @@ The following contained Phase 1 slice moved paid fal video onto the canonical te
 - provider completion finalizes usage only after the MP4 is in private storage;
 - submission failure, or provider failure observed during authenticated polling, calls an idempotent database release, while complimentary one-per-workspace previews remain unbilled and watermarked;
 - five video-ledger regression tests cover reserve order, durable bindings, service-only RPCs, private-storage-before-finalize, and failure release;
-- no provider render was submitted during this implementation; a background reconciler and live canary remain deployment exit gates so jobs do not depend on an open browser.
+- an authenticated hourly Vercel cron now polls only already-submitted fal jobs created within six hours, with no stale-backlog catch-up and no render-submission capability;
+- unresolved paid reservations older than that delivery window are failed and refunded without contacting fal, preventing both catch-up spend and permanently stranded credits;
+- no provider render was submitted during this implementation; deployment must confirm the Vercel plan accepts hourly cron, then a live canary remains an exit gate.
 
 ## Source references
 
