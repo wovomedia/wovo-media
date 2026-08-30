@@ -183,7 +183,7 @@ This is a **P0 privilege-escalation risk**. User-editable profile fields such as
 
 ### Missing V2 behavior
 
-- No verified one-time grant of 10 free credits exists.
+- A database-idempotent one-time grant of 10 free credits is implemented locally as of August 30, 2026 and is pending migration/deployment.
 - Google sign-in is not exposed.
 - The signed-out root composer/auth modal flow does not exist.
 - Owner privileges are surfaced in the interface.
@@ -677,7 +677,7 @@ Before changing prices, add a simulator with assumptions for utilization, output
 - create route ownership/retirement registry;
 - introduce provider/model/cost registry (**completed locally August 30, 2026; image/video model IDs, pricing versions, customer-credit quotes, and provider-cost estimates are centralized; pending deployment**);
 - define canonical generation job and asset lineage;
-- create idempotent signup grant;
+- create idempotent signup grant (**completed locally August 30, 2026; pending migration/deployment**);
 - move video reservation/refund into the portal ledger;
 - add unit/database tests for roles, grants, reservations, refunds, and cross-tenant access.
 
@@ -737,6 +737,14 @@ The next contained Phase 1 slice also established a code-level provider/model re
 - video job metadata snapshots the model, pricing version, registry version, estimated provider cost, and proposed 24-credit quote without changing the legacy video debit path;
 - unpriced generic model overrides no longer silently inherit another model's cost;
 - four provider-registry tests pass, for nine Phase 1 tests total.
+
+The following contained Phase 1 slice established the signup credit grant:
+
+- the grant is uniquely keyed by the authenticated user ID, not by login attempt or workspace;
+- the service-only RPC takes a per-user transaction lock and reuses the canonical portal credit ledger;
+- onboarding applies the grant only after workspace membership exists and deletes the incomplete workspace if the grant fails;
+- account deletion preserves the user-level grant marker, preventing delete-and-recreate credit farming;
+- three source-level grant invariants cover the user uniqueness, fixed 10-credit value, browser-role revocation, RLS, and onboarding order.
 
 ## Source references
 

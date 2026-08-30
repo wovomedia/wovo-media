@@ -1292,7 +1292,36 @@ async function onboard(context: PortalContext, body: ActionBody) {
       related_table: "wovo_portal_accounts",
       related_id: account.id,
     });
-    return { account };
+    const signupCreditGrant = await supabaseServiceRoleRequest<{
+      applied: boolean;
+      credits: number;
+      balanceAfter: number;
+    }>(
+      "/rest/v1/rpc/wovo_grant_signup_credits",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          p_user_id: context.user.id,
+          p_account_id: account.id,
+        }),
+      },
+    );
+    if (
+      !signupCreditGrant
+      || typeof signupCreditGrant.applied !== "boolean"
+      || !Number.isInteger(signupCreditGrant.credits)
+      || (signupCreditGrant.credits !== 0 && signupCreditGrant.credits !== 10)
+      || signupCreditGrant.applied !== (signupCreditGrant.credits === 10)
+      || !Number.isInteger(signupCreditGrant.balanceAfter)
+      || signupCreditGrant.balanceAfter < 0
+    ) {
+      throw new Error("Unable to apply the one-time signup credit grant.");
+    }
+    return {
+      account,
+      signupCredits: signupCreditGrant.credits,
+      signupCreditGrant: signupCreditGrant.applied ? "applied" : "already_used",
+    };
   } catch (error) {
     await supabaseServiceRoleRequest(`/rest/v1/wovo_portal_accounts?id=eq.${encodeURIComponent(account.id)}`, {
       method: "DELETE",
