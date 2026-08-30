@@ -149,6 +149,10 @@ export async function POST(request: Request) {
           updated_at: new Date().toISOString(),
           result_payload: {
             model: falJob.model,
+            modelPricingVersion: falJob.pricingVersion,
+            modelRegistryVersion: falJob.registryVersion,
+            estimatedProviderCostMicros: falJob.estimatedProviderCostMicros,
+            quotedCredits: falJob.quotedCredits,
             durationSeconds: falJob.seconds,
             remixMode,
             sourceOutputId: sourceOutputId || null,

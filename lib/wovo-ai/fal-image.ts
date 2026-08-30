@@ -1,9 +1,8 @@
 import "server-only";
 
 import { fal } from "@fal-ai/client";
+import { resolveAiModel } from "@/lib/ai/provider-models";
 import { getEnv } from "@/lib/env";
-
-const IMAGE_MODEL = "fal-ai/flux-2";
 
 type FalImageResult = {
   images?: Array<{ url?: string; content_type?: string; width?: number; height?: number }>;
@@ -18,8 +17,9 @@ function configureFal() {
 
 export async function generateFalImage(prompt: string, aspect: string) {
   configureFal();
+  const model = resolveAiModel("image.default");
   const imageSize = aspect === "9:16" ? "portrait_16_9" : aspect === "16:9" ? "landscape_16_9" : "square_hd";
-  const result = await fal.subscribe(IMAGE_MODEL, {
+  const result = await fal.subscribe(model.modelId, {
     input: {
       prompt,
       image_size: imageSize,
@@ -35,7 +35,14 @@ export async function generateFalImage(prompt: string, aspect: string) {
   if (data.has_nsfw_concepts?.[0]) throw new Error("FAL_IMAGE_SAFETY_BLOCK");
   const image = data.images?.[0];
   if (!image?.url) throw new Error("FAL_IMAGE_RESULT_MISSING");
-  return { url: image.url, contentType: image.content_type || "image/png", requestId: result.requestId, model: IMAGE_MODEL };
+  return {
+    url: image.url,
+    contentType: image.content_type || "image/png",
+    requestId: result.requestId,
+    model: model.modelId,
+    pricingVersion: model.pricingVersion,
+    estimatedProviderCostMicros: model.outputPricing?.estimatedMicrosPerOutput ?? 0,
+  };
 }
 
 export async function downloadFalImage(url: string) {

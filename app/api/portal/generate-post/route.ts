@@ -3,6 +3,7 @@ import OpenAI from "openai";
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { getEnv } from "@/lib/env";
+import { estimateTokenCostMicros, quoteSocialPostImage, resolveAiModel } from "@/lib/ai/provider-models";
 import { assertPortalAccountAccess, PortalHttpError, requirePortalContext } from "@/lib/portal/server";
 import { supabaseServiceRoleRequest } from "@/lib/supabase/server";
 import { downloadFalImage, generateFalImage } from "@/lib/wovo-ai/fal-image";
@@ -60,6 +61,8 @@ export async function POST(request: Request) {
     const platform = required(body.platform ?? "instagram", "Platform", 40).toLowerCase();
     if (!["instagram", "facebook", "linkedin"].includes(platform)) throw new PortalHttpError(400, "Choose Instagram, Facebook, or LinkedIn.");
     const aspect = ["1:1", "9:16", "16:9"].includes(String(body.aspect)) ? String(body.aspect) : "1:1";
+    const quote = quoteSocialPostImage();
+    const captionModel = resolveAiModel("caption.default");
     await ensureUsagePolicy(context, accountId);
     const idempotencyKey = `portal-post:${context.user.id}:${randomUUID()}`;
     const reserved = await supabaseServiceRoleRequest<UsageRow | UsageRow[]>("/rest/v1/rpc/wovo_ai_reserve_usage", {
@@ -69,10 +72,16 @@ export async function POST(request: Request) {
         p_actor_user_id: context.user.id,
         p_feature: "image_visual",
         p_mode: "fast",
-        p_estimated_units: 12,
-        p_estimated_provider_cost_micros: 50000,
+        p_estimated_units: quote.customerCredits,
+        p_estimated_provider_cost_micros: quote.estimatedProviderCostMicros,
         p_idempotency_key: idempotencyKey,
-        p_metadata: { workflow: "portal_post_image", platform, aspect },
+        p_metadata: {
+          workflow: "portal_post_image",
+          platform,
+          aspect,
+          registryVersion: quote.registryVersion,
+          models: quote.models,
+        },
       }),
     });
     usageId = (Array.isArray(reserved) ? reserved[0] : reserved)?.id ?? null;
@@ -89,7 +98,7 @@ export async function POST(request: Request) {
     if (moderation.results[0]?.flagged) throw new PortalHttpError(400, "This request could not be generated.");
     const contextBlock = JSON.stringify(account);
     const captionResponse = await client.responses.create({
-      model: getEnv("OPENAI_MODEL") || "gpt-5.6-luna",
+      model: captionModel.modelId,
       store: false,
       max_output_tokens: 450,
       instructions: "Write one original social caption for the requested platform using only the supplied business facts. Include a hook, useful body, clear call to action, and exactly 3 relevant hashtags. Never invent awards, prices, results, hours, addresses, or claims. Return only the finished caption.",
@@ -119,12 +128,17 @@ export async function POST(request: Request) {
         account_id: accountId, created_by: context.user.id, title, caption, platform, content_type: "social_post",
         scheduled_for: body.scheduledFor ? new Date(String(body.scheduledFor)).toISOString() : null, status: "client_review",
         creative_brief: prompt, hashtags, timezone: "America/Chicago", asset_id: assetId, source_rights_confirmed: true,
-        ai_generated: true, ai_provider: "openai+fal", ai_model: generated.model,
+        ai_generated: true, ai_provider: "openai+fal", ai_model: `${captionModel.modelId}+${generated.model}`,
       }),
     });
     const itemId = contentRows?.[0]?.id;
     if (!itemId) throw new Error("CONTENT_RECORD_FAILED");
-    await supabaseServiceRoleRequest("/rest/v1/rpc/wovo_ai_finalize_usage", { method: "POST", body: JSON.stringify({ p_request_id: usageId, p_actual_units: 12, p_actual_provider_cost_micros: 50000, p_provider_request_id: generated.requestId }) });
+    const captionCostMicros = estimateTokenCostMicros(captionModel, {
+      inputTokens: captionResponse.usage?.input_tokens ?? 0,
+      outputTokens: captionResponse.usage?.output_tokens ?? 0,
+    });
+    const reconciledProviderCostMicros = generated.estimatedProviderCostMicros + captionCostMicros;
+    await supabaseServiceRoleRequest("/rest/v1/rpc/wovo_ai_finalize_usage", { method: "POST", body: JSON.stringify({ p_request_id: usageId, p_actual_units: quote.customerCredits, p_actual_provider_cost_micros: reconciledProviderCostMicros, p_provider_request_id: generated.requestId }) });
     usageId = null;
     const { data: signed } = await storage.storage.from("wovo-portal-assets").createSignedUrl(path, 900);
     return NextResponse.json({ itemId, assetId, caption, previewUrl: signed?.signedUrl ?? null }, { status: 201 });

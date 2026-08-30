@@ -2,7 +2,7 @@
 
 **Audit date:** August 30, 2026
 
-**Status:** Phase 0 architecture and production-readiness audit complete; the first contained Phase 1 authorization-hardening slice is implemented locally and verified.
+**Status:** Phase 0 architecture and production-readiness audit complete; the first contained Phase 1 authorization-hardening and provider-registry slices are implemented locally and verified.
 
 **Scope:** repository, local application, public production health, Supabase migrations and policies, Stripe catalog/integration, AI generation, social publishing, credits, storage, auth, and user experience.
 
@@ -675,7 +675,7 @@ Before changing prices, add a simulator with assumptions for utilization, output
 
 - remove editable-metadata authorization (**completed locally August 30, 2026; pending deployment**);
 - create route ownership/retirement registry;
-- introduce provider/model/cost registry;
+- introduce provider/model/cost registry (**completed locally August 30, 2026; image/video model IDs, pricing versions, customer-credit quotes, and provider-cost estimates are centralized; pending deployment**);
 - define canonical generation job and asset lineage;
 - create idempotent signup grant;
 - move video reservation/refund into the portal ledger;
@@ -725,9 +725,18 @@ The first implementation slice should be deliberately small:
 
 1. remove `user_metadata` from every privileged role/admin decision (**complete locally**);
 2. preserve user metadata only for non-authoritative profile fields (**complete locally**);
-3. add regression tests for a user who sets `user_metadata.role = admin` or an owner email and must remain unauthorized (**5 tests passing**);
+3. add regression tests for a user who sets `user_metadata.role = admin` or an owner email and must remain unauthorized (**5 authorization tests passing**);
 4. run typecheck, lint, and production build (**passing: 0 lint errors, production build generated 106 routes**);
 5. do not alter provider flags, publish queues, Stripe products, credits, or production data in that slice.
+
+The next contained Phase 1 slice also established a code-level provider/model registry:
+
+- OpenAI caption and fal image/video model IDs now resolve from one versioned registry;
+- social image posts snapshot both model IDs, pricing versions, registry version, estimated provider cost, and 12-credit quote before reservation;
+- completed caption token usage is included in the reconciled provider-cost estimate;
+- video job metadata snapshots the model, pricing version, registry version, estimated provider cost, and proposed 24-credit quote without changing the legacy video debit path;
+- unpriced generic model overrides no longer silently inherit another model's cost;
+- four provider-registry tests pass, for nine Phase 1 tests total.
 
 ## Source references
 

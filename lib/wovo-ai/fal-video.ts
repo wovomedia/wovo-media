@@ -1,10 +1,8 @@
 import "server-only";
 
 import { fal } from "@fal-ai/client";
+import { quoteShortVideo, resolveAiModel } from "@/lib/ai/provider-models";
 import { getEnv } from "@/lib/env";
-
-const TEXT_MODEL = "fal-ai/wan/v2.2-a14b/text-to-video/turbo";
-const IMAGE_MODEL = "fal-ai/wan/v2.2-a14b/image-to-video/turbo";
 
 type FalVideoData = {
   video?: { url?: string; content_type?: string; file_name?: string; file_size?: number };
@@ -19,7 +17,7 @@ function configureFal() {
 }
 
 export function getFalVideoModel(hasReferenceImage: boolean) {
-  return hasReferenceImage ? IMAGE_MODEL : TEXT_MODEL;
+  return resolveAiModel(hasReferenceImage ? "video.image.default" : "video.text.default").modelId;
 }
 
 export async function createFalVideoJob(input: {
@@ -33,7 +31,10 @@ export async function createFalVideoJob(input: {
   // runtime that the provider endpoint does not accept.
   const requestedSeconds = Number.isFinite(input.durationSeconds) ? Math.round(Number(input.durationSeconds)) : 5;
   const seconds = Math.max(4, Math.min(requestedSeconds, 8));
-  const model = getFalVideoModel(Boolean(input.inputReferenceImageUrl));
+  const hasReferenceImage = Boolean(input.inputReferenceImageUrl);
+  const resolvedModel = resolveAiModel(hasReferenceImage ? "video.image.default" : "video.text.default");
+  const model = resolvedModel.modelId;
+  const quote = quoteShortVideo(hasReferenceImage);
   const common = {
     prompt: input.prompt,
     resolution: "720p" as const,
@@ -41,14 +42,23 @@ export async function createFalVideoJob(input: {
     enable_output_safety_checker: true,
   };
   const submitted = input.inputReferenceImageUrl
-    ? await fal.queue.submit(IMAGE_MODEL, {
+    ? await fal.queue.submit(model, {
         input: { ...common, image_url: input.inputReferenceImageUrl, aspect_ratio: "auto" as const },
       })
-    : await fal.queue.submit(TEXT_MODEL, {
+    : await fal.queue.submit(model, {
         input: { ...common, aspect_ratio: "9:16" as const, enable_prompt_expansion: true },
       });
   if (!submitted.request_id) throw new Error("FAL_VIDEO_JOB_ID_MISSING");
-  return { providerJobId: submitted.request_id, status: "queued", model, seconds };
+  return {
+    providerJobId: submitted.request_id,
+    status: "queued",
+    model,
+    seconds,
+    pricingVersion: resolvedModel.pricingVersion,
+    registryVersion: quote.registryVersion,
+    estimatedProviderCostMicros: quote.estimatedProviderCostMicros,
+    quotedCredits: quote.customerCredits,
+  };
 }
 
 export async function getFalVideoJob(model: string, requestId: string): Promise<{
