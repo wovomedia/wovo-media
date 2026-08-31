@@ -7,6 +7,7 @@ import { estimateTokenCostMicros, quoteSocialPostImage, resolveAiModel } from "@
 import { assertPortalAccountAccess, PortalHttpError, requirePortalContext } from "@/lib/portal/server";
 import { supabaseServiceRoleRequest } from "@/lib/supabase/server";
 import { downloadFalImage, generateFalImage } from "@/lib/wovo-ai/fal-image";
+import { ensureWorkspaceUsagePolicy } from "@/lib/wovo-ai/usage-policy";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -25,30 +26,6 @@ function storageAdmin() {
   return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 }
 
-async function ensureUsagePolicy(context: Awaited<ReturnType<typeof requirePortalContext>>, accountId: string) {
-  const existing = await supabaseServiceRoleRequest<Array<{ period_end: string; enabled: boolean }>>(
-    `/rest/v1/wovo_ai_usage_policies?select=period_end,enabled&account_id=eq.${encodeURIComponent(accountId)}&limit=1`
-  ).catch(() => []);
-  if (existing?.[0]?.enabled && Date.parse(existing[0].period_end) > Date.now()) return;
-  const subscriptions = await supabaseServiceRoleRequest<Array<{ status: string }>>(
-    `/rest/v1/wovo_portal_subscriptions?select=status&account_id=eq.${encodeURIComponent(accountId)}&status=in.(active,trialing)&limit=1`
-  ).catch(() => []);
-  const owner = context.mode === "staff" && context.staffRole === "owner";
-  const now = new Date();
-  const periodEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-  await supabaseServiceRoleRequest("/rest/v1/wovo_ai_usage_policies?on_conflict=account_id", {
-    method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({
-      account_id: accountId, enabled: true, plan_key: owner ? "owner_test" : "core",
-      daily_unit_limit: owner ? 100000 : 48, weekly_unit_limit: owner ? 100000 : 100,
-      monthly_included_units: owner ? 100000 : subscriptions?.[0] ? 100 : 0,
-      requests_per_minute: owner ? 10 : 2, monthly_provider_cost_cap_micros: owner ? 100000000 : 3000000,
-      provider_ready: Boolean(getEnv("OPENAI_API_KEY") && (getEnv("FAL_KEY") || getEnv("FAL_API_KEY"))),
-      moderation_ready: true, telemetry_ready: true, code_sandbox_ready: false, advanced_mode_selection: false,
-      period_start: now.toISOString(), period_end: periodEnd.toISOString(), updated_by: context.user.id, updated_at: now.toISOString(),
-    }),
-  });
-}
-
 export async function POST(request: Request) {
   let usageId: string | null = null;
   try {
@@ -63,7 +40,7 @@ export async function POST(request: Request) {
     const aspect = ["1:1", "9:16", "16:9"].includes(String(body.aspect)) ? String(body.aspect) : "1:1";
     const quote = quoteSocialPostImage();
     const captionModel = resolveAiModel("caption.default");
-    await ensureUsagePolicy(context, accountId);
+    await ensureWorkspaceUsagePolicy(context, accountId);
     const idempotencyKey = `portal-post:${context.user.id}:${randomUUID()}`;
     const reserved = await supabaseServiceRoleRequest<UsageRow | UsageRow[]>("/rest/v1/rpc/wovo_ai_reserve_usage", {
       method: "POST",

@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { createFalVideoJob } from "@/lib/wovo-ai/fal-video";
-import { requireServerUser, supabaseServiceRoleRequest } from "@/lib/supabase/server";
+import { supabaseServiceRoleRequest } from "@/lib/supabase/server";
 import { asRecord, asString, isUuid } from "@/lib/wovo-ai/feed-utils";
 import { getEnv } from "@/lib/env";
 import { quoteShortVideo } from "@/lib/ai/provider-models";
 import { checkAiRateLimit } from "@/lib/wovo-ai/rate-limit";
+import { assertPortalAccountAccess, PortalHttpError, requirePortalContext } from "@/lib/portal/server";
+import { signedMediaUrl } from "@/lib/wovo-ai/media-token";
+import { ensureWorkspaceUsagePolicy } from "@/lib/wovo-ai/usage-policy";
 
 type CreateVideoBody = {
   prompt?: string;
@@ -19,16 +22,48 @@ type CreateVideoBody = {
 
 type VideoJobRow = {
   id: string;
+  user_id: string;
   account_id: string | null;
   usage_request_id: string | null;
   status: string;
   provider: string;
   provider_job_id: string | null;
   result_url: string | null;
+  result_payload?: Record<string, unknown> | null;
+  error?: string | null;
+  updated_at?: string;
   created_at: string;
 };
 
 type VideoRemixMode = "standard" | "animate_image" | "replace_dance";
+
+function visibleVideoJob(requestUrl: string, row: VideoJobRow) {
+  let mediaUrl: string | null = null;
+  if (row.status === "completed") {
+    try {
+      mediaUrl = signedMediaUrl(requestUrl, { kind: "video", jobId: row.id, ownerUserId: row.user_id, lifetimeSeconds: 30 * 24 * 60 * 60 });
+    } catch {
+      mediaUrl = null;
+    }
+  }
+  return { ...row, result_url: mediaUrl };
+}
+
+export async function GET(request: Request) {
+  try {
+    const context = await requirePortalContext(request.headers.get("authorization"));
+    const accountId = new URL(request.url).searchParams.get("accountId")?.trim() ?? "";
+    if (!isUuid(accountId)) throw new PortalHttpError(400, "Choose a valid workspace.");
+    await assertPortalAccountAccess(context, accountId);
+    const rows = await supabaseServiceRoleRequest<VideoJobRow[]>(
+      `/rest/v1/video_jobs?select=id,user_id,account_id,usage_request_id,status,provider,provider_job_id,result_url,result_payload,error,updated_at,created_at&account_id=eq.${encodeURIComponent(accountId)}&order=created_at.desc&limit=40`,
+    ) ?? [];
+    return NextResponse.json({ jobs: rows.map((row) => visibleVideoJob(request.url, row)) }, { headers: { "Cache-Control": "private, no-store" } });
+  } catch (error) {
+    const status = error instanceof PortalHttpError ? error.status : 401;
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to load video projects." }, { status });
+  }
+}
 
 export async function POST(request: Request) {
   let pendingJobId: string | null = null;
@@ -36,7 +71,8 @@ export async function POST(request: Request) {
   let pendingPaidReservation = false;
   let pendingWasPreview = false;
   try {
-    const { user } = await requireServerUser(request.headers.get("authorization"));
+    const context = await requirePortalContext(request.headers.get("authorization"));
+    const user = context.user;
     pendingActorUserId = user.id;
     const body = (await request.json().catch(() => ({}))) as CreateVideoBody;
     const isWorkspacePreview = body.preview === true;
@@ -45,6 +81,7 @@ export async function POST(request: Request) {
     if (!isUuid(accountId)) {
       return NextResponse.json({ error: "Select a valid workspace before creating video." }, { status: 400 });
     }
+    await assertPortalAccountAccess(context, accountId);
 
     const rateLimit = checkAiRateLimit(user.id, "video");
     if (!rateLimit.allowed) {
@@ -59,6 +96,8 @@ export async function POST(request: Request) {
     }
 
     const billingSource = isWorkspacePreview ? "workspace_preview" : "workspace_credits";
+    const ownerExempt = !isWorkspacePreview && context.mode === "staff" && context.staffRole === "owner";
+    if (!isWorkspacePreview && !ownerExempt) await ensureWorkspaceUsagePolicy(context, accountId);
     if (isWorkspacePreview) {
       const accounts = await supabaseServiceRoleRequest<Array<{ id: string; owner_user_id: string }>>(
         `/rest/v1/wovo_portal_accounts?select=id,owner_user_id&id=eq.${encodeURIComponent(accountId)}&owner_user_id=eq.${encodeURIComponent(user.id)}&archived_at=is.null&limit=1`,
@@ -117,11 +156,12 @@ export async function POST(request: Request) {
       workspacePreview: isWorkspacePreview,
       previewAccountId: isWorkspacePreview ? accountId : null,
       previewWatermarkRequired: isWorkspacePreview,
+      ownerExempt,
     };
     let createdJob: VideoJobRow | null = null;
-    if (isWorkspacePreview) {
+    if (isWorkspacePreview || ownerExempt) {
       const rows = await supabaseServiceRoleRequest<VideoJobRow[]>(
-        "/rest/v1/video_jobs?select=id,account_id,usage_request_id,status,provider,provider_job_id,result_url,created_at",
+        "/rest/v1/video_jobs?select=id,user_id,account_id,usage_request_id,status,provider,provider_job_id,result_url,result_payload,error,updated_at,created_at",
         {
           method: "POST",
           headers: { Prefer: "return=representation" },
@@ -202,7 +242,8 @@ export async function POST(request: Request) {
     return NextResponse.json({
       job: created,
       billing_source: billingSource,
-      reserved_credits: isWorkspacePreview ? 0 : quote.customerCredits,
+      reserved_credits: isWorkspacePreview || ownerExempt ? 0 : quote.customerCredits,
+      owner_exempt: ownerExempt,
       warning: null,
     });
   } catch (error) {

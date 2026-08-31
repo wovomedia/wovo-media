@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { getEnv } from "@/lib/env";
 import { reconcileRecentVideoJobs } from "@/lib/wovo-ai/video-reconciler";
+import { reconcileRecentMusicJobs } from "@/lib/wovo-ai/music-reconciler";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,20 +22,24 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: { "Cache-Control": "no-store" } });
   }
   try {
-    const result = await reconcileRecentVideoJobs(6);
-    if (result.failures.length > 0) {
-      console.error("Video reconciliation completed with retryable failures", {
-        failed: result.failures.length,
-        codes: [...new Set(result.failures.map((failure) => failure.code))],
+    const [video, music] = await Promise.all([
+      reconcileRecentVideoJobs(6),
+      reconcileRecentMusicJobs(6),
+    ]);
+    const failures = [...video.failures, ...music.failures];
+    if (failures.length > 0) {
+      console.error("Media reconciliation completed with retryable failures", {
+        failed: failures.length,
+        codes: [...new Set(failures.map((failure) => failure.code))],
       });
     }
-    return NextResponse.json(result, { headers: { "Cache-Control": "private, no-store" } });
+    return NextResponse.json({ video, music }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
-    const code = /^[A-Z0-9_]{3,80}$/.test(message) ? message : "VIDEO_RECONCILER_FAILED";
-    console.error("Video reconciliation failed before polling", { code });
+    const code = /^[A-Z0-9_]{3,80}$/.test(message) ? message : "MEDIA_RECONCILER_FAILED";
+    console.error("Media reconciliation failed before polling", { code });
     return NextResponse.json(
-      { found: 0, completed: 0, failed: 0, processing: 0, expired: 0, failures: [], workerError: code },
+      { video: null, music: null, workerError: code },
       { status: 503, headers: { "Cache-Control": "private, no-store" } },
     );
   }

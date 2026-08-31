@@ -52,7 +52,8 @@ test("the paid endpoint reserves before calling fal and no longer requires a sub
   assert.ok(reserveIndex >= 0 && providerIndex > reserveIndex);
   assert.match(source, /Select a valid workspace before creating video/);
   assert.match(source, /prompt\.length < 3 \|\| prompt\.length > 6000/);
-  assert.match(source, /reserved_credits: isWorkspacePreview \? 0 : quote\.customerCredits/);
+  assert.match(source, /reserved_credits: isWorkspacePreview \|\| ownerExempt \? 0 : quote\.customerCredits/);
+  assert.match(source, /context\.mode === "staff" && context\.staffRole === "owner"/);
   assert.match(source, /job\.status !== "failed"/);
   assert.doesNotMatch(source, /getSubscriptionStatus|guardAiRequest|Pro features/);
 });

@@ -7,6 +7,7 @@ import {
   directProviderMarginBps,
   estimateTokenCostMicros,
   quoteShortVideo,
+  quoteMusicTrack,
   quoteSocialPostImage,
   resolveAiModel,
 } from "../lib/ai/provider-models.ts";
@@ -20,19 +21,31 @@ test("caption pricing produces the audited token-cost estimate", () => {
   );
 });
 
+test("music quotes preserve the provider-cost margin for economy and premium models", () => {
+  const economy = quoteMusicTrack("economy", 120);
+  const premium = quoteMusicTrack("premium", 120);
+  assert.equal(economy.workflow, "music_track");
+  assert.equal(economy.customerCredits, 4);
+  assert.equal(economy.estimatedProviderCostMicros, 40_000);
+  assert.equal(premium.customerCredits, 13);
+  assert.equal(premium.estimatedProviderCostMicros, 200_000);
+  assert.ok(directProviderMarginBps(economy) >= AI_MIN_DIRECT_PROVIDER_MARGIN_BPS);
+  assert.ok(directProviderMarginBps(premium) >= AI_MIN_DIRECT_PROVIDER_MARGIN_BPS);
+});
+
 test("social post quote snapshots both models and customer credits", () => {
   const quote = quoteSocialPostImage();
   assert.equal(quote.registryVersion, AI_MODEL_REGISTRY_VERSION);
   assert.equal(quote.workflow, "social_post_image");
-  assert.equal(quote.customerCredits, 4);
-  assert.ok(quote.estimatedProviderCostMicros > 50_000);
+  assert.equal(quote.customerCredits, 2);
+  assert.ok(quote.estimatedProviderCostMicros > 30_000);
   assert.deepEqual(quote.models.map((model) => model.key), ["caption.default", "image.default"]);
 });
 
 test("short-video quote records the correct fal workflow", () => {
   const textQuote = quoteShortVideo(false);
   const imageQuote = quoteShortVideo(true);
-  assert.equal(textQuote.customerCredits, 35);
+  assert.equal(textQuote.customerCredits, 12);
   assert.equal(textQuote.estimatedProviderCostMicros, 100_000);
   assert.equal(textQuote.models[0]?.key, "video.text.default");
   assert.equal(imageQuote.models[0]?.key, "video.image.default");

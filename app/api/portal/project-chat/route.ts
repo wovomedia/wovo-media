@@ -13,10 +13,18 @@ export async function POST(request: Request) {
     const accountId = requiredString(body.accountId, "Workspace", 80);
     await assertPortalAccountAccess(context, accountId);
     const projectId = requiredString(body.projectId, "Project", 80);
-    const source = body.source === "content" ? "content" : "workflow";
+    const source = ["content", "workflow", "video", "music"].includes(String(body.source))
+      ? String(body.source) as "content" | "workflow" | "video" | "music"
+      : "workflow";
     const message = requiredString(body.message, "Message", 3000);
     const attachmentId = typeof body.attachmentId === "string" ? body.attachmentId : null;
-    const table = source === "content" ? "wovo_portal_content_items" : "wovo_portal_workflow_drafts";
+    const table = source === "content"
+      ? "wovo_portal_content_items"
+      : source === "video"
+        ? "video_jobs"
+        : source === "music"
+          ? "wovo_music_jobs"
+          : "wovo_portal_workflow_drafts";
     const rows = await supabaseServiceRoleRequest<Array<Record<string, unknown>>>(`/rest/v1/${table}?select=*&id=eq.${encodeURIComponent(projectId)}&account_id=eq.${encodeURIComponent(accountId)}&limit=1`);
     if (!rows?.[0]) throw new PortalHttpError(404, "Project not found.");
     let attachment: Record<string, unknown> | null = null;

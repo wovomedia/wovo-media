@@ -6,6 +6,7 @@ import { downloadFalVideo, getFalVideoJob } from "@/lib/wovo-ai/fal-video";
 import { getEnv } from "@/lib/env";
 import { requireServerUser, supabaseServiceRoleRequest } from "@/lib/supabase/server";
 import { asRecord, asString, isEligibleFeedPost } from "@/lib/wovo-ai/feed-utils";
+import { signedMediaUrl, verifyMediaAccess } from "@/lib/wovo-ai/media-token";
 
 type VideoJobRow = {
   id: string;
@@ -41,6 +42,23 @@ function normalizeJobStatus(status: string): string {
 
 function getInternalResultUrl(jobId: string): string {
   return `/api/wovo/video/${encodeURIComponent(jobId)}?content=1`;
+}
+
+function visibleJob(requestUrl: string, row: VideoJobRow) {
+  if (normalizeJobStatus(row.status) !== "completed") return row;
+  try {
+    return {
+      ...row,
+      result_url: signedMediaUrl(requestUrl, {
+        kind: "video",
+        jobId: row.id,
+        ownerUserId: row.user_id,
+        lifetimeSeconds: 30 * 24 * 60 * 60,
+      }),
+    };
+  } catch {
+    return row;
+  }
 }
 
 function adminStorage() {
@@ -91,8 +109,8 @@ async function canViewerAccessSharedVideo(jobId: string, ownerUserId: string): P
 
 export async function GET(request: Request, { params }: { params: Promise<{ jobId: string }> }) {
   try {
-    const { user } = await requireServerUser(request.headers.get("authorization"));
-    const isContentRequest = new URL(request.url).searchParams.get("content") === "1";
+    const requestUrl = new URL(request.url);
+    const isContentRequest = requestUrl.searchParams.get("content") === "1";
     const { jobId } = await params;
 
     const rows = await supabaseServiceRoleRequest<VideoJobRow[]>(
@@ -103,7 +121,19 @@ export async function GET(request: Request, { params }: { params: Promise<{ jobI
       return NextResponse.json({ error: "Video job not found." }, { status: 404 });
     }
 
-    const isOwner = row.user_id === user.id;
+    const signedContentAccess = isContentRequest && verifyMediaAccess({
+      kind: "video",
+      jobId: row.id,
+      ownerUserId: row.user_id,
+      expires: requestUrl.searchParams.get("expires"),
+      signature: requestUrl.searchParams.get("signature"),
+    });
+    const user = signedContentAccess
+      ? null
+      : (await requireServerUser(request.headers.get("authorization"))).user;
+
+    const isOwner = user?.id === row.user_id;
+    const actorUserId = user?.id ?? row.user_id;
     if (!isContentRequest && !isOwner) {
       return NextResponse.json({ error: "Forbidden." }, { status: 403 });
     }
@@ -111,7 +141,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ jobI
     const currentStatus = normalizeJobStatus(row.status);
 
     if (isContentRequest) {
-      if (!isOwner) {
+      if (!signedContentAccess && !isOwner) {
         const canView = await canViewerAccessSharedVideo(jobId, row.user_id);
         if (!canView) {
           return NextResponse.json({ error: "This video is not publicly available." }, { status: 403 });
@@ -152,7 +182,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ jobI
     if (currentStatus === "completed" || currentStatus === "failed" || !row.provider_job_id) {
       if (currentStatus === "completed" && !row.result_url) {
         const patched = await supabaseServiceRoleRequest<VideoJobRow[]>(
-          `/rest/v1/video_jobs?select=id,user_id,account_id,usage_request_id,status,provider,provider_job_id,result_url,result_payload,error,updated_at,created_at&id=eq.${encodeURIComponent(jobId)}&user_id=eq.${encodeURIComponent(user.id)}`,
+          `/rest/v1/video_jobs?select=id,user_id,account_id,usage_request_id,status,provider,provider_job_id,result_url,result_payload,error,updated_at,created_at&id=eq.${encodeURIComponent(jobId)}&user_id=eq.${encodeURIComponent(actorUserId)}`,
           {
             method: "PATCH",
             headers: { Prefer: "return=representation" },
@@ -162,9 +192,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ jobI
             }),
           },
         );
-        return NextResponse.json({ job: patched?.[0] ?? row });
+        return NextResponse.json({ job: visibleJob(request.url, patched?.[0] ?? row) });
       }
-      return NextResponse.json({ job: row });
+      return NextResponse.json({ job: visibleJob(request.url, row) });
     }
 
     try {
@@ -193,12 +223,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ jobI
             method: "POST",
             body: JSON.stringify({
               p_job_id: row.id,
-              p_actor_user_id: user.id,
+              p_actor_user_id: actorUserId,
               p_error_code: "video_provider_failed",
             }),
           },
         );
-        return NextResponse.json({ job: Array.isArray(failed) ? failed[0] ?? row : failed ?? row });
+        return NextResponse.json({ job: visibleJob(request.url, Array.isArray(failed) ? failed[0] ?? row : failed ?? row) });
       }
 
       if (normalized === "completed" && row.usage_request_id) {
@@ -208,17 +238,17 @@ export async function GET(request: Request, { params }: { params: Promise<{ jobI
             method: "POST",
             body: JSON.stringify({
               p_job_id: row.id,
-              p_actor_user_id: user.id,
+              p_actor_user_id: actorUserId,
               p_result_url: resultUrl,
               p_payload: { providerCompleted: true },
             }),
           },
         );
-        return NextResponse.json({ job: Array.isArray(completed) ? completed[0] ?? row : completed ?? row });
+        return NextResponse.json({ job: visibleJob(request.url, Array.isArray(completed) ? completed[0] ?? row : completed ?? row) });
       }
 
       const patchRows = await supabaseServiceRoleRequest<VideoJobRow[]>(
-        `/rest/v1/video_jobs?select=id,user_id,account_id,usage_request_id,status,provider,provider_job_id,result_url,result_payload,error,updated_at,created_at&id=eq.${encodeURIComponent(jobId)}&user_id=eq.${encodeURIComponent(user.id)}`,
+        `/rest/v1/video_jobs?select=id,user_id,account_id,usage_request_id,status,provider,provider_job_id,result_url,result_payload,error,updated_at,created_at&id=eq.${encodeURIComponent(jobId)}&user_id=eq.${encodeURIComponent(actorUserId)}`,
         {
           method: "PATCH",
           headers: { Prefer: "return=representation" },
@@ -232,7 +262,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ jobI
         },
       );
 
-      return NextResponse.json({ job: patchRows?.[0] ?? row });
+      return NextResponse.json({ job: visibleJob(request.url, patchRows?.[0] ?? row) });
     } catch (pollError) {
       return NextResponse.json({
         job: row,

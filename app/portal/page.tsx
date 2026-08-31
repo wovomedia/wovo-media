@@ -41,7 +41,7 @@ const WOVO_PRODUCTS: Array<{ label: string; detail: string; target: Tab; mark: s
   { label: "Cartoon Studio", detail: "Characters and episodes", target: "queue", mark: "C" },
   { label: "Social Campaigns", detail: "Captions, carousels, plans", target: "queue", mark: "S" },
   { label: "Website Builder", detail: "Pages and storefronts", target: "studio", mark: "W" },
-  { label: "AI Music", detail: "Songs and music-video briefs", target: "studio", mark: "M" },
+  { label: "AI Music", detail: "Generate playable tracks", target: "queue", mark: "M" },
   { label: "Projects", detail: "Media, drafts, revisions", target: "studio", mark: "P" },
   { label: "Publish", detail: "Approve and schedule", target: "calendar", mark: "→" },
 ];
@@ -182,15 +182,24 @@ export default function PortalPage() {
   }, [router]);
 
   useEffect(() => {
-    const checkout = new URLSearchParams(window.location.search).get(
-      "checkout",
-    );
+    const params = new URLSearchParams(window.location.search);
+    const checkout = params.get("checkout");
+    const credits = params.get("credits");
+    const requestedPack = params.get("buyCredits");
     if (checkout === "success")
       setNotice(
         "Payment received. Stripe is confirming your access; the dashboard will refresh automatically.",
       );
     if (checkout === "canceled")
       setNotice("Checkout was canceled. No new purchase was completed.");
+    if (credits === "success")
+      setNotice("Credit payment received. Stripe is verifying the purchase and will update this workspace ledger automatically.");
+    if (credits === "canceled")
+      setNotice("Credit checkout was canceled. No credits were purchased.");
+    if (requestedPack && CLIENT_CREDIT_PACKS.some((pack) => pack.key === requestedPack)) {
+      setTab("studio");
+      setNotice("Your one-time credit pack is ready below. Checkout starts only after you choose it again inside your verified workspace.");
+    }
     void load().catch((reason) => {
       setLoading(false);
       setError(
@@ -198,6 +207,12 @@ export default function PortalPage() {
       );
     });
   }, [load]);
+
+  useEffect(() => {
+    if (!snapshot || tab !== "studio" || window.location.hash !== "#credit-packs") return;
+    const timer = window.setTimeout(() => document.getElementById("credit-packs")?.scrollIntoView({ behavior: "smooth", block: "center" }), 0);
+    return () => window.clearTimeout(timer);
+  }, [snapshot, tab]);
 
   const account =
     snapshot?.accounts.find((item) => item.id === accountId) ?? null;
@@ -3044,14 +3059,14 @@ function Overview({
   );
 }
 
-type CreatorMode = "post" | "campaign" | "episode" | "website" | "video";
+type CreatorMode = "post" | "campaign" | "episode" | "website" | "video" | "music";
 type WorkbenchProject = {
   id: string;
   title: string;
   kind: string;
   status: string;
   date: string;
-  source: "content" | "workflow";
+  source: "content" | "workflow" | "video" | "music";
   caption?: string;
   brief?: string;
   generated?: Record<string, unknown>;
@@ -3065,7 +3080,8 @@ function mediaUrls(value?: Record<string, unknown>) {
     if (
       typeof entry === "string" &&
       /^https:\/\//.test(entry) &&
-      /\.(mp4|webm|mov|png|jpe?g|webp)(\?|$)/i.test(entry)
+      (/\.(mp4|webm|mov|png|jpe?g|webp|mp3|wav|ogg|m4a)(\?|$)/i.test(entry) ||
+        /\/api\/wovo\/(video|music)\/[0-9a-f-]+(?:\?|$)/i.test(entry))
     )
       found.push(entry);
     else if (Array.isArray(entry)) entry.forEach(visit);
@@ -3099,8 +3115,13 @@ const CREATOR_MODES: Array<{
   },
   {
     value: "video",
-    label: "Video brief",
-    eyebrow: "Storyboard-first workflow",
+    label: "AI video",
+    eyebrow: "Metered fal.ai video render",
+  },
+  {
+    value: "music",
+    label: "AI music",
+    eyebrow: "Playable commercial-use audio",
   },
 ];
 
@@ -3143,6 +3164,15 @@ function CreatorWorkbench({
   const [aspect, setAspect] = useState("9:16");
   const [surface, setSurface] = useState<"light" | "dark">("light");
   const [generatingPost, setGeneratingPost] = useState(false);
+  const [generatingMedia, setGeneratingMedia] = useState(false);
+  const [videoJobs, setVideoJobs] = useState<Array<{
+    id: string; status: string; prompt: string; result_url: string | null;
+    created_at: string; result_payload?: Record<string, unknown> | null;
+  }>>([]);
+  const [musicJobs, setMusicJobs] = useState<Array<{
+    id: string; status: string; prompt: string; mediaUrl: string | null;
+    createdAt: string; quality: string; durationSeconds: number;
+  }>>([]);
   const [selectedProject, setSelectedProject] =
     useState<WorkbenchProject | null>(null);
   const [projectMessage, setProjectMessage] = useState("");
@@ -3152,17 +3182,82 @@ function CreatorWorkbench({
     name: string;
   } | null>(null);
   const [projectBusy, setProjectBusy] = useState(false);
-  const [metaDestinations, setMetaDestinations] = useState<Array<{
+  const [socialDestinations, setSocialDestinations] = useState<Array<{
     id: string;
-    pageName: string;
-    instagramUsername: string | null;
+    provider: "facebook" | "instagram" | "tiktok" | "youtube";
+    accountName: string;
+    status: string;
   }>>([]);
   const imageAssets = assets.filter(
     (asset) => asset.mime_type.startsWith("image/") && asset.rights_confirmed,
   );
   const activeMode =
     CREATOR_MODES.find((item) => item.value === mode) ?? CREATOR_MODES[0];
+  const refreshMediaJobs = useCallback(async () => {
+    const [videoResponse, musicResponse] = await Promise.all([
+      authedFetch(`/api/wovo/video?accountId=${encodeURIComponent(account.id)}`),
+      authedFetch(`/api/wovo/music?accountId=${encodeURIComponent(account.id)}`),
+    ]);
+    const videoPayload = videoResponse.ok
+      ? await videoResponse.json() as { jobs?: typeof videoJobs }
+      : { jobs: [] as typeof videoJobs };
+    const musicPayload = musicResponse.ok
+      ? await musicResponse.json() as { jobs?: typeof musicJobs }
+      : { jobs: [] as typeof musicJobs };
+    const videos = videoPayload.jobs ?? [];
+    const music = musicPayload.jobs ?? [];
+    const refreshedVideos = await Promise.all(videos.map(async (job) => {
+      if (!["queued", "processing"].includes(job.status)) return job;
+      const response = await authedFetch(`/api/wovo/video/${encodeURIComponent(job.id)}`);
+      if (!response.ok) return job;
+      const payload = await response.json() as { job?: typeof job };
+      return payload.job ?? job;
+    }));
+    const refreshedMusic = await Promise.all(music.map(async (job) => {
+      if (!["queued", "processing"].includes(job.status)) return job;
+      const response = await authedFetch(`/api/wovo/music/${encodeURIComponent(job.id)}`);
+      if (!response.ok) return job;
+      const payload = await response.json() as { job?: typeof job };
+      return payload.job ?? job;
+    }));
+    setVideoJobs(refreshedVideos);
+    setMusicJobs(refreshedMusic);
+  }, [account.id, authedFetch]);
+
+  useEffect(() => {
+    let active = true;
+    const refresh = () => void refreshMediaJobs().catch(() => {
+      if (!active) return;
+    });
+    refresh();
+    const timer = window.setInterval(refresh, 10_000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [refreshMediaJobs]);
+
   const recentOutputs = [
+    ...videoJobs.slice(0, 6).map((job) => ({
+      id: job.id,
+      title: `AI video · ${job.prompt.slice(0, 72)}`,
+      kind: "AI video",
+      status: job.status,
+      date: job.created_at,
+      source: "video" as const,
+      brief: job.prompt,
+      generated: job.result_url ? { video: job.result_url } : undefined,
+    })),
+    ...musicJobs.slice(0, 6).map((job) => ({
+      id: job.id,
+      title: `AI music · ${job.prompt.slice(0, 72)}`,
+      kind: `${job.quality} music`,
+      status: job.status,
+      date: job.createdAt,
+      source: "music" as const,
+      brief: job.prompt,
+      generated: job.mediaUrl ? { audio: job.mediaUrl } : undefined,
+    })),
     ...items.slice(0, 4).map((item) => ({
       id: item.id,
       title: item.title,
@@ -3278,17 +3373,17 @@ function CreatorWorkbench({
   useEffect(() => {
     let active = true;
     void authedFetch(
-      `/api/integrations/meta/status?accountId=${encodeURIComponent(account.id)}`,
+      `/api/integrations/social/connections?accountId=${encodeURIComponent(account.id)}`,
     )
       .then(async (response) =>
         response.ok
           ? (response.json() as Promise<{
-              connections?: Array<{ id: string; status: string; pageName: string; instagramUsername: string | null }>;
+              connections?: Array<{ id: string; provider: "facebook" | "instagram" | "tiktok" | "youtube"; accountName: string; status: string }>;
             }>)
           : null,
       )
       .then((payload) => {
-        if (active) setMetaDestinations((payload?.connections ?? []).filter((item) => item.status === "healthy"));
+        if (active) setSocialDestinations((payload?.connections ?? []).filter((item) => !["action_required", "expired", "disconnected", "error"].includes(item.status)));
       })
       .catch(() => null);
     return () => {
@@ -3314,6 +3409,10 @@ function CreatorWorkbench({
       setChannel("download");
       setFormat("campaign_plan");
       setAspect("1:1");
+    } else if (nextMode === "music") {
+      setChannel("download");
+      setFormat("instrumental");
+      setAspect("audio");
     } else {
       setChannel("download");
       setFormat("single_post");
@@ -3321,15 +3420,17 @@ function CreatorWorkbench({
     }
   }
 
-  const connectedChannelChoices = metaDestinations.flatMap((connection) => [
-    ...(connection.instagramUsername
-      ? [{ value: `instagram:${connection.id}`, label: `Instagram · @${connection.instagramUsername}` }]
-      : []),
-    { value: `facebook:${connection.id}`, label: `Facebook · ${connection.pageName}` },
-  ]);
+  const connectedChannelChoices = socialDestinations
+    .filter((connection) => mode !== "post" || connection.provider === "facebook" || connection.provider === "instagram")
+    .map((connection) => ({
+      value: `${connection.provider}:${connection.id}`,
+      label: `${connection.provider === "youtube" ? "YouTube" : connection.provider[0].toUpperCase() + connection.provider.slice(1)} · ${connection.accountName}`,
+    }));
   const channelChoices = mode === "website"
     ? [{ value: "website", label: "Website preview" }]
-    : [{ value: "download", label: "Download only" }, ...connectedChannelChoices];
+    : mode === "music"
+      ? [{ value: "download", label: "Download track" }]
+      : [{ value: "download", label: "Download only" }, ...connectedChannelChoices];
   const formatChoices =
     mode === "website"
       ? [
@@ -3338,6 +3439,12 @@ function CreatorWorkbench({
           { value: "services_site", label: "Services" },
           { value: "portfolio", label: "Portfolio" },
         ]
+      : mode === "music"
+        ? [
+            { value: "instrumental", label: "Instrumental" },
+            { value: "jingle", label: "Brand jingle" },
+            { value: "soundtrack", label: "Video soundtrack" },
+          ]
       : mode === "episode"
         ? [
             { value: "vertical_episode", label: "Vertical episode" },
@@ -3362,7 +3469,9 @@ function CreatorWorkbench({
                 { value: "story", label: "Story" },
               ];
   const aspectChoices =
-    mode === "website"
+    mode === "music"
+      ? [{ value: "audio", label: "Audio track" }]
+      : mode === "website"
       ? [
           { value: "16:9", label: "Desktop" },
           { value: "9:16", label: "Mobile" },
@@ -3459,6 +3568,11 @@ function CreatorWorkbench({
       `${CREATOR_MODES.find((item) => item.value === mode)?.label ?? "Creative"} · ${prompt.slice(0, 64)}`;
     const rightsConfirmed = data.get("rightsConfirmed") === "on";
     if (mode === "post") {
+      const selectedProvider = channel.includes(":") ? channel.split(":")[0] : "instagram";
+      if (!["facebook", "instagram"].includes(selectedProvider)) {
+        setError("Image posts can currently be prepared for Facebook or Instagram. Choose Video for TikTok or YouTube.");
+        return;
+      }
       setError("");
       setNotice("Writing the caption and rendering an original image…");
       setGeneratingPost(true);
@@ -3470,7 +3584,7 @@ function CreatorWorkbench({
             accountId: account.id,
             title,
             prompt,
-            platform: channel.startsWith("facebook:") ? "facebook" : "instagram",
+            platform: selectedProvider,
             destinationConnectionId: channel.includes(":") ? channel.split(":")[1] : null,
             aspect,
             scheduledFor: data.get("scheduledFor"),
@@ -3500,14 +3614,77 @@ function CreatorWorkbench({
       }
       return;
     }
+    if (mode === "music") {
+      setError("");
+      setNotice("Submitting a private, metered music render to fal.ai…");
+      setGeneratingMedia(true);
+      try {
+        const quality = data.get("musicQuality") === "premium" ? "premium" : "economy";
+        const response = await authedFetch("/api/wovo/music", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            accountId: account.id,
+            prompt: `${format.replaceAll("_", " ")}. ${prompt}`,
+            quality,
+            durationSeconds: Number(data.get("musicDuration") ?? 60),
+          }),
+        });
+        const payload = await response.json() as { error?: string; job?: { id: string }; reservedCredits?: number; ownerExempt?: boolean };
+        if (!response.ok || !payload.job?.id) throw new Error(payload.error ?? "The music render could not start.");
+        setNotice(payload.ownerExempt
+          ? "Owner music render started with no customer credits charged. It will appear here when fal finishes."
+          : `${payload.reservedCredits ?? 0} credits reserved. The playable track will appear here when fal finishes.`);
+        form.reset();
+        await refreshMediaJobs();
+      } catch (reason) {
+        setNotice("");
+        setError(reason instanceof Error ? reason.message : "The music render could not start.");
+      } finally {
+        setGeneratingMedia(false);
+      }
+      return;
+    }
+    if (mode === "video" || mode === "episode") {
+      setError("");
+      setNotice("Submitting a private, metered AI video render to fal.ai…");
+      setGeneratingMedia(true);
+      try {
+        const characterName = String(data.get("characterName") ?? "").trim();
+        const characterPersonality = String(data.get("characterPersonality") ?? "").trim();
+        const episodeGoal = String(data.get("episodeGoal") ?? "").trim();
+        const renderPrompt = mode === "episode"
+          ? `Animated vertical cartoon episode. Character: ${characterName || "an original recurring character"}. Personality: ${characterPersonality || "warm and expressive"}. Episode goal: ${episodeGoal || prompt}. Creative direction: ${prompt}. Do not add protected logos or recognizable people unless they are present in an approved reference.`
+          : prompt;
+        const response = await authedFetch("/api/wovo/video", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            accountId: account.id,
+            prompt: renderPrompt,
+            durationSeconds: Number(data.get("duration") ?? 8),
+            remixMode: "standard",
+          }),
+        });
+        const payload = await response.json() as { error?: string; job?: { id: string }; reserved_credits?: number; owner_exempt?: boolean };
+        if (!response.ok || !payload.job?.id) throw new Error(payload.error ?? "The video render could not start.");
+        setNotice(payload.owner_exempt
+          ? "Owner video render started with no customer credits charged. It will appear here when fal finishes."
+          : `${payload.reserved_credits ?? 0} credits reserved. The playable video will appear here when fal finishes.`);
+        form.reset();
+        await refreshMediaJobs();
+      } catch (reason) {
+        setNotice("");
+        setError(reason instanceof Error ? reason.message : "The video render could not start.");
+      } finally {
+        setGeneratingMedia(false);
+      }
+      return;
+    }
     const workflowType =
       mode === "campaign"
         ? "post_plan"
-        : mode === "episode"
-          ? "mascot_series"
-          : mode === "website"
-            ? "website_site"
-            : "ugc_ad";
+        : "website_site";
     const result = await onAction(
       {
         action: "create_workflow_draft",
@@ -3531,15 +3708,18 @@ function CreatorWorkbench({
         durationSeconds: data.get("duration"),
         startFrameAssetId: data.get("startFrameAssetId") || null,
       },
-      mode === "video"
-        ? "Private video/storyboard brief saved. No video was generated or published."
-        : "Private creation brief saved for review. Nothing was published.",
+      "Private creation brief saved for review. Nothing was published.",
     );
     if (result) form.reset();
   }
 
-  const actionLabel =
-    mode === "post" ? "Generate post + image" : "Generate draft";
+  const actionLabel = mode === "post"
+    ? "Generate post + image"
+    : mode === "music"
+      ? "Generate playable music"
+      : mode === "video" || mode === "episode"
+        ? "Generate AI video"
+        : "Save draft";
   return (
     <section className="overflow-hidden rounded-[28px] border border-white/10 bg-[#0f0e0d] text-white shadow-[0_28px_90px_rgba(0,0,0,.35)]">
       <header className="flex flex-col gap-4 border-b border-white/10 bg-[#0f0e0d] px-4 py-5 sm:px-6 lg:flex-row lg:items-end lg:justify-between">
@@ -3640,6 +3820,8 @@ function CreatorWorkbench({
                 <legend className="text-xs font-semibold text-white/65">
                   {mode === "website"
                     ? "Site type"
+                    : mode === "music"
+                      ? "Track type"
                     : mode === "episode"
                       ? "Episode output"
                       : mode === "campaign"
@@ -3662,7 +3844,7 @@ function CreatorWorkbench({
               </fieldset>
               <fieldset>
                 <legend className="text-xs font-semibold text-white/65">
-                  Canvas
+                  {mode === "music" ? "Output" : "Canvas"}
                 </legend>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {aspectChoices.map((choice) => (
@@ -3711,11 +3893,22 @@ function CreatorWorkbench({
                   </span>
                 </div>
                 <p className="mt-2 text-xs leading-5 text-white/45">
-                  Every new post includes an original generated image. The image
-                  is saved privately with the caption for approval.
+                  {mode === "music"
+                    ? "Generate a playable track, store it privately in WOVO, then download it or use it in a later music-video project."
+                    : mode === "video" || mode === "episode"
+                      ? "This starts a real 720p fal.ai video render. The result is stored privately and credits are returned if the provider fails."
+                      : mode === "post"
+                        ? "Every new post includes an original generated image saved privately with its caption for approval."
+                        : "This workflow saves a structured brief first; no provider render is started."}
                 </p>
                 <div className="mt-3 flex min-h-11 items-center rounded-xl border border-[#f05a3a] bg-[#f05a3a]/12 p-3 text-xs font-semibold text-[#ff9b82]">
-                  Generate a new image
+                  {mode === "music"
+                    ? "Generate playable audio"
+                    : mode === "video" || mode === "episode"
+                      ? "Generate a real AI video"
+                      : mode === "post"
+                        ? "Generate a new image"
+                        : "Save a reviewable brief"}
                 </div>
               </div>
             </aside>
@@ -3752,6 +3945,8 @@ function CreatorWorkbench({
                       placeholder={
                         mode === "episode"
                           ? "Introduce the character, setting, episode beats, and approved call to action…"
+                          : mode === "music"
+                            ? "Describe the genre, mood, instruments, tempo, structure, and where this track will be used…"
                           : mode === "website"
                             ? "Describe the offer, audience, hero message, sections, and primary action…"
                             : mode === "video"
@@ -3768,7 +3963,18 @@ function CreatorWorkbench({
                     className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/12 bg-[#1b1917] p-4 text-center"
                     aria-label={`${activeMode.label} preview`}
                   >
-                    {mode === "website" ? (
+                    {mode === "music" ? (
+                      <div className="w-full rounded-2xl border border-[#f05a3a]/40 bg-gradient-to-br from-[#f05a3a]/20 to-transparent p-3">
+                        <div className="flex h-24 items-center justify-center gap-1" aria-hidden="true">
+                          {[28, 52, 78, 42, 88, 60, 34, 70, 96, 48, 74, 38].map((height, index) => (
+                            <span key={`${height}-${index}`} className="w-1.5 rounded-full bg-[#f05a3a]" style={{ height: `${height}%`, opacity: .55 + (index % 3) * .18 }} />
+                          ))}
+                        </div>
+                        <div className="mt-2 flex items-center justify-between text-[9px] font-bold text-white/45">
+                          <span>00:00</span><span>WOVO AUDIO</span>
+                        </div>
+                      </div>
+                    ) : mode === "website" ? (
                       <div
                         className={`w-full overflow-hidden rounded-lg border border-[#f05a3a]/50 shadow-xl ${surface === "light" ? "bg-[#fffdf8] text-[#191714]" : "bg-[#11100f] text-white"}`}
                       >
@@ -3818,6 +4024,8 @@ function CreatorWorkbench({
                     <p className="mt-4 text-xs font-semibold">
                       {mode === "website"
                         ? `${surface} ${format.replaceAll("_", " ")}`
+                        : mode === "music"
+                          ? format.replaceAll("_", " ")
                         : `${aspect} ${activeMode.label.toLowerCase()}`}
                     </p>
                     <p className="mt-1 text-[10px] leading-4 text-white/35">
@@ -3948,6 +4156,43 @@ function CreatorWorkbench({
                       ))}
                     </div>
                   </div>
+                </div>
+              ) : null}
+              {mode === "music" ? (
+                <div className="mt-3 grid gap-4 rounded-2xl border border-[#f05a3a]/25 bg-[#f05a3a]/8 p-4 lg:grid-cols-2">
+                  <fieldset>
+                    <legend className="text-xs font-semibold text-white/65">Music model</legend>
+                    <div className="mt-2 grid gap-2">
+                      <label className="cursor-pointer">
+                        <input type="radio" name="musicQuality" value="economy" defaultChecked className="peer sr-only" />
+                        <span className="block rounded-xl border border-white/10 bg-white/[.04] p-3 text-xs text-white/60 peer-checked:border-[#f05a3a] peer-checked:bg-[#f05a3a]/12 peer-checked:text-white">
+                          <strong className="block text-sm">Fast track · CassetteAI</strong>
+                          <span className="mt-1 block leading-5 text-white/45">2 credits per started minute · up to 3 minutes</span>
+                        </span>
+                      </label>
+                      <label className="cursor-pointer">
+                        <input type="radio" name="musicQuality" value="premium" className="peer sr-only" />
+                        <span className="block rounded-xl border border-white/10 bg-white/[.04] p-3 text-xs text-white/60 peer-checked:border-[#f05a3a] peer-checked:bg-[#f05a3a]/12 peer-checked:text-white">
+                          <strong className="block text-sm">Studio track · Stable Audio 2.5</strong>
+                          <span className="mt-1 block leading-5 text-white/45">13 credits · richer fixed-price render</span>
+                        </span>
+                      </label>
+                    </div>
+                  </fieldset>
+                  <fieldset>
+                    <legend className="text-xs font-semibold text-white/65">Length</legend>
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      {[30, 60, 120, 180].map((seconds) => (
+                        <label key={seconds} className="cursor-pointer">
+                          <input type="radio" name="musicDuration" value={seconds} defaultChecked={seconds === 60} className="peer sr-only" />
+                          <span className="flex min-h-12 items-center justify-center rounded-xl border border-white/10 bg-white/[.04] text-xs font-bold text-white/60 peer-checked:border-[#f05a3a] peer-checked:text-[#ff9b82]">
+                            {seconds < 60 ? `${seconds}s` : `${seconds / 60} min`}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                    <p className="mt-3 text-[11px] leading-5 text-white/40">Commercial-use provider models. WOVO stores the result privately; you remain responsible for the prompt and intended use.</p>
+                  </fieldset>
                 </div>
               ) : null}
               {mode === "video" ? (
@@ -4123,8 +4368,12 @@ function CreatorWorkbench({
             <div>
               <p className="text-xs font-semibold">
                 {mode === "post"
-                  ? "4 credits · caption + original image"
-                  : "0 credits to save this draft"}
+                  ? "2 credits · caption + original image"
+                  : mode === "music"
+                    ? "2–13 credits · shown by music model and duration"
+                    : mode === "video" || mode === "episode"
+                      ? "12 credits · real 720p AI video render"
+                      : "0 credits to save this draft"}
               </p>
               <p className="mt-1 text-[11px] text-white/40">
                 Credits are reserved server-side and automatically returned if
@@ -4134,12 +4383,17 @@ function CreatorWorkbench({
             <button
               disabled={
                 generatingPost ||
+                generatingMedia ||
                 busy === "create_content" ||
                 busy === "create_workflow_draft"
               }
               className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-[#f05a3a] px-6 text-sm font-bold text-[#191714] shadow-[0_12px_30px_rgba(240,90,58,.24)] transition hover:bg-[#ff7658] focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#171513] disabled:cursor-not-allowed disabled:opacity-45 sm:w-auto"
             >
-              {generatingPost ? "Creating caption + image…" : actionLabel}
+              {generatingPost
+                ? "Creating caption + image…"
+                : generatingMedia
+                  ? mode === "music" ? "Starting music render…" : "Starting video render…"
+                  : actionLabel}
             </button>
           </div>
         </form>
@@ -4249,6 +4503,9 @@ function CreatorWorkbench({
       {selectedProject ? (
         <ProjectWorkspace
           project={selectedProject}
+          accountId={account.id}
+          connections={socialDestinations}
+          authedFetch={authedFetch}
           reply={projectReply}
           message={projectMessage}
           attachment={projectAttachment}
@@ -4276,6 +4533,9 @@ function CreatorWorkbench({
 
 function ProjectWorkspace({
   project,
+  accountId,
+  connections,
+  authedFetch,
   reply,
   message,
   attachment,
@@ -4286,6 +4546,9 @@ function ProjectWorkspace({
   onFile,
 }: {
   project: WorkbenchProject;
+  accountId: string;
+  connections: Array<{ id: string; provider: "facebook" | "instagram" | "tiktok" | "youtube"; accountName: string; status: string }>;
+  authedFetch: (url: string, init?: RequestInit) => Promise<Response>;
   reply: string;
   message: string;
   attachment: { id: string; name: string } | null;
@@ -4296,6 +4559,75 @@ function ProjectWorkspace({
   onFile: (file: File) => void;
 }) {
   const urls = mediaUrls(project.generated);
+  const publishableMediaUrl = urls[0] ?? null;
+  const publishType = project.source === "video" || /\.(mp4|webm|mov)(\?|$)/i.test(publishableMediaUrl ?? "")
+    ? "video"
+    : "image";
+  const eligibleConnections = connections.filter((connection) =>
+    publishType === "video" || ["facebook", "instagram"].includes(connection.provider),
+  );
+  const [publishCaption, setPublishCaption] = useState(project.caption || project.brief || "");
+  const [publishConnectionId, setPublishConnectionId] = useState(eligibleConnections[0]?.id ?? "");
+  const [publishSchedule, setPublishSchedule] = useState("");
+  const [publishJob, setPublishJob] = useState<{ id: string; status: string; provider: string } | null>(null);
+  const [publishBusy, setPublishBusy] = useState(false);
+  const [publishMessage, setPublishMessage] = useState("");
+
+  async function createPublishDraft(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!publishableMediaUrl || !publishConnectionId) return;
+    const connection = eligibleConnections.find((item) => item.id === publishConnectionId);
+    if (!connection) return;
+    setPublishBusy(true);
+    setPublishMessage("");
+    try {
+      const response = await authedFetch("/api/integrations/social/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "create", accountId, connectionId: connection.id, provider: connection.provider,
+          publishType, title: project.title.slice(0, 100), caption: publishCaption,
+          mediaUrl: publishableMediaUrl, mediaMimeType: publishType === "video" ? "video/mp4" : "image/jpeg",
+          privacyStatus: connection.provider === "youtube" ? "private" : undefined,
+          idempotencyKey: `project:${project.source}:${project.id}:${connection.id}`,
+        }),
+      });
+      const payload = await response.json() as { error?: string; job?: { id: string; status: string; provider: string } };
+      if (!response.ok || !payload.job) throw new Error(payload.error ?? "Unable to create the publish draft.");
+      setPublishJob(payload.job);
+      setPublishMessage("Saved for review. Approve this exact media, caption, and destination before scheduling.");
+    } catch (error) {
+      setPublishMessage(error instanceof Error ? error.message : "Unable to create the publish draft.");
+    } finally {
+      setPublishBusy(false);
+    }
+  }
+
+  async function updatePublish(action: "approve" | "schedule") {
+    if (!publishJob) return;
+    setPublishBusy(true);
+    setPublishMessage("");
+    try {
+      const response = await authedFetch("/api/integrations/social/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action, accountId, jobId: publishJob.id,
+          scheduledFor: action === "schedule" ? new Date(publishSchedule).toISOString() : undefined,
+        }),
+      });
+      const payload = await response.json() as { error?: string; job?: { id: string; status: string; provider: string } };
+      if (!response.ok || !payload.job) throw new Error(payload.error ?? "Unable to update the publish draft.");
+      setPublishJob(payload.job);
+      setPublishMessage(action === "approve"
+        ? "Approved. Choose a future time and schedule it. Nothing has been sent yet."
+        : "Scheduled. WOVO will re-verify the connection before the delivery window; no stale backlog is sent.");
+    } catch (error) {
+      setPublishMessage(error instanceof Error ? error.message : "Unable to update the publish draft.");
+    } finally {
+      setPublishBusy(false);
+    }
+  }
   return (
     <div
       className="fixed inset-0 z-[80] overflow-y-auto bg-black/75 p-3 backdrop-blur-sm sm:p-7"
@@ -4323,10 +4655,20 @@ function ProjectWorkspace({
           </div>
           <div className="mt-7 rounded-2xl border border-white/10 bg-black/25 p-5">
             {urls.map((url) =>
-              /\.(mp4|webm|mov)(\?|$)/i.test(url) ? (
+              project.source === "video" || /\.(mp4|webm|mov)(\?|$)/i.test(url) ? (
                 <div key={url} className="mb-4">
                   <video controls playsInline className="max-h-[520px] w-full rounded-xl bg-black" src={url} />
                   <a href={url} download className="mt-3 inline-flex min-h-10 items-center rounded-xl border border-white/15 px-4 text-xs font-bold text-white hover:border-[#f05a3a]">Download video</a>
+                </div>
+              ) : project.source === "music" || /\.(mp3|wav|ogg|m4a)(\?|$)/i.test(url) ? (
+                <div key={url} className="mb-4 rounded-2xl border border-white/10 bg-black/30 p-5">
+                  <div className="mb-4 flex h-24 items-center justify-center gap-1" aria-hidden="true">
+                    {[34, 62, 88, 46, 74, 96, 52, 80, 40, 68, 90, 44].map((height, index) => (
+                      <span key={`${height}-${index}`} className="w-2 rounded-full bg-[#f05a3a]" style={{ height: `${height}%`, opacity: .5 + (index % 3) * .2 }} />
+                    ))}
+                  </div>
+                  <audio controls preload="metadata" className="w-full" src={url} />
+                  <a href={url} download className="mt-3 inline-flex min-h-10 items-center rounded-xl border border-white/15 px-4 text-xs font-bold text-white hover:border-[#f05a3a]">Download track</a>
                 </div>
               ) : (
                 <div key={url} className="mb-4">
@@ -4419,6 +4761,43 @@ function ProjectWorkspace({
               {busy ? "Adam is working…" : "Ask Adam"}
             </button>
           </form>
+          {project.source !== "music" && publishableMediaUrl ? (
+            <form onSubmit={(event) => void createPublishDraft(event)} className="mt-8 border-t border-white/10 pt-6">
+              <p className="text-[10px] font-bold uppercase tracking-[.18em] text-[#ff8c70]">Approve & schedule</p>
+              <h3 className="mt-2 text-xl font-medium">Choose the exact social account.</h3>
+              {eligibleConnections.length ? (
+                <>
+                  <label className="mt-4 block text-xs font-semibold text-white/65">
+                    Destination
+                    <select value={publishConnectionId} onChange={(event) => setPublishConnectionId(event.target.value)} disabled={Boolean(publishJob)} className="mt-2 min-h-12 w-full rounded-xl border border-white/10 bg-[#24211f] px-3 text-sm text-white">
+                      {eligibleConnections.map((connection) => (
+                        <option key={connection.id} value={connection.id}>{connection.provider} · {connection.accountName}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="mt-3 block text-xs font-semibold text-white/65">
+                    Caption
+                    <textarea value={publishCaption} onChange={(event) => setPublishCaption(event.target.value)} disabled={Boolean(publishJob)} maxLength={5000} className="mt-2 min-h-28 w-full rounded-xl border border-white/10 bg-[#24211f] p-3 text-sm font-normal text-white outline-none focus:border-[#f05a3a]" placeholder="Write or ask Adam for the final caption…" />
+                  </label>
+                  {!publishJob ? (
+                    <button disabled={publishBusy} className="mt-3 min-h-12 w-full rounded-xl border border-[#f05a3a] px-4 text-sm font-bold text-[#ff9b82] disabled:opacity-45">Save exact post for review</button>
+                  ) : publishJob.status === "draft" || publishJob.status === "failed" ? (
+                    <button type="button" onClick={() => void updatePublish("approve")} disabled={publishBusy} className="mt-3 min-h-12 w-full rounded-xl bg-[#f05a3a] px-4 text-sm font-bold text-[#191714] disabled:opacity-45">Approve this exact post</button>
+                  ) : publishJob.status === "approved" ? (
+                    <div className="mt-3">
+                      <label className="block text-xs font-semibold text-white/65">Publish time<input required type="datetime-local" value={publishSchedule} onChange={(event) => setPublishSchedule(event.target.value)} className="mt-2 min-h-12 w-full rounded-xl border border-white/10 bg-[#24211f] px-3 text-sm text-white [color-scheme:dark]" /></label>
+                      <button type="button" onClick={() => void updatePublish("schedule")} disabled={publishBusy || !publishSchedule} className="mt-3 min-h-12 w-full rounded-xl bg-[#f05a3a] px-4 text-sm font-bold text-[#191714] disabled:opacity-45">Schedule approved post</button>
+                    </div>
+                  ) : (
+                    <div className="mt-3 rounded-xl border border-white/10 bg-white/[.05] p-3 text-sm capitalize text-white/70">Status: {publishJob.status.replaceAll("_", " ")}</div>
+                  )}
+                  {publishMessage ? <p role="status" className="mt-3 text-xs leading-5 text-white/55">{publishMessage}</p> : null}
+                </>
+              ) : (
+                <p className="mt-3 rounded-xl border border-white/10 bg-white/[.04] p-4 text-sm leading-6 text-white/50">Connect a compatible Facebook, Instagram, TikTok, or YouTube account in Settings first. Download still works without a social connection.</p>
+              )}
+            </form>
+          ) : null}
         </aside>
       </div>
     </div>
@@ -5687,7 +6066,7 @@ function BuildStudio({
       <CartoonSeries accountId={account.id} />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <section className={cardClass}>
+        <section id="credit-packs" className={`${cardClass} scroll-mt-24`}>
           <p className="text-xs font-bold uppercase tracking-[.14em] text-[#756e64]">
             Credits
           </p>
@@ -6167,7 +6546,7 @@ function Services({
           </span>
           <h2 className="mt-4 font-semibold">Connected channels</h2>
           <p className="mt-1 text-xs leading-5 text-[#756e64]">
-            Facebook and Instagram access
+            Facebook, Instagram, TikTok, and YouTube
           </p>
         </a>
         <a

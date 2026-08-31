@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { readSessionFromStorage } from "@/lib/supabase/session-client";
 import { supabase } from "@/lib/supabase/client";
 import { fetchProfileSummary } from "@/lib/wovo-ai/profile-client";
@@ -410,6 +411,7 @@ export default function AdminPage() {
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-200">Admin</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight">Wovo AI Control Center</h1>
           <p className="mt-2 text-sm text-slate-300">Manage users, subscriptions, credits, and audit logs. Admin users bypass paywalls and credit locks automatically.</p>
+          <Link href="/admin/integrations" className="mt-4 inline-flex min-h-11 items-center rounded-xl border border-white/15 px-4 text-sm font-semibold hover:border-[var(--wm-accent)]">Open integration diagnostics</Link>
 
           <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-xl border border-white/10 bg-black/20 p-3">

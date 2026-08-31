@@ -1,4 +1,4 @@
-export const AI_MODEL_REGISTRY_VERSION = "2026-08-30.2";
+export const AI_MODEL_REGISTRY_VERSION = "2026-08-31.1";
 export const AI_RETAIL_CREDIT_FLOOR_MICROS = 83_333;
 export const AI_MIN_DIRECT_PROVIDER_MARGIN_BPS = 8_000;
 
@@ -6,10 +6,12 @@ export type AiModelKey =
   | "caption.default"
   | "image.default"
   | "video.text.default"
-  | "video.image.default";
+  | "video.image.default"
+  | "music.economy"
+  | "music.premium";
 
 export type AiProvider = "openai" | "fal";
-export type AiCapability = "text" | "image" | "video";
+export type AiCapability = "text" | "image" | "video" | "audio";
 
 type TokenPricing = {
   inputMicrosPerMillionTokens: number;
@@ -34,7 +36,7 @@ export type ResolvedAiModel = ModelDefinition;
 
 export type GenerationQuote = {
   registryVersion: string;
-  workflow: "social_post_image" | "short_video";
+  workflow: "social_post_image" | "short_video" | "music_track";
   customerCredits: number;
   estimatedProviderCostMicros: number;
   models: Array<{
@@ -62,11 +64,11 @@ const MODEL_DEFINITIONS: Record<AiModelKey, ModelDefinition> = {
     provider: "fal",
     capability: "image",
     modelId: "fal-ai/flux-2",
-    pricingVersion: "fal-flux2-estimate-2026-08-30",
+    pricingVersion: "fal-flux2-mp-2026-08-30",
     outputPricing: {
-      // The fal alias can resolve to variants with different per-megapixel prices.
-      // This conservative quote remains an estimate until provider billing is reconciled.
-      estimatedMicrosPerOutput: 50_000,
+      // Conservative allowance above fal's published $0.012/MP price for a
+      // typical social image plus format variance and provider reconciliation.
+      estimatedMicrosPerOutput: 30_000,
     },
   },
   "video.text.default": {
@@ -87,6 +89,29 @@ const MODEL_DEFINITIONS: Record<AiModelKey, ModelDefinition> = {
     pricingVersion: "fal-wan22-720p-2026-08-30",
     outputPricing: {
       estimatedMicrosPerOutput: 100_000,
+    },
+  },
+  "music.economy": {
+    key: "music.economy",
+    provider: "fal",
+    capability: "audio",
+    modelId: "cassetteai/music-generator",
+    pricingVersion: "fal-cassetteai-output-minute-2026-08-31",
+    outputPricing: {
+      // fal publishes $0.02 per output minute. The quote function rounds each
+      // request up to a full minute so WOVO never under-reserves provider cost.
+      estimatedMicrosPerOutput: 20_000,
+    },
+  },
+  "music.premium": {
+    key: "music.premium",
+    provider: "fal",
+    capability: "audio",
+    modelId: "fal-ai/stable-audio-25/text-to-audio",
+    pricingVersion: "fal-stable-audio-25-output-2026-08-31",
+    outputPricing: {
+      // fal publishes a fixed $0.20 cost per generated audio output.
+      estimatedMicrosPerOutput: 200_000,
     },
   },
 };
@@ -148,7 +173,7 @@ export function quoteSocialPostImage(): GenerationQuote {
   return economicallySafe({
     registryVersion: AI_MODEL_REGISTRY_VERSION,
     workflow: "social_post_image",
-    customerCredits: 4,
+    customerCredits: 2,
     estimatedProviderCostMicros:
       captionBudgetMicros + (image.outputPricing?.estimatedMicrosPerOutput ?? 0),
     models: [modelSnapshot(caption), modelSnapshot(image)],
@@ -160,8 +185,29 @@ export function quoteShortVideo(hasReferenceImage: boolean): GenerationQuote {
   return economicallySafe({
     registryVersion: AI_MODEL_REGISTRY_VERSION,
     workflow: "short_video",
-    customerCredits: 35,
+    customerCredits: 12,
     estimatedProviderCostMicros: model.outputPricing?.estimatedMicrosPerOutput ?? 0,
+    models: [modelSnapshot(model)],
+  });
+}
+
+export type MusicQuality = "economy" | "premium";
+
+export function quoteMusicTrack(quality: MusicQuality, durationSeconds: number): GenerationQuote {
+  const normalizedSeconds = Math.max(30, Math.min(Math.round(durationSeconds), quality === "premium" ? 190 : 180));
+  const model = resolveAiModel(quality === "premium" ? "music.premium" : "music.economy");
+  const outputMicros = model.outputPricing?.estimatedMicrosPerOutput ?? 0;
+  const estimatedProviderCostMicros = quality === "premium"
+    ? outputMicros
+    : Math.ceil(normalizedSeconds / 60) * outputMicros;
+  const customerCredits = quality === "premium"
+    ? 13
+    : Math.max(2, Math.ceil(normalizedSeconds / 60) * 2);
+  return economicallySafe({
+    registryVersion: AI_MODEL_REGISTRY_VERSION,
+    workflow: "music_track",
+    customerCredits,
+    estimatedProviderCostMicros,
     models: [modelSnapshot(model)],
   });
 }

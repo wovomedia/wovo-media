@@ -65,6 +65,44 @@ if (metaPublishingEnabled) {
   if (!/^[a-f0-9]{64}$/i.test(metaTokenKey)) throw new Error("Production environment preflight failed: META_TOKEN_ENCRYPTION_KEY must be a 32-byte hexadecimal key.");
   required("CRON_SECRET");
 }
+const falMediaEnabled = process.env.WOVO_VIDEO_GENERATION_ENABLED?.trim() === "true"
+  || process.env.WOVO_MUSIC_GENERATION_ENABLED?.trim() === "true";
+if (falMediaEnabled) {
+  if (!(process.env.FAL_KEY?.trim() || process.env.FAL_API_KEY?.trim())) {
+    throw new Error("Production environment preflight failed: fal media generation is enabled but no FAL key is configured.");
+  }
+  const mediaSigningKey = required("WOVO_MEDIA_SIGNING_KEY");
+  if (mediaSigningKey.length < 32) {
+    throw new Error("Production environment preflight failed: WOVO_MEDIA_SIGNING_KEY must contain at least 32 characters.");
+  }
+  required("CRON_SECRET");
+}
+const tiktokConfigured = Boolean(
+  process.env.TIKTOK_CLIENT_KEY?.trim()
+  || process.env.TIKTOK_CLIENT_SECRET?.trim()
+  || process.env.WOVO_TIKTOK_DIRECT_POST_ENABLED?.trim() === "true"
+  || process.env.WOVO_TIKTOK_TEST_POSTING_ENABLED?.trim() === "true"
+);
+const youtubeConfigured = Boolean(
+  process.env.GOOGLE_YOUTUBE_CLIENT_ID?.trim()
+  || process.env.GOOGLE_YOUTUBE_CLIENT_SECRET?.trim()
+  || process.env.WOVO_YOUTUBE_PUBLISHING_ENABLED?.trim() === "true"
+  || process.env.WOVO_YOUTUBE_TEST_UPLOADS_ENABLED?.trim() === "true"
+);
+if (tiktokConfigured || youtubeConfigured) {
+  const socialTokenKey = required("WOVO_SOCIAL_TOKEN_ENCRYPTION_KEY");
+  if (!/^[a-f0-9]{64}$/i.test(socialTokenKey)) {
+    throw new Error("Production environment preflight failed: WOVO_SOCIAL_TOKEN_ENCRYPTION_KEY must be a 32-byte hexadecimal key.");
+  }
+}
+if (tiktokConfigured) {
+  required("TIKTOK_CLIENT_KEY");
+  required("TIKTOK_CLIENT_SECRET");
+}
+if (youtubeConfigured) {
+  required("GOOGLE_YOUTUBE_CLIENT_ID");
+  required("GOOGLE_YOUTUBE_CLIENT_SECRET");
+}
 required("WOVO_PORTAL_GRANDFATHERED_PRICE_IDS");
 const siteUrl = (
   process.env.NEXT_PUBLIC_SITE_URL?.trim()
