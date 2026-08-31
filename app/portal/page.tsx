@@ -89,6 +89,17 @@ function formatMoney(cents: number) {
   }).format(cents / 100);
 }
 
+async function readJsonResponse<T>(response: Response): Promise<T> {
+  const text = await response.text();
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new Error(response.ok
+      ? "WOVO received an unreadable server response. Please try again."
+      : "WOVO could not complete that request. No successful generation was recorded.");
+  }
+}
+
 function StatusPill({ status }: { status: string }) {
   const positive = [
     "active",
@@ -3607,10 +3618,10 @@ function CreatorWorkbench({
             rightsConfirmed,
           }),
         });
-        const payload = (await response.json()) as {
+        const payload = await readJsonResponse<{
           error?: string;
           previewUrl?: string | null;
-        };
+        }>(response);
         if (!response.ok)
           throw new Error(payload.error ?? "The post could not be generated.");
         setNotice(
@@ -3646,7 +3657,7 @@ function CreatorWorkbench({
             durationSeconds: Number(data.get("musicDuration") ?? 60),
           }),
         });
-        const payload = await response.json() as { error?: string; job?: { id: string }; reservedCredits?: number; ownerExempt?: boolean };
+        const payload = await readJsonResponse<{ error?: string; job?: { id: string }; reservedCredits?: number; ownerExempt?: boolean }>(response);
         if (!response.ok || !payload.job?.id) throw new Error(payload.error ?? "The music render could not start.");
         setNotice(payload.ownerExempt
           ? "Owner music render started with no customer credits charged. It will appear here when fal finishes."
@@ -3682,7 +3693,7 @@ function CreatorWorkbench({
             remixMode: "standard",
           }),
         });
-        const payload = await response.json() as { error?: string; job?: { id: string }; reserved_credits?: number; owner_exempt?: boolean };
+        const payload = await readJsonResponse<{ error?: string; job?: { id: string }; reserved_credits?: number; owner_exempt?: boolean }>(response);
         if (!response.ok || !payload.job?.id) throw new Error(payload.error ?? "The video render could not start.");
         setNotice(payload.owner_exempt
           ? "Owner video render started with no customer credits charged. It will appear here when fal finishes."

@@ -6,6 +6,8 @@ const policy = readFileSync("lib/wovo-ai/usage-policy.ts", "utf8");
 const post = readFileSync("app/api/portal/generate-post/route.ts", "utf8");
 const video = readFileSync("app/api/wovo/video/route.ts", "utf8");
 const music = readFileSync("app/api/wovo/music/route.ts", "utf8");
+const ownerCapMigration = readFileSync("supabase/migrations/20260831233000_wovo_owner_usage_policy_cap.sql", "utf8");
+const portal = readFileSync("app/portal/page.tsx", "utf8");
 
 test("all paid media tools initialize one canonical seven-day usage policy", () => {
   assert.match(policy, /7 \* 24 \* 60 \* 60 \* 1000/);
@@ -19,4 +21,8 @@ test("owner generation is exempt while customer policy stays provider-gated", ()
   assert.match(policy, /provider_ready: Boolean\(getEnv\("OPENAI_API_KEY"\)/);
   assert.match(video, /!isWorkspacePreview && !ownerExempt/);
   assert.match(music, /if \(!ownerExempt\)/);
+  assert.match(ownerCapMigration, /weekly_unit_limit between 1 and 1000000/);
+  assert.match(ownerCapMigration, /provider cost and request-rate limits/);
+  assert.match(portal, /readJsonResponse/);
+  assert.doesNotMatch(portal, /Unexpected token/);
 });
