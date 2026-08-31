@@ -1,6 +1,5 @@
-import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
-import { getEnv } from "@/lib/env";
+import { authorizedCronRequest } from "@/lib/cron/scheduler-auth";
 import { reconcileRecentVideoJobs } from "@/lib/wovo-ai/video-reconciler";
 import { reconcileRecentMusicJobs } from "@/lib/wovo-ai/music-reconciler";
 
@@ -8,17 +7,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
-function authorized(request: Request): boolean {
-  const secret = getEnv("CRON_SECRET");
-  const supplied = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? "";
-  if (!secret || !supplied) return false;
-  const expected = Buffer.from(secret);
-  const actual = Buffer.from(supplied);
-  return expected.length === actual.length && timingSafeEqual(expected, actual);
-}
-
 export async function GET(request: Request) {
-  if (!authorized(request)) {
+  if (!(await authorizedCronRequest(request))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: { "Cache-Control": "no-store" } });
   }
   try {

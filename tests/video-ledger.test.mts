@@ -77,8 +77,12 @@ test("video cron is secret-protected and only reconciles recent submitted jobs",
     readFile(new URL("../vercel.json", import.meta.url), "utf8"),
   ]);
 
-  assert.match(route, /CRON_SECRET/);
-  assert.match(route, /timingSafeEqual/);
+  const schedulerAuth = await readFile(new URL("../lib/cron/scheduler-auth.ts", import.meta.url), "utf8");
+  const supabaseCron = await readFile(new URL("../supabase/migrations/20260831190000_wovo_media_social_supabase_hourly_triggers.sql", import.meta.url), "utf8");
+  assert.match(route, /authorizedCronRequest/);
+  assert.match(schedulerAuth, /CRON_SECRET/);
+  assert.match(schedulerAuth, /timingSafeEqual/);
+  assert.match(schedulerAuth, /wovo-scheduler:\$\{pathname\}/);
   assert.match(worker, /provider=eq\.fal/);
   assert.match(worker, /provider_job_id=not\.is\.null/);
   assert.match(worker, /created_at=gte\./);
@@ -88,8 +92,8 @@ test("video cron is secret-protected and only reconciles recent submitted jobs",
   assert.match(worker, /wovo_video_complete_job/);
   assert.match(worker, /wovo_video_fail_job/);
   assert.doesNotMatch(worker, /createFalVideoJob/);
-  assert.deepEqual(
-    JSON.parse(config).crons.find((cron: { path: string }) => cron.path === "/api/cron/video-jobs"),
-    { path: "/api/cron/video-jobs", schedule: "5 * * * *" },
-  );
+  assert.equal(JSON.parse(config).crons.some((cron: { path: string }) => cron.path === "/api/cron/video-jobs"), false);
+  assert.match(supabaseCron, /wovo-media-reconciliation-hourly/);
+  assert.match(supabaseCron, /5 \* \* \* \*/);
+  assert.match(supabaseCron, /\/api\/cron\/video-jobs/);
 });

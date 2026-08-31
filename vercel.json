@@ -4,14 +4,6 @@
     {
       "path": "/api/cron/adam-daily-report",
       "schedule": "0 15 * * *"
-    },
-    {
-      "path": "/api/cron/video-jobs",
-      "schedule": "5 * * * *"
-    },
-    {
-      "path": "/api/cron/social-publishing",
-      "schedule": "15 * * * *"
     }
   ]
 }

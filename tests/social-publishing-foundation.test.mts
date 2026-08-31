@@ -85,9 +85,15 @@ test("connection disconnect decrypts only providers using the generic token key"
 
 test("cron is authenticated and reconciles current plus stale provider jobs", async () => {
   const source = await readFile(cronUrl, "utf8");
-  assert.match(source, /timingSafeEqual/);
-  assert.match(source, /CRON_SECRET/);
+  const schedulerAuth = await readFile(new URL("../lib/cron/scheduler-auth.ts", import.meta.url), "utf8");
+  const supabaseCron = await readFile(new URL("../supabase/migrations/20260831190000_wovo_media_social_supabase_hourly_triggers.sql", import.meta.url), "utf8");
+  assert.match(source, /authorizedCronRequest/);
+  assert.match(schedulerAuth, /timingSafeEqual/);
+  assert.match(schedulerAuth, /CRON_SECRET/);
   assert.match(source, /reconcileSocialPublishJobs/);
   assert.match(source, /reconcileStaleSocialPublishJobs/);
   assert.match(source, /status: 503/);
+  assert.match(supabaseCron, /wovo-social-publishing-hourly/);
+  assert.match(supabaseCron, /15 \* \* \* \*/);
+  assert.match(supabaseCron, /\/api\/cron\/social-publishing/);
 });

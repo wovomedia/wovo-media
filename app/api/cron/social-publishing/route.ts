@@ -1,20 +1,12 @@
-import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
-import { getEnv } from "@/lib/env";
+import { authorizedCronRequest } from "@/lib/cron/scheduler-auth";
 import { processScheduledSocialJobs, reconcileSocialPublishJobs, reconcileStaleSocialPublishJobs } from "@/lib/publishing/service";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
-function authorized(request: Request) {
-  const expected = getEnv("CRON_SECRET");
-  const actual = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? "";
-  const left = Buffer.from(actual); const right = Buffer.from(expected);
-  return Boolean(expected) && left.length === right.length && timingSafeEqual(left, right);
-}
-
 export async function GET(request: Request) {
-  if (!authorized(request)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!(await authorizedCronRequest(request))) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const [scheduled, processing, stale] = await Promise.all([
       processScheduledSocialJobs(6),
