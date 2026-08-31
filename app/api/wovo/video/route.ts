@@ -276,6 +276,12 @@ export async function POST(request: Request) {
       }
     }
     const message = error instanceof Error ? error.message : "";
+    if (error instanceof PortalHttpError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    if (message.includes("Missing bearer token") || message.includes("Unable to verify session")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     console.error("wovo_video_create_failed", {
       code: /^[A-Z0-9_]+$/.test(message) ? message : "VIDEO_CREATE_FAILED",
       ledgerCreated: Boolean(pendingJobId),

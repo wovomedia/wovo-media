@@ -18,6 +18,8 @@ test("music jobs reserve canonical usage before fal and refund failures", () => 
   assert.ok(reserveIndex >= 0 && providerIndex > reserveIndex, "the durable reservation must exist before fal is called");
   assert.match(createRoute, /wovo_music_fail_job/);
   assert.match(createRoute, /ownerExempt/);
+  assert.match(createRoute, /Missing bearer token/);
+  assert.match(createRoute, /status === 401/);
 });
 
 test("music output is persisted privately and exposed through signed WOVO media URLs", () => {

@@ -191,14 +191,17 @@ export async function POST(request: Request) {
       }
     }
     const status = error instanceof PortalHttpError ? error.status
+      : error instanceof Error && (error.message.includes("Missing bearer token") || error.message.includes("Unable to verify session")) ? 401
       : error instanceof Error && error.message.includes("Insufficient AI credits") ? 402
         : 500;
     const message = error instanceof PortalHttpError
       ? error.message
+      : status === 401
+        ? "Unauthorized"
       : status === 402
         ? "This workspace does not have enough credits for that music model."
         : "The music provider is temporarily unavailable. No credits were kept for a failed submission.";
-    console.error("wovo_music_create_failed", { code, ledgerCreated: Boolean(pendingJobId) });
+    if (status !== 401) console.error("wovo_music_create_failed", { code, ledgerCreated: Boolean(pendingJobId) });
     return NextResponse.json({ error: message }, { status });
   }
 }

@@ -56,6 +56,8 @@ test("the paid endpoint reserves before calling fal and no longer requires a sub
   assert.match(source, /context\.mode === "staff" && context\.staffRole === "owner"/);
   assert.match(source, /job\.status !== "failed"/);
   assert.doesNotMatch(source, /getSubscriptionStatus|guardAiRequest|Pro features/);
+  assert.match(source, /Missing bearer token/);
+  assert.match(source, /status: 401/);
 });
 
 test("provider polling persists output before finalizing or releases on failure", async () => {
