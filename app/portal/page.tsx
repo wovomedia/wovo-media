@@ -492,7 +492,7 @@ export default function PortalPage() {
               ],
               [
                 "Verify pricing",
-                "Review the monthly, three-month, and yearly billing choices.",
+                "Review the monthly, three-month, six-month, and yearly billing choices.",
                 "/pricing",
               ],
               [

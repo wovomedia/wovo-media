@@ -60,7 +60,7 @@ export default function HomePage() {
                 See the workspace
               </Link>
             </div>
-            <p className="mt-4 text-xs leading-5 text-[#777067]">Choose monthly, every-three-months, or yearly billing. Human production services are separate paid add-ons or quotes.</p>
+            <p className="mt-4 text-xs leading-5 text-[#777067]">Choose monthly, every 3 months, every 6 months, or yearly billing—or buy one-time credits without a subscription. Human production services remain separate paid add-ons or quotes.</p>
           </div>
 
           <div id="product" className="relative scroll-mt-28">

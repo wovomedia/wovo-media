@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import WovoLogo from "@/components/ui/wovo-logo";
 import AdamOperations from "@/app/portal/AdamOperations";
@@ -529,8 +530,13 @@ export default function OwnerOperations({
               <div className="grid gap-4 md:grid-cols-2">
                 <InfoCard title="President / owner access" copy="Full WOVO operations access is resolved server-side from the verified owner allowlist and stored staff role. It is not self-assignable." />
                 <InfoCard title="Team notifications" copy="Database notifications contain a case reference and portal destination; sensitive support-message content is intentionally omitted from email notifications." />
-                <InfoCard title="Manual publishing automation" copy="Approved scheduled items create durable tenant-scoped posting tasks. Native Facebook/Instagram publishing is not enabled." />
+                <InfoCard title="Publishing automation" copy="Verified Facebook Pages and Instagram professional accounts can receive the exact post a person approved and scheduled. TikTok and YouTube stay unavailable until their production credentials and provider reviews are complete." />
                 <InfoCard title="Meeting providers" copy={snapshot.setup.meetingProviders.length ? `${snapshot.setup.meetingProviders.join(", ")} links may be attached after staff confirmation. Real hosting requires the provider account.` : "No meeting provider configured."} />
+                <article className={`${surface} p-5 md:col-span-2`}>
+                  <h2 className="text-lg font-semibold">Integration diagnostics</h2>
+                  <p className="mt-2 text-sm leading-6 text-[#655f56]">Open the protected developer view for generation providers, social publishing readiness, Stripe catalog checks, callback URLs, and recent sanitized errors. Customers cannot access it.</p>
+                  <Link href="/admin/integrations" className={`${primary} mt-4`}>Open integration diagnostics</Link>
+                </article>
               </div>
               <section className={`${surface} p-5 sm:p-6`}>
                 <h2 className="text-xl font-semibold">Recent owner audit</h2>
