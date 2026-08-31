@@ -12,13 +12,32 @@ export type WovoDailyCreative = {
   hashtags: string[];
 };
 
+const VIDEO_DIRECTIONS: Record<string, string> = {
+  "cartoon-series": "An original friendly coral-and-cream animated brand mascot sketches three quick storyboard panels, then steps into the final vertical frame. Playful premium 3D animation, lively camera push, no existing characters, no readable text, no logos.",
+  "weekly-queue": "A cinematic charcoal creator desk where coral content cards organize themselves into a clean weekly calendar, with subtle parallax and warm cream light. Premium product-film motion, no readable text, no logos, no people.",
+  "local-business-os": "A small-business storefront transforms into an elegant connected marketing dashboard made of coral light trails and cream cards. Smooth vertical camera move, grounded commercial realism, no readable text, no logos, no people.",
+  "brand-assets": "Business-owned photo, video, color, and voice symbols flow into a private charcoal vault and emerge as one polished coral campaign frame. Cinematic macro motion, premium materials, no readable text, no protected logos, no people.",
+  "human-control": "A sequence of draft cards pauses at a tactile approval control before one approved coral card moves toward Facebook and Instagram symbols. Clear review-first storytelling, warm studio lighting, no readable text, no people.",
+  "website-concepts": "Loose sketches and product blocks assemble into a refined responsive storefront on desktop and phone screens. Coral, cream, and charcoal palette, sophisticated dolly move, original interface shapes, no readable text, no third-party logos.",
+  "team-inbox": "Scattered customer questions become one calm private support inbox with organized case cards and a clear ownership path. Elegant vertical motion design, coral accents, cream cards, no readable text, no personal information, no people.",
+};
+
+export function videoPromptForCreative(creative: WovoDailyCreative) {
+  return [
+    "Create one original 9:16 vertical social video for WOVO Media.",
+    VIDEO_DIRECTIONS[creative.campaignKey] ?? VIDEO_DIRECTIONS["weekly-queue"],
+    `Campaign idea: ${creative.kicker}. ${creative.headline}`,
+    "Keep the shot coherent, visually specific, and suitable for a short Facebook or Instagram Reel. Do not render captions inside the video; WOVO adds the reviewed caption separately.",
+  ].join(" ");
+}
+
 const DAILY_CREATIVES: WovoDailyCreative[] = [
   {
     campaignKey: "cartoon-series",
     kicker: "A recurring brand character",
     headline: "Three original cartoon episodes every week.",
-    cta: "$39.99/month · Review before publishing",
-    caption: "Give your business a character people recognize. WOVO prepares three original vertical cartoon episodes each week from an approved character brief, with private review before anything is published. The Cartoon Episodes add-on is $39.99/month. Learn more at wovomedia.com/cartoon-episodes. — Adam, WOVO Media AI Operations Assistant",
+    cta: "Included with WOVO · Uses creation credits",
+    caption: "Give your business a character people recognize. WOVO can turn an approved character brief into original vertical cartoon videos and keep every result private for review before publishing. Cartoons use the same WOVO creation credits as images, music, and video—there is no separate cartoon plan. Learn more at wovomedia.com/cartoon-episodes. — Adam, WOVO Media AI Operations Assistant",
     hashtags: ["#WOVOMedia", "#BrandCharacter", "#ContentMarketing"],
   },
   {

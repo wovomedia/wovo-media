@@ -12,6 +12,8 @@ const youtubeUrl = new URL("../lib/publishing/providers/youtube.ts", import.meta
 const youtubeConnectUrl = new URL("../app/api/integrations/youtube/connect/route.ts", import.meta.url);
 const connectionRouteUrl = new URL("../app/api/integrations/social/connections/route.ts", import.meta.url);
 const cronUrl = new URL("../app/api/cron/social-publishing/route.ts", import.meta.url);
+const metaAutomationUrl = new URL("../lib/meta/publishing.ts", import.meta.url);
+const metaCronUrl = new URL("../app/api/cron/meta-publishing/route.ts", import.meta.url);
 
 test("normalized connection schema keeps all providers server-only", async () => {
   const sql = await readFile(migrationUrl, "utf8");
@@ -96,4 +98,22 @@ test("cron is authenticated and reconciles current plus stale provider jobs", as
   assert.match(supabaseCron, /wovo-social-publishing-hourly/);
   assert.match(supabaseCron, /15 \* \* \* \*/);
   assert.match(supabaseCron, /\/api\/cron\/social-publishing/);
+});
+
+test("WOVO Meta automation generates review-first fal video drafts instead of image posts", async () => {
+  const [automation, cron] = await Promise.all([
+    readFile(metaAutomationUrl, "utf8"),
+    readFile(metaCronUrl, "utf8"),
+  ]);
+  assert.match(automation, /enqueueWovoDailyVideoDraft/);
+  assert.match(automation, /createFalVideoJob/);
+  assert.match(automation, /reviewRequired: true/);
+  assert.match(automation, /createMetaReviewDraftsForAutomationVideo/);
+  assert.match(automation, /status: "draft"/);
+  assert.match(automation, /content_format: "reel"/);
+  assert.match(automation, /hashtags: creative\.hashtags/);
+  assert.match(automation, /creative\.hashtags\.join\(" "\)/);
+  assert.doesNotMatch(automation, /enqueueWovoDailyImagePost/);
+  assert.doesNotMatch(automation, /wovo-daily-image:/);
+  assert.match(cron, /enqueueWovoDailyVideoDraft/);
 });

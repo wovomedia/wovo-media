@@ -5,6 +5,7 @@ import { downloadFalVideo, getFalVideoJob } from "@/lib/wovo-ai/fal-video";
 import { getEnv } from "@/lib/env";
 import { supabaseServiceRoleRequest } from "@/lib/supabase/server";
 import { asRecord, asString } from "@/lib/wovo-ai/feed-utils";
+import { createMetaReviewDraftsForAutomationVideo } from "@/lib/meta/publishing";
 
 type ReconcileVideoRow = {
   id: string;
@@ -46,7 +47,11 @@ function sanitizedCode(error: unknown): string {
   return /^[A-Z0-9_]{3,80}$/.test(message) ? message : "VIDEO_RECONCILE_FAILED";
 }
 
-async function patchPreviewJob(row: ReconcileVideoRow, status: "queued" | "processing" | "completed" | "failed") {
+async function patchPreviewJob(
+  row: ReconcileVideoRow,
+  status: "queued" | "processing" | "completed" | "failed",
+  resultPatch: Record<string, unknown> = {},
+) {
   await supabaseServiceRoleRequest(`/rest/v1/video_jobs?id=eq.${encodeURIComponent(row.id)}&user_id=eq.${encodeURIComponent(row.user_id)}`, {
     method: "PATCH",
     headers: { Prefer: "return=minimal" },
@@ -57,6 +62,7 @@ async function patchPreviewJob(row: ReconcileVideoRow, status: "queued" | "proce
       result_payload: {
         ...asRecord(row.result_payload),
         providerCompleted: status === "completed",
+        ...resultPatch,
       },
       updated_at: new Date().toISOString(),
     }),
@@ -117,7 +123,13 @@ async function reconcileVideo(row: ReconcileVideoRow): Promise<"completed" | "fa
       }),
     });
   } else {
-    await patchPreviewJob(row, "completed");
+    const automation = asRecord(row.result_payload).wovoMetaAutomation === true;
+    const metaDraftIds = automation ? await createMetaReviewDraftsForAutomationVideo(row) : [];
+    await patchPreviewJob(row, "completed", automation ? {
+      metaDraftsCreated: true,
+      metaDraftIds,
+      reconciledBy: "video_cron",
+    } : { reconciledBy: "video_cron" });
   }
   return "completed";
 }

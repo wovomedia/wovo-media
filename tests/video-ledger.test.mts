@@ -93,6 +93,8 @@ test("video cron is secret-protected and only reconciles recent submitted jobs",
   assert.match(worker, /6 \* 60 \* 60 \* 1000/);
   assert.match(worker, /wovo_video_complete_job/);
   assert.match(worker, /wovo_video_fail_job/);
+  assert.match(worker, /createMetaReviewDraftsForAutomationVideo/);
+  assert.match(worker, /metaDraftsCreated: true/);
   assert.doesNotMatch(worker, /createFalVideoJob/);
   assert.equal(JSON.parse(config).crons.some((cron: { path: string }) => cron.path === "/api/cron/video-jobs"), false);
   assert.match(supabaseCron, /wovo-media-reconciliation-hourly/);

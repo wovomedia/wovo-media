@@ -7,8 +7,6 @@ import { useRouter } from "next/navigation";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import WovoLogo from "@/components/ui/wovo-logo";
 import OwnerOperations from "@/app/portal/OwnerOperations";
-import AiOperator from "@/app/portal/AiOperator";
-import CartoonSeries from "@/app/portal/CartoonSeries";
 import ClientMetaConnection from "@/app/portal/ClientMetaConnection";
 import ClientMetaDelivery from "@/app/portal/ClientMetaDelivery";
 import {
@@ -6084,10 +6082,6 @@ function BuildStudio({
           checks succeed.
         </p>
       </div>
-
-      <AiOperator accountId={account.id} />
-
-      <CartoonSeries accountId={account.id} />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <section id="credit-packs" className={`${cardClass} scroll-mt-24`}>

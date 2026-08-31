@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { signMetaClientMedia } from "@/lib/meta/creative";
-import { enqueueWovoDailyImagePost, loadMetaConnection, loadMetaConnections, processMetaPublishJobs, publishMetaJob } from "@/lib/meta/publishing";
+import { enqueueWovoDailyVideoDraft, loadMetaConnection, loadMetaConnections, publishMetaJob } from "@/lib/meta/publishing";
 import { assertPortalAccountAccess, isUuid, parseIsoDate, PortalHttpError, requiredString, requirePortalContext } from "@/lib/portal/server";
 import { supabaseServiceRoleRequest } from "@/lib/supabase/server";
 
@@ -139,18 +139,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ saved: true });
     }
 
-    if (body.action === "publish_image_test" && body.confirmed === true) {
-      if (!ownerScope) return NextResponse.json({ error: "The WOVO-owned image test is owner-only." }, { status: 403 });
+    if (body.action === "generate_video_draft" && body.confirmed === true) {
+      if (!ownerScope) return NextResponse.json({ error: "The WOVO-owned automation draft is owner-only." }, { status: 403 });
       if (connection.kill_switch || connection.action_policy !== "scheduled_auto_publish") {
-        return NextResponse.json({ error: "Select Scheduled automatic posts and turn off the kill switch first." }, { status: 409 });
+        return NextResponse.json({ error: "Select Scheduled automatic posts and turn off the kill switch before generating an automation draft." }, { status: 409 });
       }
-      const queued = await enqueueWovoDailyImagePost({ force: true });
-      if (queued.enqueued < 1) return NextResponse.json({ error: "Today's image post was already queued or the connection is not ready." }, { status: 409 });
-      const result = await processMetaPublishJobs(3);
-      if (result.published < queued.enqueued) {
-        return NextResponse.json({ error: "Meta did not confirm every image post. Review the publish log before retrying." }, { status: 502 });
-      }
-      return NextResponse.json({ published: true, publishedCount: result.published, queued, correlationId: randomUUID() });
+      const generated = await enqueueWovoDailyVideoDraft({ force: true });
+      if (generated.enqueued < 1) return NextResponse.json({ error: "Today's video draft already exists or the video provider is not ready." }, { status: 409 });
+      return NextResponse.json({ generated: true, reviewRequired: true, generatedVideo: generated, correlationId: randomUUID() });
     }
 
     if (body.action !== "publish_test" || body.confirmed !== true) return NextResponse.json({ error: "Explicit publication confirmation is required." }, { status: 400 });

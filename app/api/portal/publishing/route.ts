@@ -309,6 +309,12 @@ async function updateOwnerMetaItem(context: PortalContext, body: Body) {
     const scheduledFor = scheduledIso(body.scheduledFor, job.timezone);
     if (!scheduledFor || Date.parse(scheduledFor) < Date.now() + 60_000) throw new PortalHttpError(400, "Choose a schedule time at least one minute from now.");
     if (Date.parse(scheduledFor) > Date.now() + 366 * 86_400_000) throw new PortalHttpError(400, "Choose a schedule time within the next year.");
+    if (job.media_url?.includes("/api/wovo/video/")) {
+      const mediaExpiresAt = Number(new URL(job.media_url).searchParams.get("expires")) * 1000;
+      if (!Number.isFinite(mediaExpiresAt) || Date.parse(scheduledFor) > mediaExpiresAt - 60 * 60 * 1000) {
+        throw new PortalHttpError(400, "Choose a time before this private video link expires, or generate a fresh video draft.");
+      }
+    }
     const now = new Date().toISOString();
     const rows = await supabaseServiceRoleRequest<MetaJobRow[]>(
       `/rest/v1/wovo_meta_publish_jobs?id=eq.${encodeURIComponent(id)}&status=eq.approved`,

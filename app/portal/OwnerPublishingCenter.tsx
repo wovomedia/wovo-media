@@ -58,6 +58,7 @@ type LedgerItem = {
   publishedAt: string | null;
   providerId: string | null;
   providerLink: string | null;
+  mediaUrl: string | null;
   topic: string;
   approver: string;
   lastError: string | null;
@@ -174,6 +175,7 @@ export default function OwnerPublishingCenter({
         publishedAt: job.published_at,
         providerId: job.provider_post_id,
         providerLink: null,
+        mediaUrl: job.media_url,
         topic: job.topic || "Not labeled",
         approver: job.approved_by ? "Owner-approved" : "Not approved",
         lastError: job.last_error_summary,
@@ -200,6 +202,7 @@ export default function OwnerPublishingCenter({
         publishedAt: item.posted_at,
         providerId: null,
         providerLink: null,
+        mediaUrl: null,
         topic: item.series_key || human(item.content_type),
         approver: item.approved_snapshot_id ? `Approved v${item.approval_version}` : "Not approved",
         lastError: null,
@@ -311,6 +314,7 @@ export default function OwnerPublishingCenter({
             <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><Status value={item.status} /><span className="text-xs font-bold uppercase tracking-[.1em] text-[#756e64]">{item.workspace} · {item.platform} · {item.format}</span></div><h3 className="mt-2 text-lg font-bold">{item.title}</h3><p className="mt-2 line-clamp-3 whitespace-pre-wrap text-sm leading-6 text-[#655f56]">{item.caption}</p></div>
             <div className="shrink-0 text-left text-xs leading-5 text-[#756e64] md:text-right"><p>{date(item.scheduledFor)}</p><p>{item.approver}</p><p>{item.source} · {item.versionCount} audit event{item.versionCount === 1 ? "" : "s"}</p></div>
           </div>
+          {item.mediaUrl && item.format === "reel" ? <div className="mt-4 overflow-hidden rounded-2xl border border-[#191714]/10 bg-[#191714] p-3"><video className="mx-auto max-h-[540px] w-full max-w-sm rounded-xl bg-black" controls preload="metadata" playsInline src={item.mediaUrl}>Your browser cannot preview this video.</video><p className="mt-2 text-center text-xs font-semibold text-white/65">Review the exact vertical video before approving it.</p></div> : null}
           <div className="mt-4 grid gap-2 rounded-xl bg-[#f7f2e9] p-3 text-xs leading-5 text-[#655f56] sm:grid-cols-2 lg:grid-cols-4"><p><strong className="block text-[#191714]">Policy</strong>{item.policy}</p><p><strong className="block text-[#191714]">Topic</strong>{item.topic}</p><p><strong className="block text-[#191714]">Provider proof</strong>{item.providerId || "None yet"}</p><p><strong className="block text-[#191714]">Result</strong>{item.publishedAt ? `Confirmed ${date(item.publishedAt)}` : item.lastError || "Awaiting action"}</p></div>
           <div className="mt-4 flex flex-wrap gap-2">
             {item.kind === "meta" && item.status === "draft" ? <button className={primary} disabled={busy.endsWith(item.id)} onClick={() => void metaAction(item.id, "approve_meta_item")}>Verify &amp; approve</button> : null}
