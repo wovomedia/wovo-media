@@ -1,0 +1,10 @@
+.git/
+.next/
+.next-production-verified/
+node_modules/
+artifacts/
+.codex-*.log
+NOTES-FOR-CODEX.md
+.env*
+coverage/
+*.zip
