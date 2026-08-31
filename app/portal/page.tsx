@@ -25,6 +25,7 @@ import type {
 } from "@/lib/portal/types";
 
 type Tab = "overview" | "queue" | "calendar" | "studio" | "inbox" | "services";
+type CreatorMode = "post" | "campaign" | "episode" | "website" | "video" | "music";
 
 const tabs: Array<{ value: Tab; label: string; mark: string }> = [
   { value: "overview", label: "Home", mark: "H" },
@@ -35,13 +36,13 @@ const tabs: Array<{ value: Tab; label: string; mark: string }> = [
   { value: "services", label: "Settings", mark: "S" },
 ];
 
-const WOVO_PRODUCTS: Array<{ label: string; detail: string; target: Tab; mark: string }> = [
-  { label: "AI Images", detail: "Generate and revise", target: "queue", mark: "I" },
-  { label: "AI Video", detail: "Reels, ads, cinematic", target: "queue", mark: "V" },
-  { label: "Cartoon Studio", detail: "Characters and episodes", target: "queue", mark: "C" },
-  { label: "Social Campaigns", detail: "Captions, carousels, plans", target: "queue", mark: "S" },
-  { label: "Website Builder", detail: "Pages and storefronts", target: "studio", mark: "W" },
-  { label: "AI Music", detail: "Generate playable tracks", target: "queue", mark: "M" },
+const WOVO_PRODUCTS: Array<{ label: string; detail: string; target: Tab; mark: string; mode?: CreatorMode }> = [
+  { label: "AI Images", detail: "Generate and revise", target: "queue", mark: "I", mode: "post" },
+  { label: "AI Video", detail: "Reels, ads, cinematic", target: "queue", mark: "V", mode: "video" },
+  { label: "Cartoon Studio", detail: "Characters and episodes", target: "queue", mark: "C", mode: "episode" },
+  { label: "Social Campaigns", detail: "Captions, carousels, plans", target: "queue", mark: "S", mode: "campaign" },
+  { label: "Website Builder", detail: "Pages and storefronts", target: "queue", mark: "W", mode: "website" },
+  { label: "AI Music", detail: "Generate playable tracks", target: "queue", mark: "M", mode: "music" },
   { label: "Projects", detail: "Media, drafts, revisions", target: "studio", mark: "P" },
   { label: "Publish", detail: "Approve and schedule", target: "calendar", mark: "→" },
 ];
@@ -123,6 +124,7 @@ export default function PortalPage() {
   const [snapshot, setSnapshot] = useState<PortalSnapshot | null>(null);
   const [accountId, setAccountId] = useState("");
   const [tab, setTab] = useState<Tab>("overview");
+  const [creatorMode, setCreatorMode] = useState<CreatorMode>("post");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
@@ -421,6 +423,7 @@ export default function PortalPage() {
         onSignOut={signOut}
         onInspectWorkspace={(selected, selectedTab = "overview") => {
           setAccountId(selected.id);
+          if (selectedTab === "queue") setCreatorMode("post");
           setTab(selectedTab);
           setOwnerWorkspaceMode(true);
           window.scrollTo({ top: 0 });
@@ -724,7 +727,10 @@ export default function PortalPage() {
             {tabs.map((item) => (
               <button
                 key={item.value}
-                onClick={() => setTab(item.value)}
+                onClick={() => {
+                  if (item.value === "queue") setCreatorMode("post");
+                  setTab(item.value);
+                }}
                 className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-medium transition ${tab === item.value ? "bg-[#f05a3a] text-[#191714] shadow-sm" : "text-white/55 hover:bg-white/[.06] hover:text-white"}`}
               >
                 <span
@@ -736,7 +742,11 @@ export default function PortalPage() {
               </button>
             ))}
           </nav>
-          <div className="mt-5 hidden border-t border-white/10 pt-4 sm:block"><p className="px-2 text-[10px] font-bold uppercase tracking-[.18em] text-white/30">WOVO creation tools</p><div className="mt-2 space-y-1">{WOVO_PRODUCTS.map((product, index) => <button key={product.label} type="button" onClick={() => setTab(product.target)} className="group flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition hover:bg-white/[.07]"><span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-[#211e1b]"><span className="absolute inset-0 bg-[url('/wovo-product-scenes.png')] bg-[length:200%_200%] opacity-80 transition group-hover:scale-110 group-hover:opacity-100" style={{backgroundPosition: `${index % 2 ? 100 : 0}% ${Math.floor(index / 2) % 2 ? 100 : 0}%`}} /><span className="absolute bottom-1 right-1 grid h-4 w-4 place-items-center rounded bg-black/75 text-[7px] font-black text-[#ff8c70]">{product.mark}</span></span><span className="min-w-0"><span className="block truncate text-xs font-semibold text-white/80 group-hover:text-white">{product.label}</span><span className="mt-0.5 block truncate text-[10px] text-white/35">{product.detail}</span></span></button>)}</div></div>
+          <div className="mt-5 hidden border-t border-white/10 pt-4 sm:block"><p className="px-2 text-[10px] font-bold uppercase tracking-[.18em] text-white/30">WOVO creation tools</p><div className="mt-2 space-y-1">{WOVO_PRODUCTS.map((product, index) => <button key={product.label} type="button" onClick={() => {
+            if (product.mode) setCreatorMode(product.mode);
+            setTab(product.target);
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }} className="group flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition hover:bg-white/[.07]"><span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-[#211e1b]"><span className="absolute inset-0 bg-[url('/wovo-product-scenes.png')] bg-[length:200%_200%] opacity-80 transition group-hover:scale-110 group-hover:opacity-100" style={{backgroundPosition: `${index % 2 ? 100 : 0}% ${Math.floor(index / 2) % 2 ? 100 : 0}%`}} /><span className="absolute bottom-1 right-1 grid h-4 w-4 place-items-center rounded bg-black/75 text-[7px] font-black text-[#ff8c70]">{product.mark}</span></span><span className="min-w-0"><span className="block truncate text-xs font-semibold text-white/80 group-hover:text-white">{product.label}</span><span className="mt-0.5 block truncate text-[10px] text-white/35">{product.detail}</span></span></button>)}</div></div>
           {snapshot.mode === "staff" ? (
             <div className="mt-5 hidden rounded-2xl border border-[#191714]/10 bg-white/70 p-4 text-xs leading-5 text-[#655f56] sm:block">
               <p className="font-semibold text-[#191714]">Need help?</p>
@@ -837,6 +847,8 @@ export default function PortalPage() {
               ownerExempt={
                 snapshot.mode === "staff" && snapshot.staffRole === "owner"
               }
+              creatorMode={creatorMode}
+              onCreatorModeChange={setCreatorMode}
               paid={isPaid}
               staff={snapshot.mode === "staff"}
               busy={busy}
@@ -909,6 +921,7 @@ export default function PortalPage() {
             key={item.value}
             type="button"
             onClick={() => {
+              if (item.value === "queue") setCreatorMode("post");
               setTab(item.value);
               window.scrollTo({ top: 0, behavior: "smooth" });
             }}
@@ -3059,7 +3072,6 @@ function Overview({
   );
 }
 
-type CreatorMode = "post" | "campaign" | "episode" | "website" | "video" | "music";
 type WorkbenchProject = {
   id: string;
   title: string;
@@ -3132,6 +3144,8 @@ function CreatorWorkbench({
   assets,
   creditBalance,
   ownerExempt,
+  mode,
+  onModeChange,
   busy,
   onAction,
   authedFetch,
@@ -3145,6 +3159,8 @@ function CreatorWorkbench({
   assets: PortalSnapshot["assets"];
   creditBalance: number;
   ownerExempt: boolean;
+  mode: CreatorMode;
+  onModeChange: (mode: CreatorMode) => void;
   paid: boolean;
   busy: string;
   onAction: (
@@ -3156,7 +3172,6 @@ function CreatorWorkbench({
   setError: (value: string) => void;
   setNotice: (value: string) => void;
 }) {
-  const [mode, setMode] = useState<CreatorMode>("post");
   const [advanced, setAdvanced] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [channel, setChannel] = useState("download");
@@ -3392,24 +3407,27 @@ function CreatorWorkbench({
   }, [account.id, authedFetch]);
 
   function selectMode(nextMode: CreatorMode) {
-    setMode(nextMode);
-    if (nextMode === "video") {
+    onModeChange(nextMode);
+  }
+
+  useEffect(() => {
+    if (mode === "video") {
       setChannel("download");
       setFormat("vertical_video");
       setAspect("9:16");
-    } else if (nextMode === "website") {
+    } else if (mode === "website") {
       setChannel("website");
       setFormat("landing_page");
       setAspect("16:9");
-    } else if (nextMode === "episode") {
+    } else if (mode === "episode") {
       setChannel("download");
       setFormat("vertical_episode");
       setAspect("9:16");
-    } else if (nextMode === "campaign") {
+    } else if (mode === "campaign") {
       setChannel("download");
       setFormat("campaign_plan");
       setAspect("1:1");
-    } else if (nextMode === "music") {
+    } else if (mode === "music") {
       setChannel("download");
       setFormat("instrumental");
       setAspect("audio");
@@ -3418,7 +3436,7 @@ function CreatorWorkbench({
       setFormat("single_post");
       setAspect("1:1");
     }
-  }
+  }, [mode]);
 
   const connectedChannelChoices = socialDestinations
     .filter((connection) => mode !== "post" || connection.provider === "facebook" || connection.provider === "instagram")
@@ -4811,6 +4829,8 @@ function Queue({
   assets,
   creditBalance,
   ownerExempt,
+  creatorMode,
+  onCreatorModeChange,
   paid,
   staff,
   busy,
@@ -4826,6 +4846,8 @@ function Queue({
   assets: PortalSnapshot["assets"];
   creditBalance: number;
   ownerExempt: boolean;
+  creatorMode: CreatorMode;
+  onCreatorModeChange: (mode: CreatorMode) => void;
   paid: boolean;
   staff: boolean;
   busy: string;
@@ -4860,6 +4882,8 @@ function Queue({
         assets={assets}
         creditBalance={creditBalance}
         ownerExempt={ownerExempt}
+        mode={creatorMode}
+        onModeChange={onCreatorModeChange}
         paid={paid}
         busy={busy}
         onAction={onAction}
