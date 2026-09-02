@@ -112,3 +112,45 @@ export function defaultPublicMode(type: PublicCreationType): PublicGenerationMod
 export function publicModeLabel(mode: PublicGenerationMode) {
   return mode.split("-").map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`).join(" ");
 }
+
+// Adam is the default composer surface. Routing is deterministic and runs in the
+// browser so a signed-out visitor sees what WOVO will do before any account or
+// provider job exists. It picks the surface only; the server still quotes and
+// reserves credits before any paid work starts.
+export type AdamRoutedIntent =
+  | { kind: "create"; type: PublicCreationType; summary: string }
+  | { kind: "find"; summary: string }
+  | { kind: "assist"; summary: string };
+
+const ADAM_FIND = /\b(find|search|pull up|show me|open my|where is|look up|my past|earlier)\b/;
+const ADAM_ASSIST = /\b(plan|planning|strategy|strategi[sz]e|research|analy[sz]e|prepare|summari[sz]e|report|outreach|follow[- ]?up|draft (?:an? )?(?:email|reply|message)|help me decide|what should i)\b/;
+const ADAM_AUDIO = /\b(song|music|jingle|instrumental|soundtrack|audio|track|theme song)\b/;
+const ADAM_CARTOON = /\b(cartoon|animated|animation|mascot|character)\b/;
+const ADAM_VIDEO = /\b(video|ads?|advert|advertisement|commercial|reel|clip|promo|film|trailer)\b/;
+const ADAM_IMAGE = /\b(image|photo|picture|graphic|poster|flyer|logo|thumbnail|banner|menu|headshot)\b/;
+const ADAM_SOCIAL = /\b(post|caption|social|instagram|facebook|tiktok|story|stories)\b/;
+
+const ADAM_CREATE_SUMMARY: Record<PublicCreationType, string> = {
+  image: "Adam will create an image",
+  video: "Adam will create a video",
+  audio: "Adam will create audio",
+  social: "Adam will create a social post",
+  cartoon: "Adam will create a cartoon",
+};
+
+function adamCreate(type: PublicCreationType): AdamRoutedIntent {
+  return { kind: "create", type, summary: ADAM_CREATE_SUMMARY[type] };
+}
+
+export function routeAdamPrompt(prompt: string): AdamRoutedIntent {
+  const text = prompt.trim().toLowerCase();
+  if (!text) return { kind: "assist", summary: "Adam will pick the right tool" };
+  if (ADAM_FIND.test(text)) return { kind: "find", summary: "Adam will search your workspace" };
+  if (ADAM_ASSIST.test(text)) return { kind: "assist", summary: "Adam will help you plan this" };
+  if (ADAM_AUDIO.test(text)) return adamCreate("audio");
+  if (ADAM_CARTOON.test(text)) return adamCreate("cartoon");
+  if (ADAM_VIDEO.test(text)) return adamCreate("video");
+  if (ADAM_IMAGE.test(text)) return adamCreate("image");
+  if (ADAM_SOCIAL.test(text)) return adamCreate("social");
+  return adamCreate("image");
+}
