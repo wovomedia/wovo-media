@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import DealCapture from "./DealCapture";
+import { estimatePublicCredits } from "@/lib/ai/public-model-catalog";
 import {
   getWovoPlanTerm,
   WOVO_PLAN_CATALOG,
@@ -13,6 +14,22 @@ import {
 type PlanId = "free" | "starter" | "creator" | "pro";
 
 const TERMS = WOVO_TERM_CATALOG;
+
+const JOBS_PER_MONTH: Record<string, number> = { occasionally: 4, weekly: 12, daily: 45, heavy: 120 };
+const OUTPUTS_BY_QUALITY: Record<string, 1 | 2 | 4> = { standard: 1, high: 2, premium: 4 };
+
+// Iteration is a real cost driver: every retry is another billed generation.
+// The multipliers are stated in the UI so the estimate is never a black box.
+const COMPLEXITY_STEPS = [
+  { label: "Simple", attempts: 1, note: "You keep the first take." },
+  { label: "Light", attempts: 1.25, note: "An occasional retry." },
+  { label: "Balanced", attempts: 1.5, note: "About one retry every other asset." },
+  { label: "Involved", attempts: 2, note: "Two takes for each finished asset." },
+  { label: "Advanced", attempts: 2.5, note: "Repeated revisions before you keep one." },
+] as const;
+
+const EXPLORER_OUTPUTS = [1, 2, 4] as const;
+const EXPLORER_SECONDS = [30, 60, 120, 180] as const;
 
 const PLANS: Array<{
   id: PlanId;
@@ -103,44 +120,58 @@ export default function PricingExperience() {
   const [creation, setCreation] = useState("mixed");
   const [frequency, setFrequency] = useState("weekly");
   const [quality, setQuality] = useState("high");
-  const [complexity, setComplexity] = useState<
-    "simple" | "balanced" | "advanced"
-  >("balanced");
+  const [complexity, setComplexity] = useState(2);
+  const [explorer, setExplorer] = useState<"image" | "video" | "audio">("image");
+  const [explorerOutputs, setExplorerOutputs] = useState<1 | 2 | 4>(1);
+  const [explorerSeconds, setExplorerSeconds] = useState<30 | 60 | 120 | 180>(30);
+  const [explorerPremiumAudio, setExplorerPremiumAudio] = useState(false);
   const [pack, setPack] = useState<number>(20);
   const [custom, setCustom] = useState("");
   const term = TERMS.find((item) => item.id === termId) ?? TERMS[0];
 
-  const recommendation = useMemo(() => {
-    const creationScore: Record<string, number> = {
-      images: 1,
-      videos: 2,
-      premium: 3,
-      mixed: 2,
-    };
-    const frequencyScore: Record<string, number> = {
-      occasionally: 0,
-      weekly: 1,
-      daily: 2,
-      heavy: 3,
-    };
-    const qualityScore: Record<string, number> = {
-      standard: 0,
-      high: 1,
-      premium: 2,
-    };
-    const score =
-      creationScore[creation] +
-      frequencyScore[frequency] +
-      qualityScore[quality];
-    return score <= 2 ? "starter" : score <= 5 ? "creator" : "pro";
-  }, [creation, frequency, quality]);
+  const complexityStep = COMPLEXITY_STEPS[complexity] ?? COMPLEXITY_STEPS[2];
 
-  const exampleCosts =
-    complexity === "simple"
-      ? { image: 2, video: 12, audio: 2 }
-      : complexity === "balanced"
-        ? { image: 4, video: 12, audio: 2 }
-        : { image: 8, video: 12, audio: 13 };
+  // Every number below comes from the same catalog the composer quotes from,
+  // so the estimator can never advertise a price WOVO does not charge.
+  const monthlyEstimate = useMemo(() => {
+    const jobs = JOBS_PER_MONTH[frequency] ?? 12;
+    const outputCount = OUTPUTS_BY_QUALITY[quality] ?? 1;
+    const imageCredits = estimatePublicCredits({ type: "image", modelId: "flux-2", outputCount });
+    const videoCredits = estimatePublicCredits({ type: "video", modelId: "wan-2-2-turbo" });
+    const premiumAudioCredits = estimatePublicCredits({ type: "audio", modelId: "stable-audio-2-5" });
+    const perJob =
+      creation === "images"
+        ? imageCredits
+        : creation === "videos"
+          ? videoCredits
+          : creation === "premium"
+            ? videoCredits + premiumAudioCredits
+            : Math.round((imageCredits + videoCredits) / 2);
+    return Math.round(jobs * perJob * complexityStep.attempts);
+  }, [creation, frequency, quality, complexityStep]);
+
+  const recommendedPlan = useMemo(
+    () => WOVO_PLAN_CATALOG.find((plan) => plan.monthlyCredits >= monthlyEstimate) ?? null,
+    [monthlyEstimate],
+  );
+
+  const explorerCredits =
+    explorer === "image"
+      ? estimatePublicCredits({ type: "image", modelId: "flux-2", outputCount: explorerOutputs })
+      : explorer === "video"
+        ? estimatePublicCredits({ type: "video", modelId: "wan-2-2-turbo" })
+        : estimatePublicCredits({
+            type: "audio",
+            modelId: explorerPremiumAudio ? "stable-audio-2-5" : "cassette-music",
+            durationSeconds: explorerSeconds,
+          });
+  const explorerStarterNote =
+    explorerCredits <= 10
+      ? `Your 10 free starter credits cover ${Math.floor(10 / explorerCredits)} of these.`
+      : "One of these costs more than the 10 free starter credits.";
+  // The composer is a statically rendered landing page, so it does not read
+  // query parameters. The link opens it rather than pretending to preload.
+  const explorerHref = "/";
   const selectedPack = Math.max(10, Number(custom) || pack);
   const selectedCredits = Math.floor(selectedPack * 11);
 
@@ -219,7 +250,7 @@ export default function PricingExperience() {
         <div className="mt-8 grid gap-4 lg:grid-cols-4">
           {PLANS.map((plan) => {
             const price = termPrice(plan.id, plan.price, term);
-            const recommended = recommendation === plan.id;
+            const recommended = recommendedPlan?.id === plan.id;
             return (
               <article
                 key={plan.id}
@@ -324,11 +355,19 @@ export default function PricingExperience() {
             </p>
             <div className="mt-8 rounded-2xl border border-[#f05a3a]/30 bg-[#f05a3a]/8 p-5">
               <p className="text-xs text-white/45">Recommended</p>
-              <p className="mt-1 text-2xl font-semibold capitalize">
-                {recommendation}
+              <p className="mt-1 text-2xl font-semibold">
+                {recommendedPlan ? recommendedPlan.name : "Pro plus credit packs"}
               </p>
               <p className="mt-2 text-sm text-white/45">
-                Exact generation costs still appear before you create.
+                About {monthlyEstimate} credits a month at this pace
+                {recommendedPlan
+                  ? ` · ${recommendedPlan.monthlyCredits} included`
+                  : " · more than any plan allowance, so top up with credit packs"}
+                .
+              </p>
+              <p className="mt-3 text-xs leading-5 text-white/35">
+                Built from the same charges the composer quotes. Exact costs
+                still appear before every generation.
               </p>
             </div>
           </div>
@@ -366,6 +405,40 @@ export default function PricingExperience() {
               onChange={setQuality}
               last
             />
+            <p className="mt-3 text-xs leading-5 text-white/35">
+              Higher quality asks for more variations per prompt, so it costs
+              more credits.
+            </p>
+            <div className="mt-6 border-t border-white/10 pt-6">
+              <label
+                htmlFor="estimator-complexity"
+                className="text-sm font-semibold"
+              >
+                How much do you iterate?
+              </label>
+              <input
+                id="estimator-complexity"
+                type="range"
+                min={0}
+                max={COMPLEXITY_STEPS.length - 1}
+                step={1}
+                value={complexity}
+                onChange={(event) => setComplexity(Number(event.target.value))}
+                aria-valuetext={complexityStep.label}
+                className="mt-4 w-full accent-[#f05a3a]"
+              />
+              <div className="mt-2 flex justify-between text-[11px] text-white/38">
+                <span>Simple</span>
+                <span>Advanced</span>
+              </div>
+              <p className="mt-3 text-sm font-semibold text-[#ff9b82]">
+                {complexityStep.label}
+              </p>
+              <p className="mt-1 text-xs leading-5 text-white/40">
+                {complexityStep.note} Every retry is another billed generation,
+                so this moves the estimate by {complexityStep.attempts}x.
+              </p>
+            </div>
           </div>
         </div>
       </section>
@@ -444,41 +517,123 @@ export default function PricingExperience() {
                 Credits follow the real work.
               </h2>
             </div>
-            <div className="flex rounded-xl border border-white/10 p-1">
-              {(["simple", "balanced", "advanced"] as const).map((item) => (
+            <div
+              className="flex rounded-xl border border-white/10 p-1"
+              role="tablist"
+              aria-label="Cost explorer"
+            >
+              {(["image", "video", "audio"] as const).map((item) => (
                 <button
                   key={item}
-                  onClick={() => setComplexity(item)}
-                  className={`min-h-9 rounded-lg px-4 text-xs font-semibold capitalize ${complexity === item ? "bg-white text-black" : "text-white/42"}`}
+                  role="tab"
+                  aria-selected={explorer === item}
+                  onClick={() => setExplorer(item)}
+                  className={`min-h-9 rounded-lg px-4 text-xs font-semibold capitalize ${explorer === item ? "bg-white text-black" : "text-white/42"}`}
                 >
                   {item}
                 </button>
               ))}
             </div>
           </div>
-          <div className="mt-8 grid gap-4 md:grid-cols-3">
-            {[
-              ["Standard image", exampleCosts.image, "One original image"],
-              ["Short 720p video", exampleCosts.video, "One short clip"],
-              [
-                "AI music",
-                exampleCosts.audio,
-                complexity === "advanced"
-                  ? "Premium audio render"
-                  : "Commercial-use track",
-              ],
-            ].map(([label, cost, note]) => (
-              <article
-                key={String(label)}
-                className="rounded-2xl border border-white/10 bg-[#171718] p-5"
+          <div className="mt-8 grid gap-5 lg:grid-cols-[1.1fr_.9fr]">
+            <div className="rounded-2xl border border-white/10 bg-[#171718] p-5 sm:p-7">
+              {explorer === "image" ? (
+                <>
+                  <label
+                    htmlFor="explorer-outputs"
+                    className="text-sm font-semibold"
+                  >
+                    Images per prompt
+                  </label>
+                  <input
+                    id="explorer-outputs"
+                    type="range"
+                    min={0}
+                    max={EXPLORER_OUTPUTS.length - 1}
+                    step={1}
+                    value={EXPLORER_OUTPUTS.indexOf(explorerOutputs)}
+                    onChange={(event) =>
+                      setExplorerOutputs(
+                        EXPLORER_OUTPUTS[Number(event.target.value)],
+                      )
+                    }
+                    aria-valuetext={`${explorerOutputs} images`}
+                    className="mt-4 w-full accent-[#f05a3a]"
+                  />
+                  <div className="mt-2 flex justify-between text-[11px] text-white/38">
+                    {EXPLORER_OUTPUTS.map((item) => (
+                      <span key={item}>{item}</span>
+                    ))}
+                  </div>
+                  <p className="mt-5 text-sm leading-6 text-white/45">
+                    FLUX 2 · standard image · {explorerOutputs}{" "}
+                    {explorerOutputs === 1 ? "output" : "outputs"}
+                  </p>
+                </>
+              ) : explorer === "video" ? (
+                <>
+                  <p className="text-sm font-semibold">Short vertical clip</p>
+                  <p className="mt-5 text-sm leading-6 text-white/45">
+                    Wan 2.2 Turbo is the one verified video model today, at 720p
+                    vertical. WOVO does not sell 1080p or 4K video, because it
+                    cannot deliver them yet.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <label
+                    htmlFor="explorer-seconds"
+                    className="text-sm font-semibold"
+                  >
+                    Track length
+                  </label>
+                  <input
+                    id="explorer-seconds"
+                    type="range"
+                    min={0}
+                    max={EXPLORER_SECONDS.length - 1}
+                    step={1}
+                    value={EXPLORER_SECONDS.indexOf(explorerSeconds)}
+                    onChange={(event) =>
+                      setExplorerSeconds(
+                        EXPLORER_SECONDS[Number(event.target.value)],
+                      )
+                    }
+                    aria-valuetext={`${explorerSeconds} seconds`}
+                    className="mt-4 w-full accent-[#f05a3a]"
+                  />
+                  <div className="mt-2 flex justify-between text-[11px] text-white/38">
+                    <span>30s</span>
+                    <span>1m</span>
+                    <span>2m</span>
+                    <span>3m</span>
+                  </div>
+                  <button
+                    onClick={() => setExplorerPremiumAudio((current) => !current)}
+                    aria-pressed={explorerPremiumAudio}
+                    className={`mt-5 min-h-11 rounded-xl border px-4 text-xs font-semibold ${explorerPremiumAudio ? "border-[#f05a3a] bg-[#f05a3a]/12 text-[#ff9b82]" : "border-white/10 text-white/45"}`}
+                  >
+                    Premium audio render
+                  </button>
+                </>
+              )}
+            </div>
+            <div className="rounded-2xl border border-[#f05a3a]/30 bg-[#f05a3a]/8 p-5 sm:p-7">
+              <p className="text-xs text-white/45">This setup costs</p>
+              <p className="mt-2 text-5xl font-medium tracking-[-.045em]">
+                {explorerCredits}
+                <span className="ml-2 text-sm text-white/45">credits</span>
+              </p>
+              <p className="mt-4 text-xs leading-5 text-white/45">
+                {explorerStarterNote}
+              </p>
+              <Link
+                href={explorerHref}
+                className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl bg-[#f05a3a] px-5 text-xs font-black text-[#140b08]"
               >
-                <p className="text-sm text-white/45">{label}</p>
-                <p className="mt-5 text-4xl font-medium tracking-[-.045em]">
-                  {cost} <span className="text-sm text-white/38">credits</span>
-                </p>
-                <p className="mt-3 text-xs text-white/35">{note}</p>
-              </article>
-            ))}
+                Open the composer
+              </Link>
+            </div>
           </div>
           <p className="mt-5 text-xs leading-5 text-white/34">
             Premium models, more outputs, longer clips, supported higher
