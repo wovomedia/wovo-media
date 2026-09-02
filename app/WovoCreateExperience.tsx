@@ -35,6 +35,8 @@ function Icon({ name, className = "h-5 w-5" }: { name: IconName; className?: str
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">{paths[name]}</svg>;
 }
 
+export type CreationAvailability = Record<PublicCreationType, boolean>;
+
 type ComposerTab = "adam" | PublicCreationType;
 
 const TYPES: Array<{ id: ComposerTab; label: string; icon: IconName }> = [
@@ -68,7 +70,7 @@ type BrowserSpeechRecognition = {
   onend: (() => void) | null;
 };
 
-export default function WovoCreateExperience() {
+export default function WovoCreateExperience({ availability }: { availability: CreationAvailability }) {
   const router = useRouter();
   const [tab, setTab] = useState<ComposerTab>("adam");
   const [prompt, setPrompt] = useState("");
@@ -89,6 +91,7 @@ export default function WovoCreateExperience() {
 
   const adamIntent = tab === "adam" ? routeAdamPrompt(prompt) : null;
   const type: PublicCreationType = tab === "adam" ? (adamIntent && adamIntent.kind === "create" ? adamIntent.type : "image") : tab;
+  const typeAvailable = availability[type] !== false;
   const showControls = tab !== "adam";
   const showSummary = tab !== "adam" || adamIntent?.kind === "create";
   const availableModels = useMemo(() => PUBLIC_MODEL_CATALOG.filter((model) => model.types.includes(type)), [type]);
@@ -147,6 +150,7 @@ export default function WovoCreateExperience() {
 
   async function generate() {
     if (prompt.trim().length < 6) { setGenerateError("Describe what you want to create first."); return; }
+    if (!typeAvailable) { setGenerateError(`WOVO cannot make ${type} yet. Pick another type and nothing will be charged.`); return; }
     setGenerateError("");
     const intent = { prompt: prompt.trim(), type, modelId: selectedModel.id, ratio: activeRatio, mode, outputCount: effectiveOutputCount, durationSeconds: type === "audio" ? audioDuration : null, durationLabel: duration, resolution: resolutionLabel, audio: audioLabel, credits: showSummary ? credits : 0, adam: tab === "adam" && adamIntent ? { kind: adamIntent.kind, summary: adamIntent.summary } : null, referenceName: referenceName || null, referenceData, createdAt: new Date().toISOString() };
     localStorage.setItem("wovo-generation-intent", JSON.stringify(intent));
@@ -181,16 +185,17 @@ export default function WovoCreateExperience() {
             <section className="mx-auto max-w-[900px] text-center"><span className="inline-flex items-center gap-2 rounded-full border border-[#f05a3a]/25 bg-[#f05a3a]/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[.13em] text-[#ff8c70]"><span className="h-1.5 w-1.5 rounded-full bg-[#f05a3a]" />10 free credits · no card</span><h1 className="mt-6 text-[clamp(2.6rem,6vw,5rem)] font-medium leading-[.96] tracking-[-.055em]">What do you want WOVO to handle?</h1><p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-white/50">Create content, find past work, plan campaigns, or ask Adam for help. Type it or say it — Adam routes the job and shows the exact credit cost first.</p></section>
 
             <section className="mx-auto mt-10 max-w-[960px]">
-              <div className="flex flex-wrap justify-center gap-2" role="tablist" aria-label="Creation type">{TYPES.map((item) => <button key={item.id} onClick={() => chooseType(item.id)} className={`inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-semibold transition ${tab === item.id ? "bg-white text-black" : "border border-white/10 bg-white/[.03] text-white/55 hover:text-white"}`} aria-pressed={tab === item.id}><Icon name={item.icon} className="h-4 w-4" />{item.label}</button>)}</div>
+              <div className="flex flex-wrap justify-center gap-2" role="tablist" aria-label="Creation type">{TYPES.map((item) => { const enabled = item.id === "adam" || availability[item.id] !== false; return <button key={item.id} onClick={() => enabled && chooseType(item.id)} disabled={!enabled} title={enabled ? undefined : `${item.label} is not available yet`} className={`inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-semibold transition ${tab === item.id ? "bg-white text-black" : enabled ? "border border-white/10 bg-white/[.03] text-white/55 hover:text-white" : "cursor-not-allowed border border-white/[.06] bg-transparent text-white/22"}`} aria-pressed={tab === item.id}><Icon name={item.icon} className="h-4 w-4" />{item.label}</button>; })}</div>
               <div className="mt-5 overflow-hidden rounded-[28px] border border-white/14 bg-[#151516] shadow-[0_32px_100px_rgba(0,0,0,.45)] focus-within:border-[#f05a3a]/55">
                 <textarea id="create-prompt" value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder={tab === "adam" ? "Ask Adam anything or tell WOVO what you want to accomplish…" : `Describe the ${type} you want to create…`} className="min-h-40 w-full resize-none bg-transparent px-5 pb-3 pt-6 text-lg leading-8 text-white outline-none placeholder:text-white/28 sm:min-h-48 sm:px-7 sm:text-xl" />
                 <div className="flex flex-col gap-3 border-t border-white/10 p-3.5 sm:flex-row sm:items-center sm:p-4">
                   <div className="flex flex-wrap items-center gap-2"><input ref={fileInput} type="file" accept="image/*,video/*,audio/*" className="sr-only" onChange={attachReference} /><button onClick={() => fileInput.current?.click()} className="inline-flex min-h-10 max-w-44 items-center gap-2 rounded-xl border border-white/10 px-3 text-xs font-semibold text-white/65 hover:text-white" aria-label="Add a reference"><Icon name="plus" className="h-4 w-4 shrink-0" /><span className="truncate">{referenceName || "Add reference"}</span></button><button onClick={() => setModelOpen(true)} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-white/10 px-3 text-xs font-semibold text-white/75 hover:border-[#f05a3a]/40"><Icon name="spark" className="h-4 w-4 text-[#ff7659]" />{selectedModel.name}<span className="text-white/35">⌄</span></button><div className="flex rounded-xl border border-white/10 p-1">{ratioOptions.map((item) => <button key={item} onClick={() => setRatio(item)} className={`min-h-8 rounded-lg px-2.5 text-[11px] font-semibold ${activeRatio === item ? "bg-white/12 text-white" : "text-white/38"}`}>{item}</button>)}</div><button onClick={startSpeech} className={`grid h-10 w-10 place-items-center rounded-xl border transition ${listening ? "border-[#f05a3a] bg-[#f05a3a] text-black" : "border-white/10 text-white/55 hover:text-white"}`} aria-label={listening ? "Listening" : "Speak your prompt"}><Icon name="mic" className="h-4 w-4" /></button></div>
-                  <div className="ml-auto flex items-center justify-end gap-3"><div className="text-right"><p className="text-sm font-bold">{showSummary ? `${credits} credits` : "No credits"}</p><p className="text-[10px] text-white/38">{showSummary ? "Exact estimate" : "Finding and planning are free"}</p></div><button onClick={() => void generate()} className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-[#f05a3a] px-5 text-sm font-black text-[#140b08] shadow-[0_10px_35px_rgba(240,90,58,.28)] hover:bg-[#ff7659]">Generate <Icon name="arrow" className="h-4 w-4" /></button></div>
+                  <div className="ml-auto flex items-center justify-end gap-3"><div className="text-right"><p className="text-sm font-bold">{!typeAvailable ? "Unavailable" : showSummary ? `${credits} credits` : "No credits"}</p><p className="text-[10px] text-white/38">{showSummary ? "Exact estimate" : "Finding and planning are free"}</p></div><button onClick={() => void generate()} className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-[#f05a3a] px-5 text-sm font-black text-[#140b08] shadow-[0_10px_35px_rgba(240,90,58,.28)] hover:bg-[#ff7659]">Generate <Icon name="arrow" className="h-4 w-4" /></button></div>
                 </div>
               </div>
               {speechError || generateError ? <p className="mt-3 text-center text-sm text-[#ff8c70]">{speechError || generateError}</p> : null}
-              {tab === "adam" && adamIntent && !speechError && !generateError ? <p className="mt-3 text-center text-sm text-white/45">{adamIntent.summary}{adamIntent.kind === "create" ? ` · ${credits} WOVO Credits` : " · no credits used"}</p> : null}
+              {!typeAvailable && !speechError && !generateError ? <p className="mt-3 text-center text-sm text-white/45">WOVO cannot make {type} yet, so it is not offered here. Nothing will be charged.</p> : null}
+              {typeAvailable && tab === "adam" && adamIntent && !speechError && !generateError ? <p className="mt-3 text-center text-sm text-white/45">{adamIntent.summary}{adamIntent.kind === "create" ? ` · ${credits} WOVO Credits` : " · no credits used"}</p> : null}
               {showControls ? (
               <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_1fr]">
                 <div className="rounded-2xl border border-white/10 bg-white/[.025] p-3">

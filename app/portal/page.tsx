@@ -6,7 +6,6 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import WovoLogo from "@/components/ui/wovo-logo";
-import OwnerOperations from "@/app/portal/OwnerOperations";
 import ClientMetaConnection from "@/app/portal/ClientMetaConnection";
 import ClientMetaDelivery from "@/app/portal/ClientMetaDelivery";
 import {
@@ -143,9 +142,6 @@ export default function PortalPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [staffSearch, setStaffSearch] = useState("");
-  // The founder uses the same WOVO as customers. Operations is a tool that
-  // opens on request, not the product the owner is dropped into.
-  const [ownerWorkspaceMode, setOwnerWorkspaceMode] = useState(true);
   const [resumedIntent, setResumedIntent] = useState<ResumedGenerationIntent | null>(null);
 
   const authedFetch = useCallback(async (url: string, init?: RequestInit) => {
@@ -179,12 +175,6 @@ export default function PortalPage() {
       throw new Error(payload.error ?? "The portal could not load.");
     setSnapshot(payload);
     setAccountId((current) => {
-      if (
-        payload.mode === "staff" &&
-        payload.staffRole === "owner" &&
-        !ownerWorkspaceMode
-      )
-        return "";
       return payload.accounts.some(
         (account) => account.id === current && !account.archived_at,
       )
@@ -192,7 +182,7 @@ export default function PortalPage() {
         : (payload.accounts.find((account) => !account.archived_at)?.id ?? "");
     });
     setLoading(false);
-  }, [authedFetch, ownerWorkspaceMode, router]);
+  }, [authedFetch, router]);
 
   const signOut = useCallback(async () => {
     await signOutAndClear();
@@ -438,31 +428,6 @@ export default function PortalPage() {
     );
   }
 
-  if (
-    snapshot.mode === "staff" &&
-    snapshot.staffRole === "owner" &&
-    !ownerWorkspaceMode
-  ) {
-    return (
-      <OwnerOperations
-        snapshot={snapshot}
-        busy={busy}
-        error={error}
-        notice={notice}
-        onAction={action}
-        onRefresh={load}
-        onSignOut={signOut}
-        onInspectWorkspace={(selected, selectedTab = "overview") => {
-          setAccountId(selected.id);
-          if (selectedTab === "queue") setCreatorMode("post");
-          setTab(selectedTab);
-          setOwnerWorkspaceMode(true);
-          window.scrollTo({ top: 0 });
-        }}
-      />
-    );
-  }
-
   if (snapshot.mode === "staff" && snapshot.accounts.length === 0) {
     return (
       <main className="min-h-screen bg-[#f3efe6] px-4 py-6 text-[#191714] sm:px-8 sm:py-10">
@@ -671,18 +636,6 @@ export default function PortalPage() {
                 : "Client marketing workspace"}
             </p>
           </div>
-          {snapshot.mode === "staff" && snapshot.staffRole === "owner" ? (
-            <button
-              className="hidden min-h-11 items-center rounded-xl border border-[#f05a3a]/25 bg-[#f05a3a]/10 px-3 text-sm font-bold text-[#8f301f] sm:inline-flex"
-              onClick={() => {
-                setOwnerWorkspaceMode(false);
-                setAccountId("");
-                setTab("overview");
-              }}
-            >
-              Back to operations
-            </button>
-          ) : null}
           {snapshot.mode === "staff" ? (
             <div className="hidden items-center gap-2 md:flex">
               <input
@@ -705,17 +658,6 @@ export default function PortalPage() {
                 ))}
               </select>
             </div>
-          ) : null}
-          {snapshot.mode === "staff" && snapshot.staffRole === "owner" ? (
-            <button
-              className="min-h-11 rounded-xl border border-white/10 px-3 text-sm text-white/50 hover:border-[#f05a3a]/50 hover:text-white"
-              onClick={() => {
-                setOwnerWorkspaceMode(false);
-                window.scrollTo({ top: 0 });
-              }}
-            >
-              Operations
-            </button>
           ) : null}
           <button
             className="min-h-11 rounded-xl border border-white/10 px-3 text-sm text-white/65 hover:border-[#f05a3a]/50 hover:text-white"
@@ -770,18 +712,6 @@ export default function PortalPage() {
         </aside>
 
         <section className="min-w-0 rounded-2xl bg-[#f3efe6] p-3 sm:p-5">
-          {snapshot.mode === "staff" && snapshot.staffRole === "owner" ? (
-            <button
-              className={`${secondaryButton} mb-4 w-full sm:hidden`}
-              onClick={() => {
-                setOwnerWorkspaceMode(false);
-                setAccountId("");
-                setTab("overview");
-              }}
-            >
-              Back to WOVO Operations
-            </button>
-          ) : null}
           {notice ? (
             <div
               role="status"
@@ -3451,7 +3381,7 @@ function CreatorWorkbench({
             remixMode: "standard",
           }),
         });
-        const payload = await readJsonResponse<{ error?: string; job?: { id: string }; reserved_credits?: number; owner_exempt?: boolean }>(response);
+        const payload = await readJsonResponse<{ error?: string; job?: { id: string }; reserved_credits?: number }>(response);
         if (!response.ok || !payload.job?.id) throw new Error(payload.error ?? "The video render could not start.");
         setNotice(`${payload.reserved_credits ?? 0} credits reserved. The playable video will appear here when WOVO finishes.`);
         form.reset();
