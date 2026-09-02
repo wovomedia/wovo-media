@@ -11,6 +11,7 @@ const terms = readFileSync("app/terms-of-use/page.tsx", "utf8");
 const cancellation = readFileSync("app/cancellation-refund-policy/page.tsx", "utf8");
 const metaConnection = readFileSync("app/portal/OwnerMetaConnection.tsx", "utf8");
 const publishingCenter = readFileSync("app/portal/OwnerPublishingCenter.tsx", "utf8");
+const stripe = readFileSync("lib/stripe.ts", "utf8");
 
 test("public and owner UI describes the live four-period billing catalog", () => {
   for (const source of [pricingCatalog, portal, terms, cancellation]) {
@@ -20,6 +21,8 @@ test("public and owner UI describes the live four-period billing catalog", () =>
   assert.match(home, /WovoCreateExperience/);
   assert.match(terms, /without a recurring subscription/);
   assert.match(cancellation, /One-time credit packs do not renew/);
+  assert.match(stripe, /args\.mode === "subscription"/);
+  assert.match(stripe, /One-time purchase\. WOVO credits do not renew/);
 });
 
 test("owner settings describe native publishing truthfully and expose diagnostics", () => {

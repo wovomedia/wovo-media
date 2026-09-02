@@ -81,8 +81,12 @@ export async function createCheckoutSession(args: {
     "branding_settings[background_color]": "#FFFDF8",
     "branding_settings[button_color]": "#D94326",
     submit_type: args.mode === "subscription" ? "subscribe" : "pay",
-    "custom_text[submit][message]": "Renews at the price and cadence shown until canceled. Manage future renewal from WOVO Billing. Cancellation and refund terms: wovomedia.com/cancellation-refund-policy.",
-    "custom_text[after_submit][message]": "Access activates after Stripe confirms payment. Manage billing and future cancellation from your WOVO workspace.",
+    "custom_text[submit][message]": args.mode === "subscription"
+      ? "Renews at the price and cadence shown until canceled. Manage future renewal from WOVO Billing. Cancellation and refund terms: wovomedia.com/cancellation-refund-policy."
+      : "One-time purchase. WOVO credits do not renew and appear only after Stripe confirms payment.",
+    "custom_text[after_submit][message]": args.mode === "subscription"
+      ? "Access activates after Stripe confirms payment. Manage billing and future cancellation from your WOVO workspace."
+      : "Purchased credits appear in this WOVO workspace after the verified payment webhook completes.",
     ...metaBody,
     ...(args.mode === "subscription"
       ? {
