@@ -25,6 +25,7 @@ type VideoJobRow = {
   user_id: string;
   account_id: string | null;
   usage_request_id: string | null;
+  prompt: string;
   status: string;
   provider: string;
   provider_job_id: string | null;
@@ -56,7 +57,7 @@ export async function GET(request: Request) {
     if (!isUuid(accountId)) throw new PortalHttpError(400, "Choose a valid workspace.");
     await assertPortalAccountAccess(context, accountId);
     const rows = await supabaseServiceRoleRequest<VideoJobRow[]>(
-      `/rest/v1/video_jobs?select=id,user_id,account_id,usage_request_id,status,provider,provider_job_id,result_url,result_payload,error,updated_at,created_at&account_id=eq.${encodeURIComponent(accountId)}&order=created_at.desc&limit=40`,
+      `/rest/v1/video_jobs?select=id,user_id,account_id,usage_request_id,prompt,status,provider,provider_job_id,result_url,result_payload,error,updated_at,created_at&account_id=eq.${encodeURIComponent(accountId)}&order=created_at.desc&limit=40`,
     ) ?? [];
     return NextResponse.json({ jobs: rows.map((row) => visibleVideoJob(request.url, row)) }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
@@ -161,7 +162,7 @@ export async function POST(request: Request) {
     let createdJob: VideoJobRow | null = null;
     if (isWorkspacePreview || ownerExempt) {
       const rows = await supabaseServiceRoleRequest<VideoJobRow[]>(
-        "/rest/v1/video_jobs?select=id,user_id,account_id,usage_request_id,status,provider,provider_job_id,result_url,result_payload,error,updated_at,created_at",
+        "/rest/v1/video_jobs?select=id,user_id,account_id,usage_request_id,prompt,status,provider,provider_job_id,result_url,result_payload,error,updated_at,created_at",
         {
           method: "POST",
           headers: { Prefer: "return=representation" },

@@ -13,6 +13,7 @@ type VideoJobRow = {
   user_id: string;
   account_id: string | null;
   usage_request_id: string | null;
+  prompt: string;
   status: string;
   provider: string;
   provider_job_id: string | null;
@@ -114,7 +115,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ jobI
     const { jobId } = await params;
 
     const rows = await supabaseServiceRoleRequest<VideoJobRow[]>(
-      `/rest/v1/video_jobs?select=id,user_id,account_id,usage_request_id,status,provider,provider_job_id,result_url,result_payload,error,updated_at,created_at&id=eq.${encodeURIComponent(jobId)}&limit=1`,
+      `/rest/v1/video_jobs?select=id,user_id,account_id,usage_request_id,prompt,status,provider,provider_job_id,result_url,result_payload,error,updated_at,created_at&id=eq.${encodeURIComponent(jobId)}&limit=1`,
     );
     const row = rows?.[0];
     if (!row) {
@@ -182,7 +183,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ jobI
     if (currentStatus === "completed" || currentStatus === "failed" || !row.provider_job_id) {
       if (currentStatus === "completed" && !row.result_url) {
         const patched = await supabaseServiceRoleRequest<VideoJobRow[]>(
-          `/rest/v1/video_jobs?select=id,user_id,account_id,usage_request_id,status,provider,provider_job_id,result_url,result_payload,error,updated_at,created_at&id=eq.${encodeURIComponent(jobId)}&user_id=eq.${encodeURIComponent(actorUserId)}`,
+          `/rest/v1/video_jobs?select=id,user_id,account_id,usage_request_id,prompt,status,provider,provider_job_id,result_url,result_payload,error,updated_at,created_at&id=eq.${encodeURIComponent(jobId)}&user_id=eq.${encodeURIComponent(actorUserId)}`,
           {
             method: "PATCH",
             headers: { Prefer: "return=representation" },
@@ -248,7 +249,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ jobI
       }
 
       const patchRows = await supabaseServiceRoleRequest<VideoJobRow[]>(
-        `/rest/v1/video_jobs?select=id,user_id,account_id,usage_request_id,status,provider,provider_job_id,result_url,result_payload,error,updated_at,created_at&id=eq.${encodeURIComponent(jobId)}&user_id=eq.${encodeURIComponent(actorUserId)}`,
+        `/rest/v1/video_jobs?select=id,user_id,account_id,usage_request_id,prompt,status,provider,provider_job_id,result_url,result_payload,error,updated_at,created_at&id=eq.${encodeURIComponent(jobId)}&user_id=eq.${encodeURIComponent(actorUserId)}`,
         {
           method: "PATCH",
           headers: { Prefer: "return=representation" },

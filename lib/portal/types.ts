@@ -419,7 +419,10 @@ export type PortalSnapshot = {
     monthlyCheckoutConfigured: boolean;
     monthlyPrice: { amountCents: number; currency: string; interval: string } | null;
     billingOptions: Array<{
-      frequency: "monthly" | "quarterly" | "semiannual" | "yearly";
+      planId: "starter" | "creator" | "pro";
+      planName: string;
+      monthlyCredits: number;
+      frequency: "monthly" | "quarterly" | "semiannual" | "annual";
       label: string;
       amountCents: number;
       currency: "usd";

@@ -13,6 +13,13 @@
   --wm-studio-panel: #171513;
   --wm-studio-raised: #211e1b;
   --wm-line: rgba(25, 23, 20, 0.12);
+  --wovo-v2-bg: #0b0b0c;
+  --wovo-v2-panel: #151516;
+  --wovo-v2-raised: #1d1d1f;
+  --wovo-v2-text: #f7f4ee;
+  --wovo-v2-muted: rgba(247, 244, 238, 0.52);
+  --wovo-v2-line: rgba(255, 255, 255, 0.1);
+  --wovo-v2-accent: #f05a3a;
 }
 
 *, *::before, *::after { box-sizing: border-box; }

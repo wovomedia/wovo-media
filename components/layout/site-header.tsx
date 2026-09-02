@@ -30,7 +30,7 @@ export function SiteHeader() {
     });
     return () => { active = false; };
   }, [pathname]);
-  if (privatePrefixes.some((path) => pathname.startsWith(path))) return null;
+  if (pathname === "/" || pathname === "/pricing" || privatePrefixes.some((path) => pathname.startsWith(path))) return null;
 
   return (
     <header className="sticky top-0 z-50 border-b border-[#191714]/10 bg-[#f3efe6]/95 backdrop-blur-xl">

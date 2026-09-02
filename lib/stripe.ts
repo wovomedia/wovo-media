@@ -24,7 +24,7 @@ async function stripeRequest<T>(path: string, body?: StripeRequestBody, method =
   return payload;
 }
 
-export type StripeCheckoutSession = { url: string | null; id: string; customer?: string; subscription?: string };
+export type StripeCheckoutSession = { url: string | null; id: string; customer?: string; subscription?: string; amount_total?: number | null; currency?: string | null };
 export type StripePortalSession   = { url: string; id: string };
 export type StripePrice = {
   id: string;
@@ -100,6 +100,37 @@ export async function createCheckoutSession(args: {
   }
 
   return stripeRequest("/checkout/sessions", body);
+}
+
+export async function createCreditAmountCheckoutSession(args: {
+  customerId: string;
+  amountCents: number;
+  creditUnits: number;
+  userId: string;
+  successUrl: string;
+  cancelUrl: string;
+  metadata: Record<string, string>;
+}): Promise<StripeCheckoutSession> {
+  const metaBody = Object.fromEntries(Object.entries(args.metadata).map(([key, value]) => [`metadata[${key}]`, value]));
+  return stripeRequest("/checkout/sessions", {
+    mode: "payment",
+    customer: args.customerId,
+    "line_items[0][price_data][currency]": "usd",
+    "line_items[0][price_data][unit_amount]": args.amountCents,
+    "line_items[0][price_data][product_data][name]": `${args.creditUnits.toLocaleString("en-US")} WOVO Creator Credits`,
+    "line_items[0][price_data][product_data][metadata][wovo_product]": "workspace_credits_v2_custom",
+    "line_items[0][quantity]": 1,
+    success_url: args.successUrl,
+    cancel_url: args.cancelUrl,
+    "metadata[userId]": args.userId,
+    "metadata[purchaseType]": "extra_credits",
+    "branding_settings[display_name]": "WOVO Media",
+    "branding_settings[background_color]": "#FFFDF8",
+    "branding_settings[button_color]": "#D94326",
+    submit_type: "pay",
+    "custom_text[submit][message]": "One-time purchase. WOVO credits do not renew and appear after verified payment.",
+    ...metaBody,
+  });
 }
 
 export async function createPortalSession(customerId: string, returnUrl: string): Promise<StripePortalSession> {

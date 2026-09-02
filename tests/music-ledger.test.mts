@@ -7,6 +7,8 @@ const createRoute = readFileSync("app/api/wovo/music/route.ts", "utf8");
 const jobRoute = readFileSync("app/api/wovo/music/[jobId]/route.ts", "utf8");
 const reconciler = readFileSync("lib/wovo-ai/music-reconciler.ts", "utf8");
 const mediaCron = readFileSync("app/api/cron/video-jobs/route.ts", "utf8");
+const falMusic = readFileSync("lib/wovo-ai/fal-music.ts", "utf8");
+const audioStorageMigration = readFileSync("supabase/migrations/20260901140000_allow_wovo_music_storage.sql", "utf8");
 
 test("music jobs reserve canonical usage before fal and refund failures", () => {
   assert.match(migration, /p_account_id, p_actor_user_id, 'music'/);
@@ -35,4 +37,12 @@ test("authenticated media cron reconciles both video and music jobs", () => {
   assert.match(mediaCron, /reconcileRecentMusicJobs/);
   assert.match(mediaCron, /Promise\.all/);
   assert.match(mediaCron, /MEDIA_RECONCILER_FAILED/);
+});
+
+test("music downloads validate audio signatures and the private bucket accepts audio", () => {
+  assert.match(falMusic, /ascii\(0, 4\) === "RIFF" && ascii\(8, 4\) === "WAVE"/);
+  assert.match(falMusic, /providerType\?\.startsWith\("audio\/"\)/);
+  assert.match(audioStorageMigration, /'audio\/wav'/);
+  assert.match(audioStorageMigration, /'audio\/mpeg'/);
+  assert.match(audioStorageMigration, /where id = 'wovo-portal-assets'/);
 });

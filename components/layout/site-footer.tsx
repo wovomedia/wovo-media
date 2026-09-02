@@ -7,7 +7,7 @@ const privatePrefixes = ["/portal", "/admin", "/login", "/signup", "/auth", "/fo
 
 export function SiteFooter() {
   const pathname = usePathname();
-  if (privatePrefixes.some((path) => pathname.startsWith(path))) return null;
+  if (pathname === "/" || pathname === "/pricing" || privatePrefixes.some((path) => pathname.startsWith(path))) return null;
 
   return (
     <footer className="bg-[#191714] text-[#f3efe6]">

@@ -81,7 +81,21 @@ export async function downloadFalMusic(url: string) {
   if (!response.ok) throw new Error("FAL_MUSIC_DOWNLOAD_FAILED");
   const bytes = await response.arrayBuffer();
   if (!bytes.byteLength || bytes.byteLength > 80 * 1024 * 1024) throw new Error("FAL_MUSIC_SIZE_INVALID");
-  const contentType = response.headers.get("content-type") || "audio/wav";
-  if (!contentType.startsWith("audio/")) throw new Error("FAL_MUSIC_CONTENT_TYPE_INVALID");
+  const sample = new Uint8Array(bytes.slice(0, 16));
+  const ascii = (start: number, length: number) => String.fromCharCode(...sample.slice(start, start + length));
+  const detectedType = ascii(0, 4) === "RIFF" && ascii(8, 4) === "WAVE"
+    ? "audio/wav"
+    : ascii(0, 3) === "ID3" || (sample[0] === 0xff && (sample[1] & 0xe0) === 0xe0)
+      ? "audio/mpeg"
+      : ascii(0, 4) === "OggS"
+        ? "audio/ogg"
+        : ascii(4, 4) === "ftyp"
+          ? "audio/mp4"
+          : null;
+  const providerType = response.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase() ?? null;
+  // Some provider responses currently label valid WAV output as image/png. Trust
+  // recognized audio signatures, never a mismatched provider header by itself.
+  const contentType = detectedType ?? (providerType?.startsWith("audio/") ? providerType : null);
+  if (!contentType) throw new Error("FAL_MUSIC_CONTENT_TYPE_INVALID");
   return { bytes, contentType };
 }

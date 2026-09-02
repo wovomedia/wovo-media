@@ -24,6 +24,7 @@ import type {
 
 type Tab = "overview" | "queue" | "calendar" | "studio" | "inbox" | "services";
 type CreatorMode = "post" | "campaign" | "episode" | "website" | "video" | "music";
+type ResumedGenerationIntent = { prompt?: string; type?: string; ratio?: string; modelId?: string; referenceName?: string | null };
 
 const tabs: Array<{ value: Tab; label: string; mark: string }> = [
   { value: "overview", label: "Home", mark: "H" },
@@ -46,9 +47,12 @@ const WOVO_PRODUCTS: Array<{ label: string; detail: string; target: Tab; mark: s
 ];
 
 const CLIENT_CREDIT_PACKS = [
-  { key: "small", units: 50, price: "$5" },
-  { key: "growth", units: 110, price: "$10" },
-  { key: "studio", units: 300, price: "$25" },
+  { key: "usd10", units: 110, price: "$10", amount: 10 },
+  { key: "usd20", units: 220, price: "$20", amount: 20 },
+  { key: "usd50", units: 550, price: "$50", amount: 50 },
+  { key: "usd100", units: 1100, price: "$100", amount: 100 },
+  { key: "usd500", units: 5500, price: "$500", amount: 500 },
+  { key: "usd1000", units: 11000, price: "$1,000", amount: 1000 },
 ] as const;
 
 const inputClass =
@@ -140,6 +144,7 @@ export default function PortalPage() {
   const [notice, setNotice] = useState("");
   const [staffSearch, setStaffSearch] = useState("");
   const [ownerWorkspaceMode, setOwnerWorkspaceMode] = useState(false);
+  const [resumedIntent, setResumedIntent] = useState<ResumedGenerationIntent | null>(null);
 
   const authedFetch = useCallback(async (url: string, init?: RequestInit) => {
     const token = (await getActiveSession())?.access_token;
@@ -197,6 +202,21 @@ export default function PortalPage() {
     const checkout = params.get("checkout");
     const credits = params.get("credits");
     const requestedPack = params.get("buyCredits");
+    if (params.get("resume") === "1") {
+      try {
+        const restored = JSON.parse(localStorage.getItem("wovo-generation-intent") ?? "null") as ResumedGenerationIntent | null;
+        if (restored?.prompt) {
+          setResumedIntent(restored);
+          setTab("queue");
+          setCreatorMode(restored.type === "video" ? "video" : restored.type === "audio" ? "music" : restored.type === "cartoon" ? "episode" : restored.type === "social" ? "campaign" : "post");
+          setNotice(restored.referenceName
+            ? `Your creation settings and prompt were restored. Reconfirm the reference “${restored.referenceName}” before generating.`
+            : "Your creation settings and prompt were restored. Review the exact credit quote before generating.");
+        }
+      } catch {
+        localStorage.removeItem("wovo-generation-intent");
+      }
+    }
     if (checkout === "success")
       setNotice(
         "Payment received. Stripe is confirming your access; the dashboard will refresh automatically.",
@@ -207,7 +227,7 @@ export default function PortalPage() {
       setNotice("Credit payment received. Stripe is verifying the purchase and will update this workspace ledger automatically.");
     if (credits === "canceled")
       setNotice("Credit checkout was canceled. No credits were purchased.");
-    if (requestedPack && CLIENT_CREDIT_PACKS.some((pack) => pack.key === requestedPack)) {
+    if (requestedPack && CLIENT_CREDIT_PACKS.some((pack) => pack.key === requestedPack || String(pack.amount) === requestedPack)) {
       setTab("studio");
       setNotice("Your one-time credit pack is ready below. Checkout starts only after you choose it again inside your verified workspace.");
     }
@@ -853,9 +873,7 @@ export default function PortalPage() {
                   (item) => item.account_id === account.id,
                 )?.balance ?? 0
               }
-              ownerExempt={
-                snapshot.mode === "staff" && snapshot.staffRole === "owner"
-              }
+              resumedIntent={resumedIntent}
               creatorMode={creatorMode}
               onCreatorModeChange={setCreatorMode}
               paid={isPaid}
@@ -1055,8 +1073,17 @@ function PlanOnboarding({
 }) {
   const [step, setStep] = useState(0);
   const [localError, setLocalError] = useState("");
+  const [billingPlan, setBillingPlan] = useState<BillingOption["planId"]>(() => {
+    if (typeof window === "undefined") return "starter";
+    const value = new URLSearchParams(window.location.search).get("plan");
+    return value === "creator" || value === "pro" ? value : "starter";
+  });
   const [billingFrequency, setBillingFrequency] =
-    useState<BillingOption["frequency"]>("monthly");
+    useState<BillingOption["frequency"]>(() => {
+      if (typeof window === "undefined") return "monthly";
+      const value = new URLSearchParams(window.location.search).get("term");
+      return value === "quarterly" || value === "semiannual" || value === "annual" ? value : "monthly";
+    });
   const [draft, setDraft] = useState<PlanDraft>({
     businessName: "",
     businessType: "local_business",
@@ -1136,13 +1163,14 @@ function PlanOnboarding({
     high: Math.round(weeklyHigh * 4.33 * months),
   }));
   const selectedBillingOption =
-    billingOptions.find((option) => option.frequency === billingFrequency) ??
-    billingOptions[0] ??
+    billingOptions.find((option) => option.planId === billingPlan && option.frequency === billingFrequency) ??
+    billingOptions.find((option) => option.planId === billingPlan) ??
     null;
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     await onSubmit({
       action: "onboard",
+      planId: billingPlan,
       billingFrequency,
       businessName: draft.businessName,
       businessType: draft.businessType,
@@ -1688,10 +1716,11 @@ function PlanOnboarding({
                 </div>
                 <aside className="rounded-2xl bg-[#191714] p-5 text-white sm:p-6">
                   <p className="text-xs font-bold uppercase tracking-[.16em] text-[#ff8c72]">
-                    Choose billing period
+                    Choose plan and billing period
                   </p>
+                  <BillingPlanSelector options={billingOptions} value={billingPlan} onChange={setBillingPlan} dark />
                   <BillingPeriodSelector
-                    options={billingOptions}
+                    options={billingOptions.filter((option) => option.planId === billingPlan)}
                     value={selectedBillingOption?.frequency ?? "monthly"}
                     onChange={setBillingFrequency}
                     dark
@@ -1831,6 +1860,11 @@ function BillingPeriodSelector({
       })}
     </div>
   );
+}
+
+function BillingPlanSelector({ options, value, onChange, dark = false }: { options: BillingOption[]; value: BillingOption["planId"]; onChange: (value: BillingOption["planId"]) => void; dark?: boolean }) {
+  const plans = (["starter", "creator", "pro"] as const).map((planId) => options.find((option) => option.planId === planId)).filter((option): option is BillingOption => Boolean(option));
+  return <div className="mt-4 grid grid-cols-3 gap-2" role="radiogroup" aria-label="WOVO plan">{plans.map((option) => <button key={option.planId} type="button" role="radio" aria-checked={option.planId === value} onClick={() => onChange(option.planId)} className={`min-h-14 rounded-xl border px-2 text-left ${option.planId === value ? (dark ? "border-[#ff8c72] bg-white/10" : "border-[#f05a3a] bg-[#f05a3a]/10") : dark ? "border-white/15" : "border-[#191714]/12"}`}><strong className="block text-xs">{option.planName}</strong><span className={`mt-1 block text-[10px] ${dark ? "text-white/50" : "text-[#6d665d]"}`}>{option.monthlyCredits} credits/mo</span></button>)}</div>;
 }
 
 function PlanSelection({
@@ -2151,13 +2185,22 @@ function BillingCard({
     success: string,
   ) => Promise<unknown>;
 }) {
+  const [billingPlan, setBillingPlan] = useState<BillingOption["planId"]>(() => {
+    if (typeof window === "undefined") return "starter";
+    const value = new URLSearchParams(window.location.search).get("plan");
+    return value === "creator" || value === "pro" ? value : "starter";
+  });
   const [billingFrequency, setBillingFrequency] =
-    useState<BillingOption["frequency"]>("monthly");
+    useState<BillingOption["frequency"]>(() => {
+      if (typeof window === "undefined") return "monthly";
+      const value = new URLSearchParams(window.location.search).get("term");
+      return value === "quarterly" || value === "semiannual" || value === "annual" ? value : "monthly";
+    });
   const selected =
     snapshot.setup.billingOptions.find(
-      (option) => option.frequency === billingFrequency,
+      (option) => option.planId === billingPlan && option.frequency === billingFrequency,
     ) ??
-    snapshot.setup.billingOptions[0] ??
+    snapshot.setup.billingOptions.find((option) => option.planId === billingPlan) ??
     null;
   return (
     <section className={`${cardClass} mb-5 border-[#f05a3a]/20`}>
@@ -2189,8 +2232,9 @@ function BillingCard({
           </p>
         </div>
         <div className="rounded-2xl border border-[#191714]/10 bg-[#f7f2e9] p-4">
+          <BillingPlanSelector options={snapshot.setup.billingOptions} value={billingPlan} onChange={setBillingPlan} />
           <BillingPeriodSelector
-            options={snapshot.setup.billingOptions}
+            options={snapshot.setup.billingOptions.filter((option) => option.planId === billingPlan)}
             value={selected?.frequency ?? "monthly"}
             onChange={setBillingFrequency}
           />
@@ -2211,6 +2255,7 @@ function BillingCard({
                   accountId: account.id,
                   purchaseType: "subscription",
                   planConfirmed: true,
+                  planId: selected?.planId,
                   billingFrequency: selected?.frequency,
                 },
                 "Opening secure Stripe checkout.",
@@ -2295,7 +2340,6 @@ function UnpaidWorkspacePreview({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt,
-          durationSeconds: 4,
           preview: true,
           accountId: account.id,
         }),
@@ -2432,7 +2476,7 @@ function UnpaidWorkspacePreview({
                     9:16
                   </span>
                   <span className="rounded-lg bg-white/[.06] px-2.5 py-2">
-                    4 sec
+                    Model-set short clip
                   </span>
                   <span className="rounded-lg bg-white/[.06] px-2.5 py-2">
                     Watermarked
@@ -3137,7 +3181,7 @@ const CREATOR_MODES: Array<{
   {
     value: "video",
     label: "AI video",
-    eyebrow: "Metered fal.ai video render",
+    eyebrow: "Metered WOVO AI video render",
   },
   {
     value: "music",
@@ -3152,7 +3196,6 @@ function CreatorWorkbench({
   drafts,
   assets,
   creditBalance,
-  ownerExempt,
   mode,
   onModeChange,
   busy,
@@ -3161,13 +3204,13 @@ function CreatorWorkbench({
   reload,
   setError,
   setNotice,
+  initialPrompt,
 }: {
   account: PortalAccount;
   items: PortalContentItem[];
   drafts: PortalSnapshot["workflowDrafts"];
   assets: PortalSnapshot["assets"];
   creditBalance: number;
-  ownerExempt: boolean;
   mode: CreatorMode;
   onModeChange: (mode: CreatorMode) => void;
   paid: boolean;
@@ -3180,6 +3223,7 @@ function CreatorWorkbench({
   reload: () => Promise<void>;
   setError: (value: string) => void;
   setNotice: (value: string) => void;
+  initialPrompt?: string;
 }) {
   const [advanced, setAdvanced] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -3264,22 +3308,22 @@ function CreatorWorkbench({
   const recentOutputs = [
     ...videoJobs.slice(0, 6).map((job) => ({
       id: job.id,
-      title: `AI video · ${job.prompt.slice(0, 72)}`,
+      title: `AI video · ${(job.prompt || "Untitled video").slice(0, 72)}`,
       kind: "AI video",
       status: job.status,
       date: job.created_at,
       source: "video" as const,
-      brief: job.prompt,
+      brief: job.prompt || "Private AI video render",
       generated: job.result_url ? { video: job.result_url } : undefined,
     })),
     ...musicJobs.slice(0, 6).map((job) => ({
       id: job.id,
-      title: `AI music · ${job.prompt.slice(0, 72)}`,
+      title: `AI music · ${(job.prompt || "Untitled track").slice(0, 72)}`,
       kind: `${job.quality} music`,
       status: job.status,
       date: job.createdAt,
       source: "music" as const,
-      brief: job.prompt,
+      brief: job.prompt || "Private AI music render",
       generated: job.mediaUrl ? { audio: job.mediaUrl } : undefined,
     })),
     ...items.slice(0, 4).map((item) => ({
@@ -3643,7 +3687,7 @@ function CreatorWorkbench({
     }
     if (mode === "music") {
       setError("");
-      setNotice("Submitting a private, metered music render to fal.ai…");
+      setNotice("Submitting a private, metered WOVO AI music render…");
       setGeneratingMedia(true);
       try {
         const quality = data.get("musicQuality") === "premium" ? "premium" : "economy";
@@ -3660,8 +3704,8 @@ function CreatorWorkbench({
         const payload = await readJsonResponse<{ error?: string; job?: { id: string }; reservedCredits?: number; ownerExempt?: boolean }>(response);
         if (!response.ok || !payload.job?.id) throw new Error(payload.error ?? "The music render could not start.");
         setNotice(payload.ownerExempt
-          ? "Owner music render started with no customer credits charged. It will appear here when fal finishes."
-          : `${payload.reservedCredits ?? 0} credits reserved. The playable track will appear here when fal finishes.`);
+          ? "Your private music render started. It will appear here when WOVO finishes."
+          : `${payload.reservedCredits ?? 0} credits reserved. The playable track will appear here when WOVO finishes.`);
         form.reset();
         await refreshMediaJobs();
       } catch (reason) {
@@ -3674,7 +3718,7 @@ function CreatorWorkbench({
     }
     if (mode === "video" || mode === "episode") {
       setError("");
-      setNotice("Submitting a private, metered AI video render to fal.ai…");
+      setNotice("Submitting a private, metered WOVO AI video render…");
       setGeneratingMedia(true);
       try {
         const characterName = String(data.get("characterName") ?? "").trim();
@@ -3689,15 +3733,14 @@ function CreatorWorkbench({
           body: JSON.stringify({
             accountId: account.id,
             prompt: renderPrompt,
-            durationSeconds: Number(data.get("duration") ?? 8),
             remixMode: "standard",
           }),
         });
         const payload = await readJsonResponse<{ error?: string; job?: { id: string }; reserved_credits?: number; owner_exempt?: boolean }>(response);
         if (!response.ok || !payload.job?.id) throw new Error(payload.error ?? "The video render could not start.");
         setNotice(payload.owner_exempt
-          ? "Owner video render started with no customer credits charged. It will appear here when fal finishes."
-          : `${payload.reserved_credits ?? 0} credits reserved. The playable video will appear here when fal finishes.`);
+          ? "Your private video render started. It will appear here when WOVO finishes."
+          : `${payload.reserved_credits ?? 0} credits reserved. The playable video will appear here when WOVO finishes.`);
         form.reset();
         await refreshMediaJobs();
       } catch (reason) {
@@ -3767,14 +3810,7 @@ function CreatorWorkbench({
             <p className="text-[10px] font-bold uppercase tracking-[.12em] text-white/40">
               Credits
             </p>
-            <p className="mt-1 text-lg font-semibold">
-              {ownerExempt ? "∞" : creditBalance}
-            </p>
-            {ownerExempt ? (
-              <p className="text-[9px] font-bold uppercase tracking-[.1em] text-[#a9341f]">
-                Owner exempt
-              </p>
-            ) : null}
+            <p className="mt-1 text-lg font-semibold">{creditBalance}</p>
           </div>
           <div className="border-l border-white/10 px-4 py-3">
             <p className="text-[10px] font-bold uppercase tracking-[.12em] text-white/40">
@@ -3915,15 +3951,13 @@ function CreatorWorkbench({
               <div className="border-t border-white/10 pt-4">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-xs font-semibold">Media source</p>
-                  <span className="rounded-full bg-[#f05a3a]/15 px-2 py-1 text-[10px] font-bold text-[#ff9b82]">
-                    fal.ai
-                  </span>
+                  <span className="rounded-full bg-[#f05a3a]/15 px-2 py-1 text-[10px] font-bold text-[#ff9b82]">WOVO AI</span>
                 </div>
                 <p className="mt-2 text-xs leading-5 text-white/45">
                   {mode === "music"
                     ? "Generate a playable track, store it privately in WOVO, then download it or use it in a later music-video project."
                     : mode === "video" || mode === "episode"
-                      ? "This starts a real 720p fal.ai video render. The result is stored privately and credits are returned if the provider fails."
+                      ? "This starts a real 720p WOVO AI video render. The result is stored privately and credits are returned if generation fails."
                       : mode === "post"
                         ? "Every new post includes an original generated image saved privately with its caption for approval."
                         : "This workflow saves a structured brief first; no provider render is started."}
@@ -3964,8 +3998,10 @@ function CreatorWorkbench({
                   <label className="flex min-w-0 flex-col text-sm font-semibold text-white">
                     Creative direction
                     <textarea
+                      key={initialPrompt ?? "blank-prompt"}
                       required
                       name="prompt"
+                      defaultValue={initialPrompt}
                       minLength={10}
                       maxLength={5000}
                       className="mt-3 min-h-56 flex-1 resize-y rounded-2xl border border-white/10 bg-[#171513] p-4 text-base font-normal leading-7 text-white outline-none transition placeholder:text-white/28 focus:border-[#f05a3a] focus:ring-2 focus:ring-[#f05a3a]/15"
@@ -4236,27 +4272,12 @@ function CreatorWorkbench({
                       </p>
                     </div>
                   </div>
-                  <fieldset className="mt-4">
-                    <legend className="text-xs font-semibold text-white/65">
-                      Duration
-                    </legend>
-                    <div className="mt-2 flex gap-2">
-                      {[4, 8, 12].map((seconds) => (
-                        <label key={seconds} className="cursor-pointer">
-                          <input
-                            type="radio"
-                            name="duration"
-                            value={seconds}
-                            defaultChecked={seconds === 8}
-                            className="peer sr-only"
-                          />
-                          <span className="inline-flex min-h-10 items-center rounded-xl border border-white/10 bg-white/[.04] px-4 text-xs font-bold text-white/60 peer-checked:border-[#f05a3a] peer-checked:bg-[#f05a3a]/15 peer-checked:text-[#ff9b82]">
-                            {seconds}s
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                  </fieldset>
+                  <div className="mt-4 rounded-xl border border-white/10 bg-white/[.04] p-3">
+                    <p className="text-xs font-semibold text-white/65">Model-set short clip</p>
+                    <p className="mt-1 text-[11px] leading-5 text-white/40">
+                      Wan Turbo controls the final clip length. WOVO verifies 720p output and never promises an exact runtime the provider does not accept.
+                    </p>
+                  </div>
                   <fieldset className="mt-4">
                     <legend className="text-xs font-semibold text-white/65">
                       Private start frame
@@ -4837,7 +4858,6 @@ function Queue({
   drafts,
   assets,
   creditBalance,
-  ownerExempt,
   creatorMode,
   onCreatorModeChange,
   paid,
@@ -4848,13 +4868,13 @@ function Queue({
   reload,
   setError,
   setNotice,
+  resumedIntent,
 }: {
   account: PortalAccount;
   items: PortalContentItem[];
   drafts: PortalSnapshot["workflowDrafts"];
   assets: PortalSnapshot["assets"];
   creditBalance: number;
-  ownerExempt: boolean;
   creatorMode: CreatorMode;
   onCreatorModeChange: (mode: CreatorMode) => void;
   paid: boolean;
@@ -4868,6 +4888,7 @@ function Queue({
   reload: () => Promise<void>;
   setError: (value: string) => void;
   setNotice: (value: string) => void;
+  resumedIntent?: ResumedGenerationIntent | null;
 }) {
   async function approveRange(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -4890,7 +4911,6 @@ function Queue({
         drafts={drafts}
         assets={assets}
         creditBalance={creditBalance}
-        ownerExempt={ownerExempt}
         mode={creatorMode}
         onModeChange={onCreatorModeChange}
         paid={paid}
@@ -4900,6 +4920,7 @@ function Queue({
         reload={reload}
         setError={setError}
         setNotice={setNotice}
+        initialPrompt={resumedIntent?.prompt}
       />
       <ClientMetaDelivery accountId={account.id} items={items} />
       <section className={cardClass}>
@@ -6040,9 +6061,11 @@ function BuildStudio({
     useState<PortalSnapshot["workflowDrafts"][number]["workflow_type"]>(
       "website_site",
     );
+  const [customCreditAmount, setCustomCreditAmount] = useState("75");
   const balance =
     snapshot.creditAccounts.find((item) => item.account_id === account.id)
       ?.balance ?? 0;
+  const usagePolicy = snapshot.aiUsagePolicies.find((item) => item.account_id === account.id) ?? null;
   const dm = entitlements.find(
     (item) => item.entitlement_key === "ai_dm_manager",
   );
@@ -6104,6 +6127,8 @@ function BuildStudio({
             Server-authoritative balance. Purchases and generation costs will
             appear as idempotent ledger entries.
           </p>
+          {usagePolicy?.monthly_included_units ? <p className="mt-3 rounded-xl bg-[#f7f2e9] p-3 text-xs leading-5 text-[#655f56]">{usagePolicy.monthly_included_units} subscription credits per month · next refill {formatDate(usagePolicy.period_end)}</p> : null}
+          {balance < 12 ? <p className="mt-3 rounded-xl border border-[#f05a3a]/25 bg-[#f05a3a]/8 p-3 text-xs leading-5 text-[#8f2f1d]">Low balance: a short video currently needs 12 credits. Buy only what you need below, upgrade, or wait for the refill shown above.</p> : null}
           {snapshot.setup.expansion.creditPurchaseReady ? (
             <div className="mt-4 grid gap-2" aria-label="Credit packs">
               {CLIENT_CREDIT_PACKS.map((pack) => (
@@ -6125,10 +6150,14 @@ function BuildStudio({
                   <span>{pack.price}</span>
                 </button>
               ))}
+              <div className="mt-2 rounded-xl border border-[#191714]/10 p-3">
+                <label className="text-xs font-semibold text-[#655f56]">Custom whole-dollar amount · $10–$10,000<input value={customCreditAmount} onChange={(event) => setCustomCreditAmount(event.target.value.replace(/[^0-9]/g, "").slice(0, 5))} inputMode="numeric" className={`${inputClass} mt-2`} /></label>
+                <div className="mt-3 flex items-center justify-between gap-3 text-xs"><span>{Math.max(10, Number(customCreditAmount) || 0) * 11} credits</span><button disabled={busy === "start_credit_checkout" || !Number.isInteger(Number(customCreditAmount)) || Number(customCreditAmount) < 10 || Number(customCreditAmount) > 10000} className={primaryButton} onClick={() => void onAction({ action: "start_credit_checkout", accountId: account.id, amountDollars: Number(customCreditAmount) }, `Opening secure Stripe Checkout for $${customCreditAmount} in credits.`)}>Continue</button></div>
+              </div>
             </div>
           ) : (
             <p className="mt-4 rounded-xl bg-[#f7f2e9] p-3 text-xs leading-5 text-[#655f56]">
-              Purchasing is hidden until all three Stripe prices pass the server
+              Purchasing is hidden until all six Stripe prices pass the server
               allowlist. Your existing balance and history remain available.
             </p>
           )}

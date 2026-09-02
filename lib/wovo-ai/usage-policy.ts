@@ -3,6 +3,7 @@ import "server-only";
 import { getEnv } from "@/lib/env";
 import type { PortalContext } from "@/lib/portal/server";
 import { supabaseServiceRoleRequest } from "@/lib/supabase/server";
+import { planForPortalSubscriptionPriceId } from "@/lib/portal/billing-options";
 
 type UsagePolicyState = {
   enabled: boolean;
@@ -11,29 +12,31 @@ type UsagePolicyState = {
 };
 
 /**
- * Keeps the canonical usage window aligned with WOVO's advertised seven-day
- * allowance. Credit-only workspaces receive no included units, but remain
- * enabled so purchased credits can be spent without a subscription.
+ * Keeps the canonical usage window aligned with the monthly credit release.
+ * Multi-month subscriptions still receive one monthly window at a time.
+ * Credit-only workspaces receive no included units, but remain enabled so
+ * purchased credits can be spent without a subscription.
  */
 export async function ensureWorkspaceUsagePolicy(context: PortalContext, accountId: string) {
   const [existing, subscriptions] = await Promise.all([
     supabaseServiceRoleRequest<UsagePolicyState[]>(
       `/rest/v1/wovo_ai_usage_policies?select=period_end,enabled,monthly_included_units&account_id=eq.${encodeURIComponent(accountId)}&limit=1`,
     ).catch(() => []),
-    supabaseServiceRoleRequest<Array<{ status: string }>>(
-      `/rest/v1/wovo_portal_subscriptions?select=status&account_id=eq.${encodeURIComponent(accountId)}&status=in.(active,trialing)&limit=1`,
+    supabaseServiceRoleRequest<Array<{ status: string; stripe_price_id: string | null }>>(
+      `/rest/v1/wovo_portal_subscriptions?select=status,stripe_price_id&account_id=eq.${encodeURIComponent(accountId)}&status=in.(active,trialing)&limit=1`,
     ).catch(() => []),
   ]);
   const owner = context.mode === "staff" && context.staffRole === "owner";
-  const subscribed = Boolean(subscriptions?.[0]);
-  const includedUnits = owner ? 100000 : subscribed ? 100 : 0;
+  const subscribedPlan = planForPortalSubscriptionPriceId(subscriptions?.[0]?.stripe_price_id);
+  const includedUnits = owner ? 100000 : subscribedPlan?.monthlyCredits ?? 0;
   if (
     existing?.[0]?.enabled
     && Date.parse(existing[0].period_end) > Date.now()
     && existing[0].monthly_included_units === includedUnits
   ) return;
   const now = new Date();
-  const periodEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const periodEnd = new Date(now);
+  periodEnd.setUTCMonth(periodEnd.getUTCMonth() + 1);
 
   await supabaseServiceRoleRequest("/rest/v1/wovo_ai_usage_policies?on_conflict=account_id", {
     method: "POST",
@@ -42,8 +45,8 @@ export async function ensureWorkspaceUsagePolicy(context: PortalContext, account
       account_id: accountId,
       enabled: true,
       plan_key: owner ? "owner_test" : "core",
-      daily_unit_limit: owner ? 100000 : 100,
-      weekly_unit_limit: owner ? 100000 : 100,
+      daily_unit_limit: owner ? 100000 : Math.max(20, includedUnits),
+      weekly_unit_limit: owner ? 100000 : Math.max(20, includedUnits),
       monthly_included_units: includedUnits,
       requests_per_minute: owner ? 10 : 2,
       monthly_provider_cost_cap_micros: owner ? 100000000 : 3000000,

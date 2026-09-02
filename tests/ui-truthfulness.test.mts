@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const home = readFileSync("app/page.tsx", "utf8");
+const pricing = readFileSync("app/pricing/PricingExperience.tsx", "utf8");
+const pricingCatalog = readFileSync("lib/portal/pricing-catalog.ts", "utf8");
 const portal = readFileSync("app/portal/page.tsx", "utf8");
 const owner = readFileSync("app/portal/OwnerOperations.tsx", "utf8");
 const terms = readFileSync("app/terms-of-use/page.tsx", "utf8");
@@ -11,10 +13,11 @@ const metaConnection = readFileSync("app/portal/OwnerMetaConnection.tsx", "utf8"
 const publishingCenter = readFileSync("app/portal/OwnerPublishingCenter.tsx", "utf8");
 
 test("public and owner UI describes the live four-period billing catalog", () => {
-  for (const source of [home, portal, terms, cancellation]) {
-    assert.match(source, /six-month|every 6 months/);
+  for (const source of [pricingCatalog, portal, terms, cancellation]) {
+    assert.match(source, /six-month|every 6 months|semiannual/);
   }
-  assert.match(home, /one-time credits without a subscription/);
+  assert.match(pricing, /No subscription required/);
+  assert.match(home, /WovoCreateExperience/);
   assert.match(terms, /without a recurring subscription/);
   assert.match(cancellation, /One-time credit packs do not renew/);
 });

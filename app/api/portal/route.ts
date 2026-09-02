@@ -8,10 +8,11 @@ import { getEnv } from "@/lib/env";
 import { startCreditCheckout } from "@/lib/portal/credit-checkout";
 import { getValidatedCreditPacks } from "@/lib/portal/credit-packs";
 import {
-  getPortalPriceIdForFrequency,
+  getPortalPriceId as getPortalSubscriptionPriceId,
   getValidatedPortalBillingOption,
   getValidatedPortalBillingOptions,
   isPortalBillingFrequency,
+  isPortalPlanId,
 } from "@/lib/portal/billing-options";
 import { deleteAuthUserById, supabaseServiceRoleRequest } from "@/lib/supabase/server";
 import {
@@ -360,7 +361,7 @@ async function setupStatus(): Promise<PortalSnapshot["setup"]> {
     getValidatedPortalBillingOptions(),
     getValidatedCreditPacks(),
   ]);
-  const monthlyPrice = billingOptions.find((option) => option.frequency === "monthly") ?? null;
+  const monthlyPrice = billingOptions.find((option) => option.planId === "starter" && option.frequency === "monthly") ?? null;
   return {
     monthlyCheckoutConfigured: Boolean(monthlyPrice),
     monthlyPrice: monthlyPrice
@@ -379,7 +380,7 @@ async function setupStatus(): Promise<PortalSnapshot["setup"]> {
     awardsReviewDate: getEnv("WOVO_AWARDS_REVIEW_DATE") || "2027-07-30",
     awardsRubricRequired: true,
     expansion: {
-      creditPurchaseReady: creditPacks.length === 3,
+      creditPurchaseReady: creditPacks.length === 6,
       dmManagerCheckoutReady: false,
       websiteHostingCheckoutReady: false,
       personalAssistantCheckoutReady: false,
@@ -2049,9 +2050,10 @@ async function startCheckout(request: Request, context: PortalContext, body: Act
   if (purchaseType === "subscription") {
     if (body.planConfirmed !== true) throw new PortalHttpError(400, "Review and confirm the workspace plan before checkout.");
     const billingFrequency = isPortalBillingFrequency(body.billingFrequency) ? body.billingFrequency : "monthly";
-    const billingOption = await getValidatedPortalBillingOption(billingFrequency);
+    const planId = isPortalPlanId(body.planId) ? body.planId : "starter";
+    const billingOption = await getValidatedPortalBillingOption(planId, billingFrequency);
     if (!billingOption) throw new PortalHttpError(503, "That billing period is not available. Choose one of the verified WOVO plans shown in the workspace.");
-    priceId = getPortalPriceIdForFrequency(billingFrequency);
+    priceId = getPortalSubscriptionPriceId(planId, billingFrequency);
     const accountRows = await supabaseServiceRoleRequest<Array<{ onboarding_plan: Record<string, unknown> | null }>>(
       `/rest/v1/wovo_portal_accounts?select=onboarding_plan&id=eq.${encodeURIComponent(accountId)}&limit=1`
     ).catch(() => []);
@@ -2061,6 +2063,8 @@ async function startCheckout(request: Request, context: PortalContext, body: Act
       portalAccountId: accountId,
       portalPurchaseType: "subscription",
       portalPlanConfirmed: "true",
+      portalPlanId: planId,
+      portalMonthlyCredits: String(billingOption.monthlyCredits),
       portalBillingFrequency: billingFrequency,
       portalSelectedAddons: Array.isArray(savedPlan?.recurringAddons) ? savedPlan.recurringAddons.filter((item): item is string => typeof item === "string").join(",").slice(0, 450) : "",
     };
