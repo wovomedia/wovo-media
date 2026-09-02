@@ -55,7 +55,7 @@ export default function LoginPage() {
   return (
     <AuthFrame
       eyebrow="Welcome back"
-      title="Sign in to your workspace."
+      title="Sign in to WOVO."
       description="Use the same method you chose when you created your account."
     >
       <form onSubmit={(event) => void loginWithEmail(event)}>

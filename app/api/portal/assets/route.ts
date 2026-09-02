@@ -32,22 +32,6 @@ function extension(type: string) {
   return { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "application/pdf": "pdf", "video/mp4": "mp4", "video/webm": "webm", "video/quicktime": "mov" }[type] ?? "bin";
 }
 
-async function assertActiveWorkspace(mode: "client" | "staff", accountId: string) {
-  if (mode === "staff") return;
-  const now = new Date().toISOString();
-  const [subscriptions, grants] = await Promise.all([
-    supabaseServiceRoleRequest<Array<{ status: string }>>(
-      `/rest/v1/wovo_portal_subscriptions?select=status&account_id=eq.${encodeURIComponent(accountId)}&status=in.(active,trialing)&limit=1`
-    ).catch(() => []),
-    supabaseServiceRoleRequest<Array<{ id: string }>>(
-      `/rest/v1/wovo_portal_access_grants?select=id&account_id=eq.${encodeURIComponent(accountId)}&revoked_at=is.null&starts_at=lte.${encodeURIComponent(now)}&expires_at=gt.${encodeURIComponent(now)}&limit=1`
-    ).catch(() => []),
-  ]);
-  if (!subscriptions?.[0] && !grants?.[0]) {
-    throw new PortalHttpError(402, "An active WOVO subscription or owner-approved temporary access grant is required.");
-  }
-}
-
 export async function POST(request: Request) {
   try {
     const context = await requirePortalContext(request.headers.get("authorization"));
@@ -55,7 +39,6 @@ export async function POST(request: Request) {
     const accountId = body.accountId;
     if (!isUuid(accountId)) throw new PortalHttpError(400, "Invalid account.");
     await assertPortalAccountAccess(context, accountId);
-    await assertActiveWorkspace(context.mode, accountId);
     if (body.rightsConfirmed !== true || body.peopleConsentConfirmed !== true) {
       throw new PortalHttpError(400, "Confirm asset rights and consent for every person depicted.");
     }

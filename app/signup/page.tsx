@@ -81,7 +81,7 @@ export default function SignupPage() {
         <button disabled={loading} className={`${authPrimaryButtonClass} mt-5`}>{loading ? "Creating account…" : "Create account"}</button>
       </form>
       {error ? <p role="alert" className="mt-4 rounded-xl border border-red-700/15 bg-red-50 p-3 text-sm leading-6 text-red-800">{error}</p> : null}
-      <p className="mt-4 text-xs leading-5 text-[#81796f]">After email verification, onboarding collects your business context and asset-rights confirmation. Paid workspace access begins only after Stripe confirms an active subscription.</p>
+      <p className="mt-4 text-xs leading-5 text-[#81796f]">After email verification, a short setup collects your business context and asset-rights confirmation. Your workspace then opens with 10 free credits — no card required.</p>
       <p className="mt-5 text-center text-sm text-[#756e64]">
         Already have an account?{" "}
         <Link href="/login?next=/portal" className="inline-flex min-h-11 items-center font-bold text-[#d94326] underline-offset-4 hover:underline">Sign in</Link>

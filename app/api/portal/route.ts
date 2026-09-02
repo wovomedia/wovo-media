@@ -395,7 +395,6 @@ async function setupStatus(): Promise<PortalSnapshot["setup"]> {
 
 async function assertKnowledgePermission(context: PortalContext, accountId: string, approval = false): Promise<void> {
   await assertPortalAccountAccess(context, accountId);
-  await assertPaid(context, accountId);
   if (context.mode === "staff") {
     if (!["owner", "admin", "manager"].includes(context.staffRole ?? "")) {
       throw new PortalHttpError(403, "Owner, admin, or manager knowledge access is required.");
@@ -1350,7 +1349,6 @@ async function assertPaid(context: PortalContext, accountId: string): Promise<vo
 async function updateAccountProfile(context: PortalContext, body: ActionBody) {
   const accountId = requiredString(body.accountId, "Account", 80);
   await assertPortalAccountAccess(context, accountId);
-  await assertPaid(context, accountId);
   const cadence = numberValue(body.cadence, "Posting cadence", 1, 7);
   const platforms = Array.isArray(body.platforms)
     ? body.platforms.filter((item): item is string => typeof item === "string" && PLATFORM_VALUES.includes(item)).slice(0, 7)
@@ -1377,7 +1375,6 @@ async function updateAccountProfile(context: PortalContext, body: ActionBody) {
 async function createContent(context: PortalContext, body: ActionBody) {
   const accountId = requiredString(body.accountId, "Account", 80);
   await assertPortalAccountAccess(context, accountId);
-  await assertPaid(context, accountId);
   const contentType = enumValue(body.contentType ?? "social_post", CONTENT_TYPES, "Content type");
   const rightsConfirmed = body.rightsConfirmed === true;
   if ((contentType === "property_marketing" || body.assetId) && !rightsConfirmed) {
@@ -1472,7 +1469,6 @@ async function approveContent(
   const accountId = requiredString(body.accountId, "Account", 80);
   const contentId = requiredString(body.contentId, "Content item", 80);
   await assertPortalAccountAccess(context, accountId);
-  await assertPaid(context, accountId);
   const result = await supabaseServiceRoleRequest<PortalContentApproval | PortalContentApproval[]>(
     "/rest/v1/rpc/wovo_approve_content_item",
     {
@@ -1510,7 +1506,6 @@ async function approveContent(
 async function approveContentRange(context: PortalContext, body: ActionBody) {
   const accountId = requiredString(body.accountId, "Account", 80);
   await assertPortalAccountAccess(context, accountId);
-  await assertPaid(context, accountId);
   const startDate = optionalDateOnly(body.startDate, "Approval start");
   const endDate = optionalDateOnly(body.endDate, "Approval end");
   if (!startDate || !endDate) throw new PortalHttpError(400, "Choose an approval start and end date.");
@@ -1549,7 +1544,6 @@ async function revokeContentApproval(context: PortalContext, body: ActionBody) {
   const accountId = requiredString(body.accountId, "Account", 80);
   const contentId = requiredString(body.contentId, "Content item", 80);
   await assertPortalAccountAccess(context, accountId);
-  await assertPaid(context, accountId);
   const result = await supabaseServiceRoleRequest<PortalContentItem | PortalContentItem[]>(
     "/rest/v1/rpc/wovo_revoke_content_approval",
     {
@@ -1581,7 +1575,6 @@ type GeneratedIdea = { date?: string; title?: string; caption?: string; platform
 async function generateCalendar(context: PortalContext, body: ActionBody) {
   const accountId = requiredString(body.accountId, "Account", 80);
   await assertPortalAccountAccess(context, accountId);
-  await assertPaid(context, accountId);
   const rate = checkAiRateLimit(context.user.id, "portal_calendar");
   if (!rate.allowed) throw new PortalHttpError(429, "Please wait before generating another calendar.");
   const accounts = await supabaseServiceRoleRequest<PortalAccount[]>(
@@ -1934,7 +1927,6 @@ async function createOrder(context: PortalContext, body: ActionBody) {
 async function createWorkflowDraft(context: PortalContext, body: ActionBody) {
   const accountId = requiredString(body.accountId, "Account", 80);
   await assertPortalAccountAccess(context, accountId);
-  await assertPaid(context, accountId);
   const workflowType = enumValue(body.workflowType, WORKFLOW_TYPES, "Workflow type") as PortalWorkflowDraft["workflow_type"];
   const title = requiredString(body.title, "Title", 180);
   const brief = requiredString(body.brief, "Brief", 5000);

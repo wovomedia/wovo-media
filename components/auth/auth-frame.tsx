@@ -42,7 +42,7 @@ export function AuthFrame({ eyebrow, title, description, children }: AuthFramePr
       </div>
       <div className="grid grid-cols-[1fr_auto] items-end gap-8 border-t border-white/15 pt-5 pr-5">
         <p className="text-xs leading-5 text-white/45">Email verification and tenant-scoped access protect each business workspace.</p>
-        <div className="text-right"><p className="text-xl font-medium">From $15</p><p className="text-[10px] text-white/40">USD / month</p></div>
+        <div className="text-right"><p className="text-xl font-medium">10 free credits</p><p className="text-[10px] text-white/40">No card required</p></div>
       </div>
       <div aria-hidden className="absolute bottom-0 right-0 h-40 w-2 bg-[#f05a3a]" />
     </aside>

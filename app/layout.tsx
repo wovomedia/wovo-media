@@ -6,7 +6,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: new URL("https://wovomedia.com"),
   title: {
-    default: "WOVO Media | Weekly Marketing Workspace",
+    default: "WOVO Media | AI Creative Workspace",
     template: "%s | WOVO Media",
   },
   description: "Plan, review, and move weekly marketing forward with a private brand profile, content queue, asset library, and organized support.",
@@ -24,14 +24,14 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     siteName: "WOVO Media",
-    title: "WOVO Media | Weekly Marketing Workspace",
+    title: "WOVO Media | AI Creative Workspace",
     description: "Turn business context into a focused weekly content plan, approval queue, and organized support.",
     url: "https://wovomedia.com",
     images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "WOVO Media weekly marketing workspace" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "WOVO Media | Weekly Marketing Workspace",
+    title: "WOVO Media | AI Creative Workspace",
     description: "A focused weekly marketing workspace for independent businesses.",
     images: ["/opengraph-image"],
   },

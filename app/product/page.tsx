@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "WOVO Product | Weekly Marketing Workspace",
+  title: "WOVO Product | AI Creative Workspace",
   description: "Explore WOVO's private brand profile, weekly content queue, calendar, asset library, bookings, billing, and shared team support.",
   alternates: { canonical: "/product" },
 };
