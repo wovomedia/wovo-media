@@ -143,7 +143,9 @@ export default function PortalPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [staffSearch, setStaffSearch] = useState("");
-  const [ownerWorkspaceMode, setOwnerWorkspaceMode] = useState(false);
+  // The founder uses the same WOVO as customers. Operations is a tool that
+  // opens on request, not the product the owner is dropped into.
+  const [ownerWorkspaceMode, setOwnerWorkspaceMode] = useState(true);
   const [resumedIntent, setResumedIntent] = useState<ResumedGenerationIntent | null>(null);
 
   const authedFetch = useCallback(async (url: string, init?: RequestInit) => {
@@ -703,6 +705,17 @@ export default function PortalPage() {
                 ))}
               </select>
             </div>
+          ) : null}
+          {snapshot.mode === "staff" && snapshot.staffRole === "owner" ? (
+            <button
+              className="min-h-11 rounded-xl border border-white/10 px-3 text-sm text-white/50 hover:border-[#f05a3a]/50 hover:text-white"
+              onClick={() => {
+                setOwnerWorkspaceMode(false);
+                window.scrollTo({ top: 0 });
+              }}
+            >
+              Operations
+            </button>
           ) : null}
           <button
             className="min-h-11 rounded-xl border border-white/10 px-3 text-sm text-white/65 hover:border-[#f05a3a]/50 hover:text-white"
@@ -3440,9 +3453,7 @@ function CreatorWorkbench({
         });
         const payload = await readJsonResponse<{ error?: string; job?: { id: string }; reserved_credits?: number; owner_exempt?: boolean }>(response);
         if (!response.ok || !payload.job?.id) throw new Error(payload.error ?? "The video render could not start.");
-        setNotice(payload.owner_exempt
-          ? "Your private video render started. It will appear here when WOVO finishes."
-          : `${payload.reserved_credits ?? 0} credits reserved. The playable video will appear here when WOVO finishes.`);
+        setNotice(`${payload.reserved_credits ?? 0} credits reserved. The playable video will appear here when WOVO finishes.`);
         form.reset();
         await refreshMediaJobs();
       } catch (reason) {

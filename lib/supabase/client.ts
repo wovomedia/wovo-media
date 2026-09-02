@@ -109,20 +109,45 @@ function defaultHeaders(): Headers {
   return h;
 }
 
+/**
+ * Carries the HTTP status next to the message. Session recovery has to tell a
+ * rejected refresh token apart from a network blip: the first means the person
+ * is signed out, the second means try again shortly.
+ */
+export class SupabaseRequestError extends Error {
+  readonly status: number | null;
+  constructor(message: string, status: number | null) {
+    super(message);
+    this.name = "SupabaseRequestError";
+    this.status = status;
+  }
+}
+
 async function supabaseFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = defaultHeaders();
   if (init?.headers) {
     const merge = new Headers(init.headers);
     merge.forEach((v, k) => headers.set(k, v));
   }
-  const response = await fetch(`${supabaseUrl}${path}`, { ...init, headers, cache: "no-store" });
+  let response: Response;
+  try {
+    response = await fetch(`${supabaseUrl}${path}`, { ...init, headers, cache: "no-store" });
+  } catch (cause) {
+    // Offline, DNS failure, a laptop waking up. Status stays null so callers
+    // keep the stored session rather than signing the person out.
+    throw new SupabaseRequestError(
+      cause instanceof Error ? cause.message : "Network request failed",
+      null,
+    );
+  }
   const text = await response.text();
   const json = text ? (JSON.parse(text) as T & { msg?: string; error_description?: string }) : null;
   if (!response.ok) {
-    throw new Error(
+    throw new SupabaseRequestError(
       (json as { msg?: string } | null)?.msg ??
       (json as { error_description?: string } | null)?.error_description ??
-      `Supabase request failed (${response.status}).`
+      `Supabase request failed (${response.status}).`,
+      response.status,
     );
   }
   return json as T;

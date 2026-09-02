@@ -46,17 +46,17 @@ export default function ResetPasswordPage() {
       description="Recovery links are time-limited. Use a unique password with at least 10 characters."
     >
       <form onSubmit={submit}>
-        <label className="block text-sm font-semibold text-[#3f3b35]">
+        <label className="block text-sm font-semibold text-white/80">
           New password
           <input required autoComplete="new-password" minLength={10} type="password" value={password} onChange={(event) => setPassword(event.target.value)} className={authInputClass} />
         </label>
-        <label className="mt-4 block text-sm font-semibold text-[#3f3b35]">
+        <label className="mt-4 block text-sm font-semibold text-white/80">
           Confirm new password
           <input required autoComplete="new-password" minLength={10} type="password" value={confirmation} onChange={(event) => setConfirmation(event.target.value)} className={authInputClass} />
         </label>
         <button disabled={loading} className={`${authPrimaryButtonClass} mt-5`}>{loading ? "Saving securely…" : "Save new password"}</button>
       </form>
-      {error ? <p role="alert" className="mt-4 rounded-xl border border-red-700/15 bg-red-50 p-3 text-sm leading-6 text-red-800">{error}</p> : null}
+      {error ? <p role="alert" className="mt-4 rounded-xl border border-red-400/25 bg-red-500/10 p-3 text-sm leading-6 text-red-200">{error}</p> : null}
     </AuthFrame>
   );
 }

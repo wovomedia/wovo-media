@@ -59,7 +59,7 @@ export default function LoginPage() {
       description="Use the same method you chose when you created your account."
     >
       <form onSubmit={(event) => void loginWithEmail(event)}>
-        <label className="block text-sm font-semibold text-[#3f3b35]">
+        <label className="block text-sm font-semibold text-white/80">
           Email address
           <input
             required
@@ -72,7 +72,7 @@ export default function LoginPage() {
             className={authInputClass}
           />
         </label>
-        <label className="mt-4 block text-sm font-semibold text-[#3f3b35]">
+        <label className="mt-4 block text-sm font-semibold text-white/80">
           Password
           <input
             required
@@ -84,15 +84,15 @@ export default function LoginPage() {
           />
         </label>
         <div className="mt-3 flex justify-end">
-          <Link href="/forgot-password" className="inline-flex min-h-11 items-center text-sm font-bold text-[#d94326] underline-offset-4 hover:underline">Forgot password?</Link>
+          <Link href="/forgot-password" className="inline-flex min-h-11 items-center text-sm font-bold text-[#ff8c70] underline-offset-4 hover:underline">Forgot password?</Link>
         </div>
         <button disabled={loading} className={`${authPrimaryButtonClass} mt-2`}>{loading ? "Signing in…" : "Sign in"}</button>
       </form>
-      {notice ? <p role="status" className="mt-4 rounded-xl border border-[#f05a3a]/22 bg-[#f05a3a]/10 p-3 text-sm leading-6 text-[#8f301f]">{notice}</p> : null}
-      {error ? <p role="alert" className="mt-4 rounded-xl border border-red-700/15 bg-red-50 p-3 text-sm leading-6 text-red-800">{error}</p> : null}
-      <p className="mt-6 text-center text-sm text-[#756e64]">
+      {notice ? <p role="status" className="mt-4 rounded-xl border border-[#f05a3a]/22 bg-[#f05a3a]/10 p-3 text-sm leading-6 text-[#ff9b82]">{notice}</p> : null}
+      {error ? <p role="alert" className="mt-4 rounded-xl border border-red-400/25 bg-red-500/10 p-3 text-sm leading-6 text-red-200">{error}</p> : null}
+      <p className="mt-6 text-center text-sm text-white/45">
         New to WOVO?{" "}
-        <Link href="/signup?next=/portal" className="inline-flex min-h-11 items-center font-bold text-[#d94326] underline-offset-4 hover:underline">Create an account</Link>
+        <Link href="/signup?next=/portal" className="inline-flex min-h-11 items-center font-bold text-[#ff8c70] underline-offset-4 hover:underline">Create an account</Link>
       </p>
     </AuthFrame>
   );

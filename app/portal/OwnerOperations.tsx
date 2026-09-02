@@ -349,10 +349,9 @@ export default function OwnerOperations({
               <section className={`${surface} overflow-hidden`}>
                 <div className="grid xl:grid-cols-[.72fr_1.28fr]">
                   <div className="bg-[#191714] p-6 text-white sm:p-8">
-                    <p className="text-xs font-bold uppercase tracking-[.16em] text-[#ff8c70]">Owner access</p>
-                    <h2 className="mt-3 text-3xl font-medium tracking-[-.04em]">Unlimited internal creation. Tenant-safe delivery.</h2>
-                    <p className="mt-4 text-sm leading-6 text-white/65">The Create tab opens the full Studio as soon as an active client workspace exists.</p>
-                    <div className="mt-6 rounded-2xl border border-white/10 bg-white/[.06] p-4"><p className="text-sm font-bold">Credits</p><p className="mt-1 text-3xl font-semibold text-[#ff8c70]">∞</p><p className="mt-1 text-xs leading-5 text-white/50">Server-verified owner exemption. Customer balances are unchanged.</p></div>
+                    <p className="text-xs font-bold uppercase tracking-[.16em] text-[#ff8c70]">Client production</p>
+                    <h2 className="mt-3 text-3xl font-medium tracking-[-.04em]">Create against a client workspace.</h2>
+                    <p className="mt-4 text-sm leading-6 text-white/65">The Create tab opens the full Studio as soon as an active client workspace exists. Every asset records the client that owns it.</p>
                   </div>
                   <div className="p-5 sm:p-7">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-bold uppercase tracking-[.14em] text-[#d94326]">Client workspaces</p><h3 className="mt-2 text-2xl font-semibold">Open a focused studio</h3></div><input aria-label="Search brands to create for" value={search} onChange={(event) => setSearch(event.target.value)} className={`${field} sm:max-w-72`} placeholder="Search business or email" /></div>

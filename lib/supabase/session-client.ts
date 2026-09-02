@@ -1,5 +1,6 @@
 import type { Session } from "@/lib/supabase/client";
 import { supabase } from "@/lib/supabase/client";
+import { accessTokenExpired, isDefinitiveAuthFailure } from "@/lib/supabase/session-recovery";
 
 export const STORAGE_KEY = "wovo-supabase-session";
 let refreshPromise: Promise<Session | null> | null = null;
@@ -30,21 +31,44 @@ export function clearSession() {
   supabase.setAccessToken(null);
 }
 
-function accessTokenExpiresSoon(accessToken: string): boolean {
-  try {
-    const segment = accessToken.split(".")[1];
-    const padding = "=".repeat((4 - segment.length % 4) % 4);
-    const payload = JSON.parse(atob((segment + padding).replace(/-/g, "+").replace(/_/g, "/"))) as { exp?: number };
-    return !payload.exp || payload.exp * 1000 <= Date.now() + 60_000;
-  } catch {
-    return true;
+// Refresh a minute early so a request never races its own token expiry.
+const REFRESH_BUFFER_MS = 60_000;
+
+async function refreshStoredSession(refreshToken: string): Promise<Session | null> {
+  const { data, error } = await supabase.auth.refreshSession(refreshToken);
+  if (data.session) {
+    persistSession(data.session);
+    return data.session;
   }
+
+  // Supabase refresh tokens are single use. If another tab rotated the token
+  // while this request was in flight, the loser of that race is rejected even
+  // though the person is still perfectly signed in.
+  const current = readSessionFromStorage();
+  if (current?.refresh_token && current.refresh_token !== refreshToken) {
+    supabase.setAccessToken(current.access_token);
+    return current;
+  }
+
+  if (isDefinitiveAuthFailure(error)) {
+    clearSession();
+    return null;
+  }
+
+  // Transient failure: offline, a timeout, a 5xx. Keep the stored session so a
+  // later call can recover, and keep using the current token if it has not
+  // actually expired yet.
+  if (current && !accessTokenExpired(current.access_token, 0)) {
+    supabase.setAccessToken(current.access_token);
+    return current;
+  }
+  return null;
 }
 
 export async function getActiveSession(): Promise<Session | null> {
   const stored = readSessionFromStorage();
   if (!stored) return null;
-  if (!accessTokenExpiresSoon(stored.access_token)) {
+  if (!accessTokenExpired(stored.access_token, REFRESH_BUFFER_MS)) {
     supabase.setAccessToken(stored.access_token);
     return stored;
   }
@@ -53,18 +77,9 @@ export async function getActiveSession(): Promise<Session | null> {
     return null;
   }
   if (!refreshPromise) {
-    refreshPromise = supabase.auth.refreshSession(stored.refresh_token)
-      .then(({ data, error }) => {
-        if (error || !data.session) {
-          clearSession();
-          return null;
-        }
-        persistSession(data.session);
-        return data.session;
-      })
-      .finally(() => {
-        refreshPromise = null;
-      });
+    refreshPromise = refreshStoredSession(stored.refresh_token).finally(() => {
+      refreshPromise = null;
+    });
   }
   return refreshPromise;
 }

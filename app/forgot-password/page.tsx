@@ -30,15 +30,15 @@ export default function ForgotPasswordPage() {
       description="Enter your account email. The response stays the same whether or not the address is registered."
     >
       <form onSubmit={submit}>
-        <label className="block text-sm font-semibold text-[#3f3b35]">
+        <label className="block text-sm font-semibold text-white/80">
           Email address
           <input required autoComplete="email" inputMode="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@business.com" className={authInputClass} />
         </label>
         <button disabled={loading} className={`${authPrimaryButtonClass} mt-5`}>{loading ? "Sending securely…" : "Send recovery link"}</button>
       </form>
-      {message ? <p role="status" className="mt-4 rounded-xl border border-[#f05a3a]/22 bg-[#f05a3a]/10 p-3 text-sm leading-6 text-[#8f301f]">{message}</p> : null}
+      {message ? <p role="status" className="mt-4 rounded-xl border border-[#f05a3a]/22 bg-[#f05a3a]/10 p-3 text-sm leading-6 text-[#ff9b82]">{message}</p> : null}
       <div className="mt-5 text-center">
-        <Link href="/login?next=/portal" className="inline-flex min-h-11 items-center text-sm font-bold text-[#d94326] underline-offset-4 hover:underline">Back to sign in</Link>
+        <Link href="/login?next=/portal" className="inline-flex min-h-11 items-center text-sm font-bold text-[#ff8c70] underline-offset-4 hover:underline">Back to sign in</Link>
       </div>
     </AuthFrame>
   );
