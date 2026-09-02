@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { customerSafeMessage, internalErrorCode } from "@/lib/errors/customer-safe";
 import { NextResponse } from "next/server";
 import { formatBusinessContext, type BusinessContext, normalizeBusinessContext } from "@/lib/wovo-ai/business-context";
 import { guardAiRequest, toAiGuardErrorResponse } from "@/lib/wovo-ai/request-guard";
@@ -63,6 +64,7 @@ export async function POST(request: Request) {
   } catch (error) {
     const g = toAiGuardErrorResponse(error);
     if (g) return g;
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to generate reply." }, { status: 500 });
+    console.error("wovo_chat_failed", { code: internalErrorCode(error, "WOVO_CHAT_FAILED") });
+    return NextResponse.json({ error: customerSafeMessage(error, "Unable to generate reply.") }, { status: 500 });
   }
 }

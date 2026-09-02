@@ -1,8 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { quoteMusicTrack, quoteShortVideo, quoteSocialPostImage } from "../lib/ai/provider-models.ts";
-import { WOVO_PLAN_TERMS } from "../lib/portal/pricing-catalog.ts";
+import {
+  AI_RETAIL_CREDIT_FLOOR_MICROS,
+  quoteMusicTrack,
+  quoteShortVideo,
+  quoteSocialPostImage,
+} from "../lib/ai/provider-models.ts";
+import { creditPackUnitsForDollars, WOVO_PLAN_TERMS } from "../lib/portal/pricing-catalog.ts";
 import {
   maxMonthlyCreditsForMargin,
   planTermEconomics,
@@ -82,4 +87,57 @@ test("raising an allowance to the requested marketing range would break the floo
     "500 Starter credits should not silently pass the floor",
   );
   assert.ok(stretched.contributionCentsPerMonth > 0, "500 Starter credits should still be gross-profitable");
+});
+
+// Every route a customer has to acquire a credit, as dollars of revenue per
+// credit. Margin safety must be checked against the cheapest of these, never
+// against the most expensive plan.
+function lowestRevenuePerCredit() {
+  const subscriptions = WOVO_PLAN_TERMS.map(
+    (option) => option.effectiveMonthlyCents / 100 / option.monthlyCredits,
+  );
+  const currentPacks = 1 / 11;               // flat 11 credits per dollar, no volume bonus
+  const legacyStudioPack = 25 / 300;         // still allowlisted so open Checkout Sessions can finish
+  return Math.min(...subscriptions, currentPacks, legacyStudioPack);
+}
+
+test("the registry floor never assumes more revenue than a customer can actually pay", () => {
+  const lowest = lowestRevenuePerCredit();
+  assert.ok(
+    AI_RETAIL_CREDIT_FLOOR_MICROS / 1_000_000 <= lowest + 1e-9,
+    `floor $${AI_RETAIL_CREDIT_FLOOR_MICROS / 1_000_000}/credit exceeds the cheapest real rate $${lowest.toFixed(6)}/credit`,
+  );
+});
+
+test("no enabled generation loses money at the cheapest credit a customer can buy", () => {
+  const lowest = lowestRevenuePerCredit();
+  const quotes = [
+    quoteSocialPostImage(),
+    quoteShortVideo(false),
+    quoteShortVideo(true),
+    quoteMusicTrack("economy", 30),
+    quoteMusicTrack("economy", 180),
+    quoteMusicTrack("premium", 180),
+  ];
+  for (const quote of quotes) {
+    const costPerCredit = quote.estimatedProviderCostMicros / 1_000_000 / quote.customerCredits;
+    const margin = (lowest - costPerCredit) / lowest;
+    assert.ok(
+      margin >= 0.8,
+      `${quote.workflow} keeps only ${(margin * 100).toFixed(1)}% at $${lowest.toFixed(6)}/credit`,
+    );
+  }
+});
+
+test("credit packs carry no volume bonus that would undercut the floor", () => {
+  // A bigger pack must never buy a cheaper credit than a small one.
+  const rates = [10, 20, 50, 100, 500, 1000].map(
+    (dollars) => dollars / creditPackUnitsForDollars(dollars),
+  );
+  const cheapest = Math.min(...rates);
+  const dearest = Math.max(...rates);
+  assert.ok(
+    dearest - cheapest < 1e-9,
+    `pack pricing is no longer flat (${cheapest.toFixed(6)}–${dearest.toFixed(6)}/credit) — re-check margin safety`,
+  );
 });

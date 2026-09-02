@@ -7,7 +7,7 @@
     "build": "node scripts/verify-deployment-env.mjs && next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test tests/trusted-authorization.test.mts tests/provider-models.test.mts tests/pricing-catalog.test.mts tests/signup-credit-grant.test.mts tests/usage-policy.test.mts tests/video-ledger.test.mts tests/music-ledger.test.mts tests/social-publishing-foundation.test.mts tests/creator-navigation.test.mts tests/ui-truthfulness.test.mts tests/adam-routing.test.mts tests/pricing-economics.test.mts tests/session-persistence.test.mts"
+    "test": "node --test tests/trusted-authorization.test.mts tests/provider-models.test.mts tests/pricing-catalog.test.mts tests/signup-credit-grant.test.mts tests/usage-policy.test.mts tests/video-ledger.test.mts tests/music-ledger.test.mts tests/social-publishing-foundation.test.mts tests/creator-navigation.test.mts tests/ui-truthfulness.test.mts tests/adam-routing.test.mts tests/pricing-economics.test.mts tests/session-persistence.test.mts tests/customer-safe-errors.test.mts"
   },
   "dependencies": {
     "@fal-ai/client": "^1.10.1",
