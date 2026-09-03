@@ -785,7 +785,7 @@ function escapeHtml(value: string): string {
 
 function requireOwner(context: PortalContext) {
   if (context.mode !== "staff" || context.staffRole !== "owner") {
-    throw new PortalHttpError(403, "President / owner access is required.");
+    throw new PortalHttpError(403, "This action is not available on your account.");
   }
 }
 

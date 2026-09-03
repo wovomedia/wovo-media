@@ -3,7 +3,7 @@
 **Read this before touching anything.** For Codex, ChatGPT, Claude Code, VS Code,
 and any future agent.
 
-Last updated: **2026-09-02** by Claude (Cowork session).
+Last updated: **2026-09-03** by Claude (Cowork session).
 Status labels are literal: `PASS` means it was actually run and observed.
 Anything not tested says so.
 
@@ -13,25 +13,27 @@ Anything not tested says so.
 
 | | |
 |---|---|
-| Canonical `.git` | `C:\Users\1xpay\OneDrive\Desktop\wovo-media` (branch `main`, working tree **stale**) |
-| **Working tree in use** | `C:\Users\1xpay\.codex\worktrees\a051\wovo-media` — all work happens here |
+| **Canonical repository** | `C:\Users\1xpay\wovo-media` — working tree and `.git` together, one place, outside OneDrive |
 | Branch | `wovo-v2` |
-| HEAD | `b78355e38a13c044eba1115339ea1369a060b937` |
+| HEAD | `1799fe5d05ef944bb5e90b95864b0f21eeabbde9` |
 | Uncommitted tracked files | **0** (clean) |
 | Remote | `https://github.com/wovomedia/wovo-media.git` |
-| Ahead of `origin/main` | **52 commits — NOT PUSHED** |
-| Deployment script | `C:\Users\1xpay\OneDrive\Desktop\Deploy WOVO.bat` |
-| Backup script | `C:\Users\1xpay\OneDrive\Desktop\Back up WOVO to GitHub.bat` |
-| Deployment source dir | the `a051` worktree above |
+| Ahead of `origin/main` | **55 commits — NOT PUSHED** |
+| Deployment script | Desktop → `Deploy WOVO.bat` |
+| Backup script | Desktop → `Back up WOVO to GitHub.bat` |
+| Run locally | Desktop → `Run WOVO Locally.bat` (`npm ci` ~20s; tsc, eslint and 70 tests all run locally) |
+| Open the folder | Desktop → `Open WOVO Folder.bat` |
+| Retired, do not edit | `OneDrive\Desktop\wovo-media` and `.codex\worktrees\a051\wovo-media`, both carrying `README-RETIRED.md`. Kept only until `wovo-v2` is pushed to GitHub. |
+| Deployment source dir | the canonical repository above |
 | Production URL | https://wovomedia.com |
 | Vercel project | `wovo-media` · `prj_8EOBWflTMlmfhkVNcCIeBWcFtuis` · team `team_Quckvj8AA5WNLgwXOk56cHX2` |
 | Supabase | `WovoMedia` · ref `dadbukxeayosvkqcrzfm` |
 | Stripe | live account `acct_1SekXmFmIvQosWF9` |
 
-**GitHub is 52 commits behind and does not contain V2.** Never trigger a
+**GitHub is 55 commits behind and does not contain V2.** Never trigger a
 git-based Vercel deploy — it would build `origin/main` and ship the old
 Nova/employee product over the live site. Deploys are Vercel CLI pushes from the
-worktree.
+canonical repository.
 
 ---
 
@@ -44,8 +46,8 @@ The owner **manually ran `Deploy WOVO.bat`** on 2026-09-02.
 | Deployment | `dpl_cfo45XdLCxewg9m9s366T5p4eN9L` |
 | State | `READY`, target `production` |
 | Commit deployed | `b78355e` (`gitCommitRef: wovo-v2`, `gitDirty: 1`) |
-| Production matches local HEAD | **YES** — same SHA, working tree clean, live UI observed matching the new code |
-| Another deploy required? | **No.** The only commit since `b78355e` is `de03ba3`, which adds this file and `AGENTS.md` — documentation only, no runtime code. Any commit that touches code needs the .bat run again. |
+| Production matches local HEAD | **NO** — production is behind by the 2026-09-03 commits |
+| Another deploy required? | **YES — production is stale.** Live is `b78355e`. The legacy-workspace removal of 2026-09-03 is committed locally but **not deployed**. Until `Deploy WOVO.bat` is run, signed-in customers still see the old agency dashboard. |
 
 `gitDirty: 1` reflects untracked/ignored files present at deploy time (e.g. the
 backup bundle), not uncommitted source.
@@ -88,27 +90,56 @@ Also redirected: `/workspace` → `/`, `/wovo-ai/creator/[username]` → `/porta
 The founder now uses the same `/portal` as customers. **Server-side entitlements
 were not changed** — this was a visibility fix.
 
-### STILL REACHABLE — the biggest remaining problem
+### REMOVED on 2026-09-03 — the legacy workspace is gone
 
-**`/portal` is still the legacy client-portal dashboard.** Verified live in a
-browser on 2026-09-02 after deploy, signed in as a real account:
+Every item below was on screen for a signed-in customer on 2026-09-02 and was
+deleted from the source on 2026-09-03. Each is pinned by a test in
+`tests/ui-truthfulness.test.mts` or `tests/creator-navigation.test.mts`, so a
+future agent cannot quietly reintroduce it.
 
 | Legacy element | Status |
 |---|---|
-| `Wovo QA Diner` / "Client marketing workspace" header | **STILL REACHABLE** (that workspace is a QA test account, but the shell is the old one for everyone) |
-| `WOVO CREATION TOOLS` sidebar heading | **STILL REACHABLE** |
-| AI Images / AI Video / Cartoon Studio / Social Campaigns / Website Builder / AI Music / Projects / Publish sidebar tiles | **STILL REACHABLE** |
-| "Upload required brand assets." | **STILL REACHABLE** |
-| "Workspace progress 1/4" | **STILL REACHABLE** |
-| "Message WOVO — Open your private shared support channel" | **STILL REACHABLE** |
-| "Billing stays separate from add-ons. The core workspace is inactive." | **STILL REACHABLE** |
-| "KEEP BUILDING THIS WORKSPACE / Your preview is ready. Unlock the working version." | **STILL REACHABLE** (leftover paywall copy on the upgrade card) |
-| Old cream/black client dashboard styling | **STILL REACHABLE** |
-| Agency framing: "assigned WOVO representative", "WOVO team posting task", "client portal" | **STILL REACHABLE** |
+| "Client marketing workspace" header | **REMOVED** |
+| "WOVO creation tools" heading and its product tiles | **REMOVED** |
+| "Upload required brand assets." | **REMOVED** |
+| "Workspace progress 1/4" meter | **REMOVED** |
+| "Message WOVO — Open your private shared support channel" | **REMOVED** (the whole Inbox tab is gone) |
+| "Your preview is ready. Unlock the working version." | **REMOVED** |
+| "assigned WOVO representative" | **REMOVED** |
+| "WOVO Media client portal" footer | **REMOVED** |
+| Old cream/black dashboard styling | **REMOVED** — the content surface is dark |
+| Staff workspace: client switcher, public-inquiry replies, "President / owner" badge | **REMOVED** |
+| "Owner-protected settings / cross-client controls" in Settings | **REMOVED** |
+| Plan / add-on / employee-invite onboarding wizard | **REMOVED** — replaced by one short screen |
 
-`Website Builder` and `Cartoon Studio` are listed as creation tools but the
-2026-08-30 audit records them as prototype / gated. **Treat them as suspected
-dead buttons until proven otherwise.**
+`app/portal/page.tsx` went from **6,390 to 4,908 lines**. Checked against the
+build output: none of these strings appear in `.next/` any more.
+
+### STILL PRESENT — server side only, no UI reaches it
+
+| Remnant | Why it is still there |
+|---|---|
+| `mode: "staff"` in `lib/portal/server.ts` and ~15 authorization checks in `app/api/portal/route.ts` | It gates authorization, not UI. Ripping it out is a separate, riskier refactor. No customer-facing surface reads it any more. |
+| `/api/portal/adam`, `/api/portal/operator`, owner-gated branches of `/api/portal/publishing` | Dead endpoints from the deleted owner panel. They deny every non-owner caller, no UI calls them, and their 403 text no longer leaks internal role names. |
+
+Deleting those routes is a good next task; it was left undone rather than done
+carelessly.
+
+### NEEDS VERIFICATION — the new onboarding
+
+The rebuilt onboarding screen is the **only** path that creates a workspace and
+releases the ten one-time starter credits. It compiles, typechecks and is covered
+by string-level tests, but **no human has completed it since the rewrite**. A real
+signup is the first thing to check after the next deploy.
+
+### Companion documents added 2026-09-03
+
+- `docs/FEATURE_MATRIX.md` — every feature with an honest status. Read it before
+  telling anyone what WOVO can do.
+- `docs/AD_SPEND_WALLET.md` — wallet design and the legal/accounting gate that
+  blocks it. Not a feature flag; a company-risk decision.
+- `docs/MOBILE_APP_RELEASE.md` — what shipping the apps actually requires, with
+  the app-store billing rules as they stood on 2026-09-03.
 
 This is the single largest gap between the shipped product and
 `docs/WOVO_MASTER_PRODUCT_DEFINITION.md`, and it is priority 1.

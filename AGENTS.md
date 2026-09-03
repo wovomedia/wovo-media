@@ -7,9 +7,13 @@ file and `docs/AI_HANDOFF.md` ever disagree, the handoff wins.
 
 Then read the product specs — they are the source of truth for product intent:
 
+- `docs/FEATURE_MATRIX.md` — what is actually built, with honest statuses. Read
+  this before claiming WOVO can do anything.
 - `docs/WOVO_MASTER_PRODUCT_DEFINITION.md`
 - `docs/ADAM_FOLLOW_UP_SUGGESTIONS.md`
 - `docs/BRAND_ASSETS.md`
+- `docs/AD_SPEND_WALLET.md` — design only, blocked behind a legal/accounting gate
+- `docs/MOBILE_APP_RELEASE.md` — not started; store rules move, re-check before use
 
 ---
 

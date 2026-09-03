@@ -101,7 +101,7 @@ function optionalHttpUrl(value: unknown, label: string): string | null {
 export async function requireAdamOwner(authHeader: string | null): Promise<AdamContext> {
   const context = await requirePortalContext(authHeader);
   if (context.mode !== "staff" || context.staffRole !== "owner") {
-    throw new PortalHttpError(403, "President / owner access is required for Adam Operations.");
+    throw new PortalHttpError(403, "This action is not available on your account.");
   }
   return context as AdamContext;
 }
