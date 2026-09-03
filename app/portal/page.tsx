@@ -123,6 +123,18 @@ export default function PortalPage() {
   const [snapshot, setSnapshot] = useState<PortalSnapshot | null>(null);
   const [accountId, setAccountId] = useState("");
   const [tab, setTab] = useState<Tab>("queue");
+  // Someone who clicked a plan on /pricing arrives with ?plan=…&term=…, and
+  // BillingCard preselects from those. Show the plan card immediately for them;
+  // for everyone else keep it off the composer so a free customer meets the
+  // product before they meet a price.
+  const creditBalance = accountId
+    ? (snapshot?.creditAccounts.find((item) => item.account_id === accountId)
+        ?.balance ?? 0)
+    : 0;
+  const [arrivedFromPricing] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return new URLSearchParams(window.location.search).has("plan");
+  });
   const [creatorMode, setCreatorMode] = useState<CreatorMode>("post");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState("");
@@ -422,13 +434,40 @@ export default function PortalPage() {
               </button>
             ))}
           </nav>
+          {account ? (
+            <div className="mt-4 hidden rounded-2xl border border-white/10 bg-white/[.035] p-4 sm:block">
+              <p className="text-[10px] font-bold uppercase tracking-[.16em] text-white/35">
+                WOVO Credits
+              </p>
+              <p className="mt-2 text-3xl font-semibold leading-none">
+                {creditBalance.toLocaleString()}
+              </p>
+              <p className="mt-2 text-[11px] leading-4 text-white/38">
+                Server-authoritative. Every job shows its cost before it runs.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setTab("studio");
+                  window.requestAnimationFrame(() =>
+                    document
+                      .getElementById("credit-packs")
+                      ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+                  );
+                }}
+                className="mt-3 inline-flex min-h-10 w-full items-center justify-center rounded-xl bg-white text-xs font-bold text-black transition hover:bg-white/85"
+              >
+                Buy credits
+              </button>
+            </div>
+          ) : null}
         </aside>
 
         <section className="min-w-0 rounded-2xl border border-white/10 bg-[#111011] p-3 text-[#f7f4ee] sm:p-5">
           {notice ? (
             <div
               role="status"
-              className="mb-4 rounded-2xl border border-[#f05a3a]/20 bg-[#f05a3a]/10 p-4 text-sm text-[#8f301f]"
+              className="mb-4 rounded-2xl border border-[#f05a3a]/25 bg-[#f05a3a]/10 p-4 text-sm text-[#ffb9a4]"
             >
               {notice}
             </div>
@@ -436,12 +475,14 @@ export default function PortalPage() {
           {error ? (
             <div
               role="alert"
-              className="mb-4 rounded-2xl border border-[#b42318]/25 bg-[#fff1ed] p-4 text-sm text-[#8f2118]"
+              className="mb-4 rounded-2xl border border-[#b42318]/40 bg-[#b42318]/12 p-4 text-sm text-[#ffb4a6]"
             >
               {error}
             </div>
           ) : null}
-          {!isPaid && account ? (
+          {!isPaid
+          && account
+          && (arrivedFromPricing || tab === "overview" || tab === "services") ? (
             <BillingCard
               snapshot={snapshot}
               account={account}

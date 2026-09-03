@@ -247,7 +247,7 @@ export default function PricingExperience() {
             </button>
           ))}
         </div>
-        <div className="mt-8 grid gap-4 lg:grid-cols-4">
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {PLANS.map((plan) => {
             const price = termPrice(plan.id, plan.price, term);
             const recommended = recommendedPlan?.id === plan.id;
@@ -256,16 +256,23 @@ export default function PricingExperience() {
                 key={plan.id}
                 className={`relative flex min-h-[480px] flex-col rounded-[26px] border p-6 ${plan.id === "creator" ? "border-[#f05a3a] bg-[#1b1716] shadow-[0_24px_80px_rgba(240,90,58,.14)]" : "border-white/10 bg-[#141415]"}`}
               >
-                {plan.badge ? (
-                  <span className="absolute right-4 top-4 rounded-full bg-[#f05a3a] px-3 py-1 text-[9px] font-black uppercase tracking-[.12em] text-black">
-                    {plan.badge}
-                  </span>
-                ) : null}
-                {recommended ? (
-                  <span className="mb-4 w-fit rounded-full border border-white/10 bg-white/[.06] px-2.5 py-1 text-[9px] font-bold uppercase tracking-[.1em] text-white/65">
-                    Recommended for your estimate
-                  </span>
-                ) : null}
+                {/* Both badges share one wrapping row. "Most popular" used to be
+                    absolutely positioned at the top-right, so on the Creator card
+                    it sat on top of the recommendation pill. The row is always
+                    rendered, with a reserved height, so plan names line up across
+                    all four cards whether or not a card carries a badge. */}
+                <div className="mb-4 flex min-h-[22px] flex-wrap items-center gap-2">
+                  {plan.badge ? (
+                    <span className="rounded-full bg-[#f05a3a] px-3 py-1 text-[9px] font-black uppercase tracking-[.12em] text-black">
+                      {plan.badge}
+                    </span>
+                  ) : null}
+                  {recommended ? (
+                    <span className="rounded-full border border-white/10 bg-white/[.06] px-2.5 py-1 text-[9px] font-bold uppercase tracking-[.1em] text-white/65">
+                      Recommended for you
+                    </span>
+                  ) : null}
+                </div>
                 <h2 className="text-xl font-semibold">{plan.name}</h2>
                 <p className="mt-2 min-h-11 text-sm leading-6 text-white/42">
                   {plan.audience}
