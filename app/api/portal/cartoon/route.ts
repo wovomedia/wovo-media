@@ -7,7 +7,7 @@ import { cartoonProviderStatus, getValidatedCartoonSeriesPrice } from "@/lib/por
 import { assertPortalAccountAccess, isUuid, optionalString, PortalHttpError, requiredString, requirePortalContext, type PortalContext } from "@/lib/portal/server";
 import { supabaseServiceRoleRequest } from "@/lib/supabase/server";
 import { ensureStripeCustomerForUser } from "@/lib/wovo-ai/billing";
-import { customerSafeMessage, internalErrorCode } from "@/lib/errors/customer-safe";
+import { customerSafeMessage } from "@/lib/errors/customer-safe";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

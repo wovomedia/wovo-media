@@ -9,7 +9,7 @@ import { checkAiRateLimit } from "@/lib/wovo-ai/rate-limit";
 import { assertPortalAccountAccess, PortalHttpError, requirePortalContext } from "@/lib/portal/server";
 import { signedMediaUrl } from "@/lib/wovo-ai/media-token";
 import { ensureWorkspaceUsagePolicy } from "@/lib/wovo-ai/usage-policy";
-import { customerSafeMessage, internalErrorCode } from "@/lib/errors/customer-safe";
+import { customerSafeMessage } from "@/lib/errors/customer-safe";
 
 type CreateVideoBody = {
   prompt?: string;

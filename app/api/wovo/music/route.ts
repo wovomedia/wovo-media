@@ -9,7 +9,7 @@ import { checkAiRateLimit } from "@/lib/wovo-ai/rate-limit";
 import { isUuid } from "@/lib/wovo-ai/feed-utils";
 import { signedMediaUrl } from "@/lib/wovo-ai/media-token";
 import { ensureWorkspaceUsagePolicy } from "@/lib/wovo-ai/usage-policy";
-import { customerSafeMessage, internalErrorCode } from "@/lib/errors/customer-safe";
+import { customerSafeMessage } from "@/lib/errors/customer-safe";
 
 export const runtime = "nodejs";
 

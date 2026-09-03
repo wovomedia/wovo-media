@@ -7,7 +7,7 @@ import { getEnv } from "@/lib/env";
 import { requireServerUser, supabaseServiceRoleRequest } from "@/lib/supabase/server";
 import { asRecord, asString, isEligibleFeedPost } from "@/lib/wovo-ai/feed-utils";
 import { signedMediaUrl, verifyMediaAccess } from "@/lib/wovo-ai/media-token";
-import { customerSafeMessage, internalErrorCode } from "@/lib/errors/customer-safe";
+import { customerSafeMessage } from "@/lib/errors/customer-safe";
 
 type VideoJobRow = {
   id: string;
