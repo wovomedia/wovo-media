@@ -540,27 +540,38 @@ connections, brand assets, Computer, mobile). Adapt patterns; never clone.
 
 ## 17. Next 10 priorities
 
-Ranked on what is actually true as of 2026-09-02.
+Ranked on what is actually true as of 2026-09-03, after the legacy workspace
+removal. The first three are all blocked on the same thing: a deploy.
 
-1. **Replace the legacy `/portal` dashboard** with the V2 workspace shell.
-   This is the last place the old product still lives for signed-in customers.
-2. **Run a real image generation canary** end to end: generate → asset stored →
-   credits metered → downloadable. Nothing in section 9 is proven yet.
-3. **Verify the credit refund path** by forcing a provider failure and confirming
-   reserved credits return.
-4. **Push `wovo-v2` to GitHub** (52 commits exist only on one machine) and decide
-   whether production should deploy from git instead of a laptop worktree.
-5. **Test a real Stripe credit purchase** ($10) and one subscription: checkout →
+1. **Deploy.** Production is `b78355e`; everything from 2026-09-03 is committed
+   locally and not live. Until `Deploy WOVO.bat` runs, signed-in customers still
+   get the old agency dashboard.
+2. **Complete a real signup on production.** The rebuilt onboarding is the only
+   path that creates a workspace and releases the 10 starter credits, and no
+   human has run it since the rewrite. Check: workspace created, exactly 10
+   credits, granted once, and a second attempt grants nothing.
+3. **Run a real image canary** end to end — generate, asset stored, credits
+   metered, file downloads. The core promise is still unproven.
+4. **Verify the credit refund path** by forcing a provider failure and confirming
+   reserved credits come back.
+5. **Push `wovo-v2` to GitHub.** 58 commits exist on one machine. Until that
+   happens the retired folders cannot be deleted, because they are the only
+   other copy.
+6. **Implement free-tier social connection limits** — 2 per platform per
+   workspace, server-enforced, with an `extended_social_connections`
+   entitlement. Currently there is no cap anywhere in the code.
+7. **Test a real Stripe credit purchase** ($10) and one subscription: checkout →
    webhook → ledger → balance → duplicate-webhook protection.
-6. **Confirm every feature flag in the Vercel dashboard** and redeploy after any
-   change (build-time gate — see section 9 caveat).
-7. **Audit `Website Builder` and `Cartoon Studio`** — remove or disable if they
-   are dead buttons.
-8. **Mobile pass** at phone viewport across root, auth, pricing, portal.
-9. **Decide the legacy $25/300 credit pack** — remain, migrate, or stop selling.
-   It currently sets the margin floor.
-10. **Continue the roadmap**: Universal Adam follow-up suggestions → Brand Assets
-    → WOVO Computer, per the specs in section 14.
+8. **Delete the dead owner-only API routes** — `/api/portal/adam`,
+   `/api/portal/operator` and the owner branches of `/api/portal/publishing`.
+   No UI calls them; they only deny.
+9. **Mobile pass** at phone viewport across root, auth, pricing and the
+   workspace, now that the workspace shell has changed.
+10. **Then the roadmap**, in the owner's own order: Adam follow-up suggestions →
+    Adam over Projects and Assets → Brand Assets → Cartoon character
+    references, voices and episode memory → WOVO Computer → Revenue Engine →
+    direct-platform-billing ads. `docs/FEATURE_MATRIX.md` says where each one
+    actually stands; `docs/AD_SPEND_WALLET.md` says why the wallet waits.
 
 ---
 
@@ -603,3 +614,41 @@ availability requires paid canaries and the owner had not approved that spend.
 **What the next agent should do first** — read
 `docs/WOVO_MASTER_PRODUCT_DEFINITION.md`, then start on priority 1: replacing the
 legacy `/portal` dashboard.
+
+---
+
+## 19. Session summary — 2026-09-03
+
+**Repository consolidated.** One canonical folder at `C:\Users\1xpay\wovo-media`,
+outside OneDrive, holding both the working tree and `.git`. It was cloned from the
+old split layout with full history, verified to have the identical HEAD, both
+branches and a clean tree, then given the Vercel link and env file. Four Desktop
+scripts point at it. The two old locations carry `README-RETIRED.md`. Git commands
+that used to take three minutes now return instantly, and `npm ci` takes 20
+seconds, which is what made the rest of this session's verification possible.
+
+**The legacy signed-in product is gone.** `app/portal/page.tsx` went from 6,390 to
+4,908 lines. Removed: the agency dashboard chrome, the staff/owner workspace, the
+plan-first onboarding wizard, the support-channel Inbox, and the cream styling.
+Kept and rebuilt: the workspace creation path that grants the 10 starter credits.
+Every removal is pinned by a test.
+
+**Other fixes.** Pricing badge collision on the Creator card (two badges, one
+absolutely positioned, sitting on top of each other) and a missing two-column
+breakpoint. Credit balance surfaced in the workspace sidebar. Raw provider errors
+stopped in video, music and cartoon. Internal role vocabulary removed from three
+403 messages.
+
+**Documents added.** `FEATURE_MATRIX.md`, `AD_SPEND_WALLET.md`,
+`MOBILE_APP_RELEASE.md`.
+
+**Verified locally, every commit:** `tsc --noEmit` clean, `eslint` 0 errors,
+71/71 tests, `next build` compiles. The `/pricing` fix was additionally checked in
+the rendered HTML of a production build.
+
+**NOT verified, and honestly cannot be from here:** anything requiring a signed-in
+session. The device shell has no route to Supabase and the cloud container is
+likewise blocked, so signup, generation, purchase and refund all remain untested
+until someone exercises them on production.
+
+HEAD at end of session: `de2c249f0b090f9fdc87b3053a67c4c3092bc66d`.
