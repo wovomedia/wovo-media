@@ -45,12 +45,12 @@ The owner **manually ran `Deploy WOVO.bat`** on 2026-09-02.
 | State | `READY`, target `production` |
 | Commit deployed | `b78355e` (`gitCommitRef: wovo-v2`, `gitDirty: 1`) |
 | Production matches local HEAD | **YES** — same SHA, working tree clean, live UI observed matching the new code |
-| Another deploy required? | **No** for current HEAD. Any new commit needs the .bat run again. |
+| Another deploy required? | **No.** The only commit since `b78355e` is `de03ba3`, which adds this file and `AGENTS.md` — documentation only, no runtime code. Any commit that touches code needs the .bat run again. |
 
 `gitDirty: 1` reflects untracked/ignored files present at deploy time (e.g. the
 backup bundle), not uncommitted source.
 
-### Deploying is a manual step — this is a real tool restriction
+### Deploying is a manual step — BLOCKED for agents, by tooling
 
 An agent in this environment **cannot deploy**. All of the following were tested
 and confirmed closed:
