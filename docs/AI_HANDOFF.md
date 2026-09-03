@@ -52,6 +52,35 @@ The owner **manually ran `Deploy WOVO.bat`** on 2026-09-02.
 `gitDirty: 1` reflects untracked/ignored files present at deploy time (e.g. the
 backup bundle), not uncommitted source.
 
+### READ THIS BEFORE YOU DEPLOY — `vercel --prod` is not safe here
+
+**On 2026-09-03 a `vercel --prod` run replaced wovomedia.com with the old Nova
+site for about five minutes.** It was rolled back. Here is exactly why, so it
+does not happen again.
+
+The Vercel project `wovo-media` is **linked to GitHub `wovomedia/wovo-media`**
+(confirmed via the Vercel API: `link.type = "github"`). When the CLI runs inside
+a directory whose git remote matches that link, it does **not** upload your local
+files. It asks Vercel to build a commit from the connected repository instead.
+That deployment came back tagged `githubDeployment: 1`, `githubCommitRef: main`,
+`githubCommitSha: 9cfbe34` — an old commit from before the V2 rebrand — while the
+local working tree was 60 commits further along on `wovo-v2`.
+
+The earlier CLI deploys from the `.codex` worktree were tagged `gitDirty: 1` with
+a plain `gitCommitSha`, i.e. real file uploads. The worktree's indirect `.git`
+file evidently stopped the CLI resolving the link. The consolidated repository
+has a normal `.git`, so the link now resolves and the behaviour changed.
+
+**Until GitHub carries `wovo-v2` and Vercel's production branch points at it, a
+plain `vercel --prod` will ship the wrong code.** Verify the live site after any
+deploy — the CLI prints "Ready" and aliases the domain either way, so a green CLI
+run proves nothing.
+
+Rolling back: `Desktop\ROLLBACK WOVO.bat` promotes
+`wovo-media-hk6aiqkib-...vercel.app` (`dpl_cfo45XdLCxewg9m9s366T5p4eN9L`,
+commit `b78355e`), the last known-good V2 production build. It takes under a
+second. Keep that script until deploys are trustworthy.
+
 ### Deploying is a manual step — BLOCKED for agents, by tooling
 
 An agent in this environment **cannot deploy**. All of the following were tested
