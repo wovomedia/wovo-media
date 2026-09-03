@@ -132,27 +132,31 @@ browser QA, local database inspection.
 
 ## Repository facts you will need
 
-- **The one canonical repository is `C:\Users\1xpay\wovo-media`.** Working tree
-  and `.git` in one place, on branch `wovo-v2`. Everything — Claude, Codex, VS
-  Code, the Desktop scripts — points here. There is no second checkout.
-- Remote: `https://github.com/wovomedia/wovo-media.git`
-- Retired on 2026-09-03, kept only as a safety net until `wovo-v2` is pushed:
-  `OneDrive\Desktop\wovo-media` (the old repo) and
-  `.codex\worktrees\a051\wovo-media` (the old worktree). Both carry a
-  `README-RETIRED.md`. Do not edit files in either. `~/wovomedia` and
-  `~/wovomedia-site` are unrelated scratch projects, also marked.
-- The repo deliberately sits **outside OneDrive**. The old location was inside
-  it, which caused CRLF churn, multi-minute git commands and files git could not
-  unlink. Do not move it back under `OneDrive\`.
-- Desktop scripts, all pointing at the canonical folder: `Deploy WOVO.bat`
-  (production), `Back up WOVO to GitHub.bat`, `Run WOVO Locally.bat`,
-  `Open WOVO Folder.bat`.
-- Deployment is run by the owner from `Deploy WOVO.bat`. Agents have no Vercel
-  credentials. If a change needs to ship, say plainly that one manual run of that
-  script is required — do not claim it deployed.
-- Documentation-only changes do not require a redeploy.
-- `npm ci` takes about 20 seconds here and `npm test`, `npx tsc --noEmit` and
-  `npm run lint` all run locally, so there is no excuse for shipping unverified.
+- **There is no single folder that is both the history and the deploy source.**
+  Two locations, each with one job:
+  - **Commit history:** `C:\Users\1xpay\OneDrive\Desktop\wovo-media\.git`,
+    branch `wovo-v2`. This is where commits live. Its working tree is checked
+    out on `main` and is stale — ignore the files, use the `.git`.
+  - **Deploy source:** `C:\Users\1xpay\.codex\worktrees\a051\wovo-media`.
+    Files only, outside OneDrive, with `node_modules` and the Vercel link.
+    `Deploy WOVO.bat` deploys from here.
+- **`C:\Users\1xpay\wovo-media` IS A DIFFERENT, OLDER PROJECT** — the pre-rebrand
+  Nova site. It is not WOVO V2. Deploying it on 2026-09-03 replaced the live
+  site with the Nova page for five minutes. Never `cd` there, never deploy it.
+- The deploy folder's `.git` is deliberately broken (its worktree registration
+  was pruned). Keep it that way: with no usable git, the Vercel CLI cannot start
+  a git-integration build and must upload the actual files.
+- Remote: `https://github.com/wovomedia/wovo-media.git`. GitHub's `main` is the
+  old product and `wovo-v2` has never been pushed. Never let Vercel deploy from
+  git until that is fixed.
+- Desktop scripts: `Deploy WOVO.bat` (deploys a051), `ROLLBACK WOVO.bat`
+  (restores the last good build in under a second), `Open WOVO Folder.bat`,
+  `Run WOVO Locally.bat`.
+- Deployment is a manual double-click by the owner; agents have no Vercel
+  credentials. **A green "Ready" line from the CLI does not prove the right code
+  shipped — always load wovomedia.com and check.**
+- `npm ci`, `npx tsc --noEmit`, `npm run lint` and `npm test` all run locally.
+
 
 Stack: Next.js 16 App Router, React 19, TypeScript, Tailwind CSS 4, Vercel,
 Supabase (hand-rolled REST client in `lib/supabase/`, not `supabase-js`), Stripe.

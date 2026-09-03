@@ -52,34 +52,38 @@ The owner **manually ran `Deploy WOVO.bat`** on 2026-09-02.
 `gitDirty: 1` reflects untracked/ignored files present at deploy time (e.g. the
 backup bundle), not uncommitted source.
 
-### READ THIS BEFORE YOU DEPLOY — `vercel --prod` is not safe here
+### READ THIS BEFORE YOU DEPLOY — the folder is the whole problem
 
-**On 2026-09-03 a `vercel --prod` run replaced wovomedia.com with the old Nova
-site for about five minutes.** It was rolled back. Here is exactly why, so it
-does not happen again.
+**On 2026-09-03 a deploy replaced wovomedia.com with the pre-rebrand Nova site
+for about five minutes.** It was rolled back and later redeployed correctly.
+The cause was not the GitHub link — that was a wrong first diagnosis. The cause
+was simpler and worse:
 
-The Vercel project `wovo-media` is **linked to GitHub `wovomedia/wovo-media`**
-(confirmed via the Vercel API: `link.type = "github"`). When the CLI runs inside
-a directory whose git remote matches that link, it does **not** upload your local
-files. It asks Vercel to build a commit from the connected repository instead.
-That deployment came back tagged `githubDeployment: 1`, `githubCommitRef: main`,
-`githubCommitSha: 9cfbe34` — an old commit from before the V2 rebrand — while the
-local working tree was 60 commits further along on `wovo-v2`.
+`Deploy WOVO.bat` ran `cd %USERPROFILE%\wovo-media`, and
+**`C:\Users\1xpay\wovo-media` is a different, older project** — the Nova site,
+with its own `.git` on `main`. The CLI faithfully deployed what was in that
+folder. Nothing was wrong with Vercel, git or the code.
 
-The earlier CLI deploys from the `.codex` worktree were tagged `gitDirty: 1` with
-a plain `gitCommitSha`, i.e. real file uploads. The worktree's indirect `.git`
-file evidently stopped the CLI resolving the link. The consolidated repository
-has a normal `.git`, so the link now resolves and the behaviour changed.
+The trap that made this easy to miss: three connected folders are named
+`wovo-media`, so the Cowork bridge mounts them under qualified names
+(`1xpay--wovo-media`, `Desktop--wovo-media`, `a051--wovo-media`). A plain
+`$HOME/mnt/wovo-media` is **not** the user's `C:\Users\1xpay\wovo-media` — it is
+an ordinary directory inside the sandbox. Work written there never reaches the
+user's disk, and it feels fast precisely because it is not crossing the bridge.
+**Always confirm a path with `device_list_dir` against
+`get_device_info.connectedFolders` before calling any folder canonical.**
 
-**Until GitHub carries `wovo-v2` and Vercel's production branch points at it, a
-plain `vercel --prod` will ship the wrong code.** Verify the live site after any
-deploy — the CLI prints "Ready" and aliases the domain either way, so a green CLI
-run proves nothing.
+Deploy only from `C:\Users\1xpay\.codex\worktrees\a051\wovo-media`. Its `.git`
+is intentionally unusable so the CLI must upload files rather than build a
+commit from GitHub (GitHub's `main` is still the old product).
 
-Rolling back: `Desktop\ROLLBACK WOVO.bat` promotes
-`wovo-media-hk6aiqkib-...vercel.app` (`dpl_cfo45XdLCxewg9m9s366T5p4eN9L`,
-commit `b78355e`), the last known-good V2 production build. It takes under a
-second. Keep that script until deploys are trustworthy.
+`Desktop\ROLLBACK WOVO.bat` promotes `dpl_cfo45XdLCxewg9m9s366T5p4eN9L`
+(commit `b78355e`), a known-good V2 build, in under a second.
+
+**Verify the live site after every deploy.** The CLI prints "Ready" and aliases
+the domain whatever it built. Check `wovomedia.com/pricing` for
+"Recommended for you", and add a cache-busting query string — the first read
+after a deploy can be served from cache and show the previous build.
 
 ### Deploying is a manual step — BLOCKED for agents, by tooling
 
