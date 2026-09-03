@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "WOVO Media",
     short_name: "WOVO",
-    description: "WOVO Media weekly marketing workspace and private client portal.",
+    description: "Create images, video, music and social content with WOVO AI.",
     start_url: "/",
     display: "standalone",
     background_color: "#f3efe6",

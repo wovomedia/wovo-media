@@ -66,3 +66,49 @@ test("the health endpoint reports each subsystem independently and counts the re
   assert.match(health, /expectedPrices/);
   assert.match(health, /validatedPrices/);
 });
+
+test("the agency-era client workspace does not come back", () => {
+  // Every string here was on screen for a signed-in customer as recently as
+  // 2026-09-02. They describe a marketing agency with staff, representatives
+  // and a locked preview — not a product the customer operates themselves.
+  for (const legacy of [
+    "Client marketing workspace",
+    "WOVO creation tools",
+    "Upload required brand assets",
+    "Workspace progress",
+    "private shared support channel",
+    "Unlock the working version",
+    "Keep building this workspace",
+    "assigned WOVO representative",
+    "WOVO Media client portal",
+  ]) {
+    assert.doesNotMatch(
+      portal,
+      new RegExp(legacy.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"),
+      `legacy workspace copy is back: ${legacy}`,
+    );
+  }
+});
+
+test("the staff and owner workspace is gone from the customer app", () => {
+  // A WOVO employee account used to get a whole second product inside /portal:
+  // a client switcher, public-inquiry replies, and a "President / owner" badge.
+  assert.doesNotMatch(portal, /President \/ owner/);
+  assert.doesNotMatch(portal, /Owner-protected settings/);
+  assert.doesNotMatch(portal, /Search clients or cases/);
+  assert.doesNotMatch(portal, /Administrative workspace inspection/);
+  assert.doesNotMatch(portal, /reply_public_inquiry/);
+  assert.doesNotMatch(portal, /snapshot\.mode === "staff"/);
+  assert.doesNotMatch(portal, /snapshot\.staffRole/);
+});
+
+test("nobody is asked to choose a plan before they have made anything", () => {
+  // Onboarding exists to create the workspace and release the ten one-time
+  // starter credits. It used to collect a plan tier, paid add-ons, employee
+  // invites and a website brief first.
+  assert.match(portal, /action: "onboard"/);
+  assert.match(portal, /rightsConfirmed: true/);
+  assert.doesNotMatch(portal, /const PLAN_ADDONS/);
+  assert.doesNotMatch(portal, /const PLAN_SERVICES/);
+  assert.doesNotMatch(portal, /employeeInviteDrafts/);
+});

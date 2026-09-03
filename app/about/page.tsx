@@ -38,7 +38,7 @@ export default function AboutPage() {
         <div className="mx-auto flex max-w-[1280px] flex-col gap-7 px-5 sm:px-8 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h2 className="text-4xl font-medium tracking-[-0.035em]">Serving businesses worldwide.</h2>
-            <p className="mt-3 max-w-xl text-sm leading-6 text-[#191714]/70">Public support is handled through support@wovomedia.com and the authenticated client workspace.</p>
+            <p className="mt-3 max-w-xl text-sm leading-6 text-[#191714]/70">Support is handled through support@wovomedia.com and inside your signed-in workspace.</p>
           </div>
           <Link href="/contact" className="inline-flex min-h-12 items-center justify-center rounded-full bg-[#191714] px-7 text-sm font-bold text-white">Contact WOVO</Link>
         </div>

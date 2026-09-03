@@ -41,7 +41,7 @@ function appMetadataRole(user: { app_metadata?: Record<string, unknown> }): Port
 export async function requirePortalContext(authHeader: string | null): Promise<PortalContext> {
   const { user } = await requireServerUser(authHeader);
   if (!user.email_confirmed_at) {
-    throw new PortalHttpError(403, "Verify your email address before opening the client portal.");
+    throw new PortalHttpError(403, "Verify your email address to open your workspace.");
   }
   const rows = await supabaseServiceRoleRequest<StaffRow[]>(
     `/rest/v1/wovo_portal_staff?select=role,active&user_id=eq.${encodeURIComponent(user.id)}&limit=1`

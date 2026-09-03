@@ -18,10 +18,9 @@ import type {
   PortalContentItem,
   PortalOrder,
   PortalSnapshot,
-  PortalThread,
 } from "@/lib/portal/types";
 
-type Tab = "overview" | "queue" | "calendar" | "studio" | "inbox" | "services";
+type Tab = "overview" | "queue" | "calendar" | "studio" | "services";
 type CreatorMode = "post" | "campaign" | "episode" | "website" | "video" | "music";
 type ResumedGenerationIntent = { prompt?: string; type?: string; ratio?: string; modelId?: string; referenceName?: string | null };
 
@@ -29,20 +28,8 @@ const tabs: Array<{ value: Tab; label: string; mark: string }> = [
   { value: "overview", label: "Home", mark: "H" },
   { value: "queue", label: "Create", mark: "+" },
   { value: "calendar", label: "Calendar", mark: "C" },
-  { value: "inbox", label: "Inbox", mark: "I" },
   { value: "studio", label: "Projects", mark: "P" },
   { value: "services", label: "Settings", mark: "S" },
-];
-
-const WOVO_PRODUCTS: Array<{ label: string; detail: string; target: Tab; mark: string; mode?: CreatorMode }> = [
-  { label: "AI Images", detail: "Generate and revise", target: "queue", mark: "I", mode: "post" },
-  { label: "AI Video", detail: "Reels, ads, cinematic", target: "queue", mark: "V", mode: "video" },
-  { label: "Cartoon Studio", detail: "Characters and episodes", target: "queue", mark: "C", mode: "episode" },
-  { label: "Social Campaigns", detail: "Captions, carousels, plans", target: "queue", mark: "S", mode: "campaign" },
-  { label: "Website Builder", detail: "Pages and storefronts", target: "queue", mark: "W", mode: "website" },
-  { label: "AI Music", detail: "Generate playable tracks", target: "queue", mark: "M", mode: "music" },
-  { label: "Projects", detail: "Media, drafts, revisions", target: "studio", mark: "P" },
-  { label: "Publish", detail: "Approve and schedule", target: "calendar", mark: "→" },
 ];
 
 const CLIENT_CREDIT_PACKS = [
@@ -135,13 +122,12 @@ export default function PortalPage() {
   const router = useRouter();
   const [snapshot, setSnapshot] = useState<PortalSnapshot | null>(null);
   const [accountId, setAccountId] = useState("");
-  const [tab, setTab] = useState<Tab>("overview");
+  const [tab, setTab] = useState<Tab>("queue");
   const [creatorMode, setCreatorMode] = useState<CreatorMode>("post");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [staffSearch, setStaffSearch] = useState("");
   const [resumedIntent, setResumedIntent] = useState<ResumedGenerationIntent | null>(null);
 
   const authedFetch = useCallback(async (url: string, init?: RequestInit) => {
@@ -251,13 +237,6 @@ export default function PortalPage() {
       snapshot?.events.filter((item) => item.account_id === accountId) ?? [],
     [snapshot, accountId],
   );
-  const thread =
-    snapshot?.threads.find((item) => item.account_id === accountId) ?? null;
-  const messages = useMemo(
-    () =>
-      snapshot?.messages.filter((item) => item.account_id === accountId) ?? [],
-    [snapshot, accountId],
-  );
   const orders = useMemo(
     () =>
       snapshot?.orders.filter((item) => item.account_id === accountId) ?? [],
@@ -321,25 +300,8 @@ export default function PortalPage() {
       Date.parse(grant.expires_at) > Date.now(),
   );
   const isPaid =
-    snapshot?.mode === "staff" ||
     ["active", "trialing"].includes(subscription?.status ?? "") ||
     Boolean(activeGrant);
-  const staffAccounts = useMemo(() => {
-    if (!snapshot || snapshot.mode !== "staff") return [];
-    const query = staffSearch.trim().toLowerCase();
-    const activeAccounts = snapshot.accounts.filter(
-      (item) => !item.archived_at,
-    );
-    if (!query) return activeAccounts;
-    return activeAccounts.filter((item) => {
-      const caseReference =
-        snapshot.threads.find((candidate) => candidate.account_id === item.id)
-          ?.case_reference ?? "";
-      return [item.business_name, item.contact_email, caseReference].some(
-        (value) => value.toLowerCase().includes(query),
-      );
-    });
-  }, [snapshot, staffSearch]);
 
   async function action(payload: Record<string, unknown>, success: string) {
     setBusy(String(payload.action ?? "action"));
@@ -403,219 +365,20 @@ export default function PortalPage() {
     );
   }
 
-  if (snapshot.mode === "client" && snapshot.accounts.length === 0) {
+  if (snapshot.accounts.length === 0) {
     return (
       <PlanOnboarding
-        billingOptions={snapshot.setup.billingOptions}
-        availableAddons={[
-          snapshot.setup.expansion.dmManagerCheckoutReady ? "dm_manager" : "",
-          snapshot.setup.expansion.websiteHostingCheckoutReady
-            ? "website_hosting"
-            : "",
-          snapshot.setup.expansion.personalAssistantCheckoutReady
-            ? "personal_ai_assistant"
-            : "",
-        ].filter(Boolean)}
         busy={busy}
         error={error}
         onSubmit={async (payload) => {
           await action(
             payload,
-            "Your private workspace plan is saved. Your personalized preview is ready.",
+            "Your workspace is ready and your 10 starter credits are in it.",
           );
         }}
       />
     );
   }
-
-  if (snapshot.mode === "staff" && snapshot.accounts.length === 0) {
-    return (
-      <main className="min-h-screen bg-[#f3efe6] px-4 py-6 text-[#191714] sm:px-8 sm:py-10">
-        <div className="mx-auto max-w-6xl">
-          <header className="flex flex-wrap items-center justify-between gap-4 border-b border-[#191714]/10 pb-6">
-            <WovoLogo variant="full" size={138} />
-            <div className="flex items-center gap-3">
-              <span className="rounded-full bg-[#f05a3a]/12 px-3 py-2 text-xs font-bold uppercase tracking-[.12em] text-[#a9341f]">
-                {snapshot.staffRole === "owner"
-                  ? "President / owner"
-                  : snapshot.staffRole?.replaceAll("_", " ")}
-              </span>
-              <button
-                className={secondaryButton}
-                onClick={() => void signOut()}
-              >
-                Sign out
-              </button>
-            </div>
-          </header>
-
-          <section className="grid gap-8 py-10 lg:grid-cols-[1.2fr_.8fr] lg:items-end">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[.2em] text-[#d94326]">
-                Owner action center
-              </p>
-              <h1 className="mt-4 max-w-3xl text-4xl font-medium leading-[1.02] tracking-[-.04em] sm:text-6xl">
-                The workspace is live. The client queue is empty.
-              </h1>
-              <p className="mt-5 max-w-2xl text-base leading-7 text-[#655f56]">
-                Your verified owner role is active. No client workspace,
-                booking, support case, or ready-to-post item has been created
-                yet, so there is nothing to assign or triage.
-              </p>
-            </div>
-            <div className="rounded-3xl bg-[#191714] p-6 text-white">
-              <p className="text-xs font-bold uppercase tracking-[.18em] text-[#ff8c70]">
-                Access check
-              </p>
-              <p className="mt-4 text-2xl font-medium">
-                Full WOVO operations access
-              </p>
-              <ul className="mt-5 space-y-3 text-sm leading-6 text-white/65">
-                <li>Client and subscription oversight</li>
-                <li>Shared inbox and internal assignment</li>
-                <li>Content, calendar, bookings, and services</li>
-                <li>Owner billing exemption</li>
-              </ul>
-            </div>
-          </section>
-
-          <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              [
-                "Review public site",
-                "Check current offer and launch messaging.",
-                "/",
-              ],
-              [
-                "Verify pricing",
-                "Review the monthly, three-month, six-month, and yearly billing choices.",
-                "/pricing",
-              ],
-              [
-                "Test client signup",
-                "Open the customer-facing account flow.",
-                "/signup?next=/portal",
-              ],
-              [
-                "Open public support",
-                "Review the no-account-required inquiry path.",
-                "/contact",
-              ],
-            ].map(([title, copy, href]) => (
-              <Link
-                key={title}
-                href={href}
-                className="group rounded-2xl border border-[#191714]/12 bg-[#fffdf8] p-5 transition hover:-translate-y-0.5 hover:border-[#f05a3a]/45 hover:shadow-[0_16px_45px_rgba(25,23,20,.1)]"
-              >
-                <h2 className="font-bold">{title}</h2>
-                <p className="mt-2 text-sm leading-6 text-[#6d665d]">{copy}</p>
-                <span className="mt-5 inline-flex text-sm font-bold text-[#d94326]">
-                  Open →
-                </span>
-              </Link>
-            ))}
-          </section>
-
-          {snapshot.publicInquiries.length ? (
-            <section className="mt-10">
-              <div className="flex flex-wrap items-end justify-between gap-4">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-[.2em] text-[#d94326]">
-                    Public team inbox
-                  </p>
-                  <h2 className="mt-3 text-3xl font-medium tracking-[-.03em]">
-                    Unassigned inquiries
-                  </h2>
-                </div>
-                <span className="rounded-full border border-[#191714]/10 bg-white/60 px-3 py-2 text-xs font-bold">
-                  {snapshot.publicInquiries.length} case
-                  {snapshot.publicInquiries.length === 1 ? "" : "s"}
-                </span>
-              </div>
-              <div className="mt-5 grid gap-4 lg:grid-cols-2">
-                {snapshot.publicInquiries.map((inquiry) => (
-                  <article
-                    id={`case-${inquiry.case_reference}`}
-                    key={inquiry.id}
-                    className="scroll-mt-6 rounded-2xl border border-[#191714]/12 bg-[#fffdf8] p-5 target:border-[#f05a3a] target:ring-4 target:ring-[#f05a3a]/15"
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <p className="font-mono text-xs font-bold text-[#a9341f]">
-                          {inquiry.case_reference}
-                        </p>
-                        <h3 className="mt-2 text-xl font-bold">
-                          {inquiry.subject}
-                        </h3>
-                      </div>
-                      <StatusPill status={inquiry.status} />
-                    </div>
-                    <p className="mt-3 text-sm font-semibold">
-                      {inquiry.name} · {inquiry.email}
-                    </p>
-                    {inquiry.phone ? (
-                      <p className="mt-1 text-sm text-[#756e64]">
-                        {inquiry.phone}
-                      </p>
-                    ) : null}
-                    <p className="mt-4 whitespace-pre-wrap rounded-xl bg-[#f3efe6] p-4 text-sm leading-6 text-[#4d473f]">
-                      {inquiry.message}
-                    </p>
-                    {inquiry.staff_reply ? (
-                      <div className="mt-4 rounded-xl border border-[#f05a3a]/20 bg-[#f05a3a]/8 p-4 text-sm leading-6">
-                        <p className="font-bold">WOVO reply delivered</p>
-                        <p className="mt-2 whitespace-pre-wrap text-[#655f56]">
-                          {inquiry.staff_reply}
-                        </p>
-                      </div>
-                    ) : (
-                      <form
-                        className="mt-4"
-                        onSubmit={(event) => {
-                          event.preventDefault();
-                          const data = new FormData(event.currentTarget);
-                          void action(
-                            {
-                              action: "reply_public_inquiry",
-                              inquiryId: inquiry.id,
-                              reply: data.get("reply"),
-                            },
-                            `Reply delivered for ${inquiry.case_reference}.`,
-                          );
-                        }}
-                      >
-                        <textarea
-                          required
-                          name="reply"
-                          maxLength={5000}
-                          placeholder="Reply as WOVO Media…"
-                          className={textareaClass}
-                        />
-                        <button
-                          disabled={busy === "reply_public_inquiry"}
-                          className={`${primaryButton} mt-3`}
-                        >
-                          Send WOVO reply
-                        </button>
-                      </form>
-                    )}
-                  </article>
-                ))}
-              </div>
-            </section>
-          ) : null}
-
-          <div className="mt-8 rounded-2xl border border-[#f05a3a]/20 bg-[#f05a3a]/8 p-5 text-sm leading-6 text-[#7d2d1f]">
-            New paid clients will appear here automatically after verified
-            signup, onboarding, and Stripe webhook activation. Until the first
-            client arrives, this empty state is expected—not a missing
-            dashboard.
-          </div>
-        </div>
-      </main>
-    );
-  }
-
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#0d0c0b] text-[#191714]">
@@ -625,40 +388,10 @@ export default function PortalPage() {
           <span className="hidden h-6 w-px bg-white/10 sm:block" />
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold">
-              {snapshot.mode === "staff"
-                ? (account?.business_name ??
-                  "Administrative workspace inspection")
-                : account?.business_name}
+              {account?.business_name}
             </p>
-            <p className="truncate text-xs text-white/45">
-              {snapshot.mode === "staff"
-                ? "Explicit client workspace inspection"
-                : "Client marketing workspace"}
-            </p>
+            <p className="truncate text-xs text-white/45">Your WOVO workspace</p>
           </div>
-          {snapshot.mode === "staff" ? (
-            <div className="hidden items-center gap-2 md:flex">
-              <input
-                aria-label="Search clients or cases"
-                value={staffSearch}
-                onChange={(event) => setStaffSearch(event.target.value)}
-                placeholder="Search client, email, case"
-                className="min-h-11 w-52 rounded-xl border border-white/10 bg-white/[.07] px-3 text-sm text-white placeholder:text-white/35"
-              />
-              <select
-                aria-label="Select client"
-                value={accountId}
-                onChange={(event) => setAccountId(event.target.value)}
-                className="min-h-11 max-w-52 rounded-xl border border-white/10 bg-[#211e1b] px-3 text-sm text-white"
-              >
-                {staffAccounts.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.business_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : null}
           <button
             className="min-h-11 rounded-xl border border-white/10 px-3 text-sm text-white/65 hover:border-[#f05a3a]/50 hover:text-white"
             onClick={() => void signOut()}
@@ -689,29 +422,9 @@ export default function PortalPage() {
               </button>
             ))}
           </nav>
-          <div className="mt-5 hidden border-t border-white/10 pt-4 sm:block"><p className="px-2 text-[10px] font-bold uppercase tracking-[.18em] text-white/30">WOVO creation tools</p><div className="mt-2 space-y-1">{WOVO_PRODUCTS.map((product, index) => <button key={product.label} type="button" onClick={() => {
-            if (product.mode) setCreatorMode(product.mode);
-            setTab(product.target);
-            window.scrollTo({ top: 0, behavior: "smooth" });
-          }} className="group flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition hover:bg-white/[.07]"><span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-[#211e1b]"><span className="absolute inset-0 bg-[url('/wovo-product-scenes.png')] bg-[length:200%_200%] opacity-80 transition group-hover:scale-110 group-hover:opacity-100" style={{backgroundPosition: `${index % 2 ? 100 : 0}% ${Math.floor(index / 2) % 2 ? 100 : 0}%`}} /><span className="absolute bottom-1 right-1 grid h-4 w-4 place-items-center rounded bg-black/75 text-[7px] font-black text-[#ff8c70]">{product.mark}</span></span><span className="min-w-0"><span className="block truncate text-xs font-semibold text-white/80 group-hover:text-white">{product.label}</span><span className="mt-0.5 block truncate text-[10px] text-white/35">{product.detail}</span></span></button>)}</div></div>
-          {snapshot.mode === "staff" ? (
-            <div className="mt-5 hidden rounded-2xl border border-[#191714]/10 bg-white/70 p-4 text-xs leading-5 text-[#655f56] sm:block">
-              <p className="font-semibold text-[#191714]">Need help?</p>
-              <p className="mt-1">
-                Message the shared WOVO team. Clients never need an
-                employee&apos;s personal account.
-              </p>
-              <button
-                onClick={() => setTab("inbox")}
-                className="mt-3 font-semibold text-[#d94326]"
-              >
-                Open team inbox
-              </button>
-            </div>
-          ) : null}
         </aside>
 
-        <section className="min-w-0 rounded-2xl bg-[#f3efe6] p-3 sm:p-5">
+        <section className="min-w-0 rounded-2xl border border-white/10 bg-[#111011] p-3 text-[#f7f4ee] sm:p-5">
           {notice ? (
             <div
               role="status"
@@ -728,20 +441,6 @@ export default function PortalPage() {
               {error}
             </div>
           ) : null}
-          {snapshot.mode === "staff" && tab === "overview" ? (
-            <div className="mb-4 rounded-2xl border border-[#c58b21]/35 bg-[#fff3cf] p-4 text-sm leading-6 text-[#50360f]">
-              <p className="font-semibold">
-                Annual awards governance reminder ·{" "}
-                {formatDate(snapshot.setup.awardsReviewDate)}
-              </p>
-              <p className="mt-1 text-[#694b19]">
-                Owner/admin review only. Publish no winner, finalist, plaque, or
-                award page until verified candidates are selected using a
-                documented rubric and real moderated review data. Review count
-                alone cannot determine a winner.
-              </p>
-            </div>
-          ) : null}
           {!isPaid && account ? (
             <BillingCard
               snapshot={snapshot}
@@ -752,7 +451,6 @@ export default function PortalPage() {
           ) : null}
           {tab === "overview" && account ? (
             <Overview
-              snapshot={snapshot}
               account={account}
               content={content}
               orders={orders}
@@ -783,7 +481,7 @@ export default function PortalPage() {
               creatorMode={creatorMode}
               onCreatorModeChange={setCreatorMode}
               paid={isPaid}
-              staff={snapshot.mode === "staff"}
+              staff={false}
               busy={busy}
               onAction={action}
               authedFetch={authedFetch}
@@ -798,7 +496,7 @@ export default function PortalPage() {
               events={events}
               content={content}
               busy={busy}
-              staff={snapshot.mode === "staff"}
+              staff={false}
               onAction={action}
             />
           ) : null}
@@ -816,28 +514,11 @@ export default function PortalPage() {
               onAction={action}
             />
           ) : null}
-          {tab === "inbox" && account ? (
-            <Inbox
-              account={account}
-              thread={thread}
-              messages={messages}
-              assignments={snapshot.threadAssignments.filter(
-                (item) => item.thread_id === thread?.id,
-              )}
-              staff={snapshot.mode === "staff"}
-              canAssign={["owner", "admin", "manager"].includes(
-                snapshot.staffRole ?? "",
-              )}
-              busy={busy}
-              onAction={action}
-            />
-          ) : null}
           {tab === "services" && account ? (
             <Services
               account={account}
               orders={orders}
               addons={snapshot.setup.addonsConfigured}
-              ownerProtected={snapshot.mode === "staff" && snapshot.staffRole === "owner"}
               busy={busy}
               onAction={action}
             />
@@ -846,7 +527,7 @@ export default function PortalPage() {
       </div>
 
       <nav
-        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t border-[#191714]/10 bg-[#fffdf8]/95 px-1 pb-2 pt-1.5 shadow-[0_-16px_42px_rgba(25,23,20,.1)] backdrop-blur-xl sm:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-white/10 bg-[#0d0c0b]/95 px-1 pb-2 pt-1.5 shadow-[0_-16px_42px_rgba(0,0,0,.5)] backdrop-blur-xl sm:hidden"
         aria-label="Mobile workspace"
       >
         {tabs.map((item) => (
@@ -859,10 +540,10 @@ export default function PortalPage() {
               window.scrollTo({ top: 0, behavior: "smooth" });
             }}
             aria-current={tab === item.value ? "page" : undefined}
-            className={`min-h-14 rounded-xl px-1 text-[10px] font-bold leading-3 transition ${tab === item.value ? "bg-[#f05a3a]/15 text-[#a9341f]" : "text-[#655f56]"}`}
+            className={`min-h-14 rounded-xl px-1 text-[10px] font-bold leading-3 transition ${tab === item.value ? "bg-[#f05a3a]/15 text-[#ff8c70]" : "text-white/55"}`}
           >
             <span
-              className={`mx-auto mb-1 inline-flex h-5 w-5 items-center justify-center rounded-md text-[9px] ${tab === item.value ? "bg-[#f05a3a] text-[#191714]" : "bg-[#191714]/10"}`}
+              className={`mx-auto mb-1 inline-flex h-5 w-5 items-center justify-center rounded-md text-[9px] ${tab === item.value ? "bg-[#f05a3a] text-[#191714]" : "bg-white/10"}`}
             >
               {item.mark}
             </span>
@@ -874,8 +555,7 @@ export default function PortalPage() {
       <footer className="border-t border-[#191714]/10 px-4 py-7 text-sm text-[#7a7369]">
         <div className="mx-auto flex max-w-[1800px] flex-col justify-between gap-4 sm:flex-row">
           <p>
-            WOVO Media client portal. AI-assisted work is reviewed by people
-            before publishing.
+            WOVO — your work, your workspace.
           </p>
           <div className="flex flex-wrap gap-x-5 gap-y-2">
             <Link href="/terms-of-use" className="hover:text-[#191714]">
@@ -900,815 +580,250 @@ export default function PortalPage() {
   );
 }
 
-type PlanDraft = {
-  businessName: string;
-  businessType: string;
-  location: string;
-  websiteUrl: string;
-  audience: string;
-  ageRange: string;
-  brandVoice: string;
-  goals: string;
-  cadence: number;
-  platforms: string[];
-  logoStatus: "ready_to_upload" | "needs_help";
-  colors: string[];
-  modules: string[];
-  addons: string[];
-  services: string[];
-  rights: boolean;
-  employeeEmail: string;
-  employeePermission: string;
-  websiteInterest: boolean;
-  websiteSections: string;
-  websiteGoals: string;
-};
+const WORKSPACE_BUSINESS_TYPES: Array<[string, string]> = [
+  ["local_business", "Local business"],
+  ["restaurant", "Restaurant or food"],
+  ["contractor", "Contractor or trades"],
+  ["realtor", "Real estate"],
+  ["other", "Something else"],
+];
 
-const PLAN_MODULES = [
-  ["content", "Weekly content & approval queue"],
-  ["website_brief", "Website concept builder"],
-  ["listing_ad", "Authorized listing-to-ad briefs"],
-  ["meetings", "WOVO meeting requests"],
-  ["jobs", "Private jobs workspace"],
-] as const;
-const PLAN_ADDONS = [
-  [
-    "dm_manager",
-    "AI DM Manager",
-    "$1.99/month",
-    "Draft-reply workflow with explicit review before sending.",
-  ],
-  [
-    "website_hosting",
-    "Managed website hosting",
-    "$35/month",
-    "Requires verified pricing and successful site provisioning.",
-  ],
-  [
-    "personal_ai_assistant",
-    "Personal AI assistant",
-    "$59.99/month",
-    "Booking-request setup only; no autonomous calls or bookings.",
-  ],
-  [
-    "team_seats",
-    "WOVO Teams seats",
-    "$2.99/active employee/month",
-    "Invite draft only until seat billing and permissions are released.",
-  ],
-] as const;
-const PLAN_SERVICES = [
-  ["website_creation", "Bespoke website creation"],
-  ["shoot", "In-person shoot"],
-  ["drone", "Commercial drone request"],
-  ["custom_editing", "Custom editing / staff time"],
-] as const;
+const WORKSPACE_PLATFORMS: Array<[string, string]> = [
+  ["facebook", "Facebook"],
+  ["instagram", "Instagram"],
+  ["tiktok", "TikTok"],
+  ["youtube", "YouTube"],
+  ["linkedin", "LinkedIn"],
+  ["google_business", "Google Business"],
+];
 
+// The only job of this screen is to create the workspace and release the ten
+// one-time starter credits. It asks for nothing WOVO cannot use immediately,
+// and it never asks for a plan or a card: a customer has to be able to make
+// something before being asked to pay for anything. The wizard this replaced
+// collected plan tiers, add-ons, employee invites and a website brief before a
+// single credit had been spent.
 function PlanOnboarding({
   busy,
   error,
-  billingOptions,
-  availableAddons,
   onSubmit,
 }: {
   busy: string;
   error: string;
-  billingOptions: BillingOption[];
-  availableAddons: string[];
   onSubmit: (payload: Record<string, unknown>) => Promise<void>;
 }) {
-  const [step, setStep] = useState(0);
+  const [businessName, setBusinessName] = useState("");
+  const [businessType, setBusinessType] = useState("local_business");
+  const [location, setLocation] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState("");
+  const [cadence, setCadence] = useState(3);
+  const [platforms, setPlatforms] = useState<string[]>([]);
+  const [rights, setRights] = useState(false);
   const [localError, setLocalError] = useState("");
-  const [billingPlan, setBillingPlan] = useState<BillingOption["planId"]>(() => {
-    if (typeof window === "undefined") return "starter";
-    const value = new URLSearchParams(window.location.search).get("plan");
-    return value === "creator" || value === "pro" ? value : "starter";
-  });
-  const [billingFrequency, setBillingFrequency] =
-    useState<BillingOption["frequency"]>(() => {
-      if (typeof window === "undefined") return "monthly";
-      const value = new URLSearchParams(window.location.search).get("term");
-      return value === "quarterly" || value === "semiannual" || value === "annual" ? value : "monthly";
-    });
-  const [draft, setDraft] = useState<PlanDraft>({
-    businessName: "",
-    businessType: "local_business",
-    location: "",
-    websiteUrl: "",
-    audience: "",
-    ageRange: "not_sure",
-    brandVoice: "",
-    goals: "",
-    cadence: 3,
-    platforms: [],
-    logoStatus: "ready_to_upload",
-    colors: ["#f05a3a", "#191714"],
-    modules: [],
-    addons: [],
-    services: [],
-    rights: false,
-    employeeEmail: "",
-    employeePermission: "draft",
-    websiteInterest: false,
-    websiteSections: "",
-    websiteGoals: "",
-  });
-  const set = <K extends keyof PlanDraft>(key: K, value: PlanDraft[K]) =>
-    setDraft((current) => ({ ...current, [key]: value }));
-  const toggle = (
-    key: "platforms" | "modules" | "addons" | "services",
-    value: string,
-  ) =>
-    set(
-      key,
-      draft[key].includes(value)
-        ? draft[key].filter((item) => item !== value)
-        : [...draft[key], value],
+
+  function togglePlatform(id: string) {
+    setPlatforms((current) =>
+      current.includes(id)
+        ? current.filter((item) => item !== id)
+        : [...current, id],
     );
-  function next() {
-    setLocalError("");
-    if (step === 0 && (!draft.businessName.trim() || !draft.location.trim()))
-      return setLocalError(
-        "Add your business name and service area to continue.",
-      );
-    if (
-      step === 1 &&
-      (!draft.brandVoice.trim() || !draft.goals.trim() || !draft.rights)
-    )
-      return setLocalError(
-        "Add a brand voice and goal, then confirm your asset rights.",
-      );
-    if (
-      step === 2 &&
-      draft.employeeEmail &&
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft.employeeEmail)
-    )
-      return setLocalError(
-        "Enter a valid employee email or leave the invite draft blank.",
-      );
-    setStep((current) => Math.min(3, current + 1));
-    window.scrollTo({ top: 0, behavior: "smooth" });
   }
-  const cadenceHours = draft.cadence * 0.35;
-  const moduleHours =
-    (draft.modules.includes("content") ? 0.75 : 0) +
-    (draft.modules.includes("website_brief") ? 0.35 : 0) +
-    (draft.modules.includes("listing_ad") ? 0.35 : 0);
-  const workflowHours = draft.addons.includes("dm_manager") ? 0.5 : 0;
-  const weeklyLow = Math.max(
-    0.5,
-    Math.round((cadenceHours + moduleHours + workflowHours) * 2) / 2,
-  );
-  const weeklyHigh = Math.max(
-    weeklyLow + 0.5,
-    Math.round(weeklyLow * 1.65 * 2) / 2,
-  );
-  const projections = [3, 6, 12].map((months) => ({
-    months,
-    low: Math.round(weeklyLow * 4.33 * months),
-    high: Math.round(weeklyHigh * 4.33 * months),
-  }));
-  const selectedBillingOption =
-    billingOptions.find((option) => option.planId === billingPlan && option.frequency === billingFrequency) ??
-    billingOptions.find((option) => option.planId === billingPlan) ??
-    null;
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setLocalError("");
+    if (!businessName.trim()) {
+      setLocalError("Add your business name so WOVO can put it on your work.");
+      return;
+    }
+    if (!location.trim()) {
+      setLocalError("Add the city or area you serve.");
+      return;
+    }
+    if (!rights) {
+      setLocalError(
+        "Confirm you own or have permission to use the material you upload.",
+      );
+      return;
+    }
     await onSubmit({
       action: "onboard",
-      planId: billingPlan,
-      billingFrequency,
-      businessName: draft.businessName,
-      businessType: draft.businessType,
-      websiteUrl: draft.websiteUrl,
-      location: draft.location,
-      brandVoice: draft.brandVoice,
-      audience: `${draft.audience}\nAge range: ${draft.ageRange}`.trim(),
-      goals: draft.goals,
-      cadence: draft.cadence,
-      platforms: draft.platforms,
-      rightsConfirmed: draft.rights,
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      onboardingPlan: {
-        coreModules: draft.modules,
-        recurringAddons: draft.addons,
-        quoteServices: draft.services,
-        logoStatus: draft.logoStatus,
-        brandColors: draft.colors,
-        websiteInterest: draft.websiteInterest,
-        websiteBrief: draft.websiteInterest
-          ? { sections: draft.websiteSections, goals: draft.websiteGoals }
-          : {},
-        employeeInviteDrafts: draft.employeeEmail
-          ? [
-              {
-                email: draft.employeeEmail,
-                permission: draft.employeePermission,
-              },
-            ]
-          : [],
-      },
+      businessName: businessName.trim(),
+      businessType,
+      location: location.trim(),
+      websiteUrl: websiteUrl.trim() || undefined,
+      cadence,
+      platforms,
+      rightsConfirmed: true,
     });
   }
+
+  const message = localError || error;
+
   return (
-    <main className="min-h-screen overflow-x-hidden bg-[#f3efe6] px-4 py-5 text-[#191714] sm:px-8 sm:py-7">
-      <div className="mx-auto max-w-5xl">
-        <header className="flex items-center justify-between gap-5 border-b border-[#191714]/10 pb-5">
-          <WovoLogo variant="full" size={132} className="" />
-          <p className="hidden text-xs font-semibold text-[#655f56] sm:block">
-            Private setup · free to start, no card required
-          </p>
-        </header>
-        <div
-          className="grid grid-cols-4 border-b border-[#191714]/10"
-          aria-label={`Onboarding step ${step + 1} of 4`}
-        >
-          {["Business", "Brand", "Workspace", "Review"].map((label, item) => (
-            <div
-              key={label}
-              className={`border-b-2 px-1 py-4 text-center text-[10px] font-bold uppercase tracking-[.12em] sm:text-xs ${item === step ? "border-[#f05a3a] text-[#191714]" : item < step ? "border-[#191714] text-[#655f56]" : "border-transparent text-[#9b9388]"}`}
-            >
-              {label}
-            </div>
-          ))}
-        </div>
-        <form
-          onSubmit={(event) => void submit(event)}
-          className="bg-[#fffdf8] px-4 py-7 sm:px-8 sm:py-10"
-        >
-          <p className="text-[10px] font-bold uppercase tracking-[.18em] text-[#d94326]">
-            Step {step + 1} of 4
-          </p>
-          {step === 0 ? (
-            <section>
-              <h1 className="mt-2 text-3xl font-semibold sm:text-4xl">
-                Start with your business
-              </h1>
-              <p className="mt-3 text-sm leading-6 text-[#655f56]">
-                These details stay in your private workspace and shape the plan
-                you review before payment.
-              </p>
-              <div className="mt-7 grid gap-5 sm:grid-cols-2">
-                <label className="text-sm font-medium">
+    <main className="relative flex min-h-screen flex-col overflow-hidden bg-[#0b0b0c] text-[#f7f4ee]">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 -top-40 h-[420px] bg-[radial-gradient(60%_100%_at_50%_0%,rgba(240,90,58,.16),transparent_70%)]"
+      />
+
+      <header className="relative flex min-h-16 items-center px-5 sm:px-8">
+        <WovoLogo variant="full" size={112} className="brightness-0 invert" />
+      </header>
+
+      <div className="relative flex flex-1 justify-center px-4 py-6 sm:px-6 sm:py-10">
+        <form onSubmit={submit} className="w-full max-w-[540px]">
+          <div className="rounded-[28px] border border-white/12 bg-[#151516] p-6 shadow-[0_32px_100px_rgba(0,0,0,.5)] sm:p-8">
+            <p className="text-[10px] font-bold uppercase tracking-[.2em] text-[#ff7659]">
+              One quick step
+            </p>
+            <h1 className="mt-3 text-[2.1rem] font-medium leading-[1.05] tracking-[-.045em]">
+              Set up your workspace.
+            </h1>
+            <p className="mt-3 text-sm leading-6 text-white/45">
+              WOVO puts your business name, place and platforms on everything it
+              makes for you. Your 10 free credits are released the moment this is
+              saved — no card, no plan to pick.
+            </p>
+
+            <div className="mt-7 space-y-5">
+              <label className="block">
+                <span className="text-xs font-semibold text-white/70">
                   Business name
-                  <input
-                    value={draft.businessName}
-                    onChange={(e) => set("businessName", e.target.value)}
-                    maxLength={120}
-                    className={inputClass}
-                  />
-                </label>
-                <label className="text-sm font-medium">
-                  Industry
-                  <select
-                    value={draft.businessType}
-                    onChange={(e) => set("businessType", e.target.value)}
-                    className={inputClass}
-                  >
-                    <option value="local_business">Local business</option>
-                    <option value="restaurant">Restaurant</option>
-                    <option value="realtor">
-                      Realtor / property marketing
-                    </option>
-                    <option value="contractor">Contractor</option>
-                    <option value="other">Other</option>
-                  </select>
-                </label>
-                <label className="text-sm font-medium">
-                  Service area
-                  <input
-                    value={draft.location}
-                    onChange={(e) => set("location", e.target.value)}
-                    maxLength={240}
-                    placeholder="City, region, or remote service area"
-                    className={inputClass}
-                  />
-                </label>
-                <label className="text-sm font-medium">
-                  Current website, if any
-                  <input
-                    value={draft.websiteUrl}
-                    onChange={(e) => set("websiteUrl", e.target.value)}
-                    type="url"
-                    maxLength={300}
-                    placeholder="https://"
-                    className={inputClass}
-                  />
-                </label>
-                <label className="text-sm font-medium sm:col-span-2">
-                  Best customers
-                  <textarea
-                    value={draft.audience}
-                    onChange={(e) => set("audience", e.target.value)}
-                    maxLength={800}
-                    className={textareaClass}
-                  />
-                </label>
-                <label className="text-sm font-medium">
-                  Typical customer age
-                  <select
-                    value={draft.ageRange}
-                    onChange={(e) => set("ageRange", e.target.value)}
-                    className={inputClass}
-                  >
-                    <option value="not_sure">Not sure / broad</option>
-                    {["18-24", "25-34", "35-44", "45-54", "55-64", "65+"].map(
-                      (value) => (
-                        <option key={value}>{value}</option>
-                      ),
-                    )}
-                  </select>
-                </label>
-              </div>
-            </section>
-          ) : null}
-          {step === 1 ? (
-            <section>
-              <h1 className="mt-2 text-3xl font-semibold sm:text-4xl">
-                Set your brand direction
-              </h1>
-              <div className="mt-7 grid gap-5 sm:grid-cols-2">
-                <label className="text-sm font-medium">
-                  Logo readiness
-                  <select
-                    value={draft.logoStatus}
-                    onChange={(e) =>
-                      set(
-                        "logoStatus",
-                        e.target.value as PlanDraft["logoStatus"],
-                      )
-                    }
-                    className={inputClass}
-                  >
-                    <option value="ready_to_upload">
-                      I have a logo to upload after activation
-                    </option>
-                    <option value="needs_help">
-                      I need help getting a usable logo
-                    </option>
-                  </select>
-                  <span className="mt-2 block text-xs leading-5 text-[#756e64]">
-                    A rights-confirmed logo is required before generation. If
-                    unavailable, your setup is preserved and WOVO shows a
-                    recovery checklist.
-                  </span>
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <label className="text-sm">
-                    Primary color
-                    <input
-                      type="color"
-                      value={draft.colors[0]}
-                      onChange={(e) =>
-                        set("colors", [e.target.value, draft.colors[1]])
-                      }
-                      className={`${inputClass} p-2`}
-                    />
-                  </label>
-                  <label className="text-sm">
-                    Secondary
-                    <input
-                      type="color"
-                      value={draft.colors[1]}
-                      onChange={(e) =>
-                        set("colors", [draft.colors[0], e.target.value])
-                      }
-                      className={`${inputClass} p-2`}
-                    />
-                  </label>
-                </div>
-                <label className="text-sm font-medium">
-                  Brand voice
-                  <textarea
-                    value={draft.brandVoice}
-                    onChange={(e) => set("brandVoice", e.target.value)}
-                    placeholder="Warm, direct, useful, never pushy"
-                    className={textareaClass}
-                  />
-                </label>
-                <label className="text-sm font-medium">
-                  Main goal
-                  <textarea
-                    value={draft.goals}
-                    onChange={(e) => set("goals", e.target.value)}
-                    placeholder="Bookings, leads, repeat orders…"
-                    className={textareaClass}
-                  />
-                </label>
-                <label className="text-sm">
-                  Posts per week
-                  <select
-                    value={draft.cadence}
-                    onChange={(e) => set("cadence", Number(e.target.value))}
-                    className={inputClass}
-                  >
-                    {[1, 2, 3, 4, 5, 6, 7].map((value) => (
-                      <option key={value}>{value}</option>
-                    ))}
-                  </select>
-                </label>
-                <fieldset className="text-sm">
-                  <legend>Priority platforms</legend>
-                  <div className="mt-2 grid grid-cols-2 gap-2">
-                    {[
-                      "instagram",
-                      "facebook",
-                      "tiktok",
-                      "youtube",
-                      "google_business",
-                      "linkedin",
-                    ].map((value) => (
-                      <label
-                        key={value}
-                        className="flex min-h-12 items-center gap-2 rounded-xl border border-[#191714]/10 px-3 capitalize"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={draft.platforms.includes(value)}
-                          onChange={() => toggle("platforms", value)}
-                        />
-                        {value.replace("_", " ")}
-                      </label>
-                    ))}
-                  </div>
-                </fieldset>
-                <label className="flex items-start gap-3 rounded-2xl border border-[#f05a3a]/20 bg-[#f05a3a]/[.06] p-4 text-sm leading-6 sm:col-span-2">
-                  <input
-                    type="checkbox"
-                    checked={draft.rights}
-                    onChange={(e) => set("rights", e.target.checked)}
-                    className="mt-1"
-                  />
-                  <span>
-                    I own or have permission to use submitted business assets.
-                    Each person’s likeness and voice require separate
-                    permission.
-                  </span>
-                </label>
-              </div>
-            </section>
-          ) : null}
-          {false && step === 2 ? (
-            <section>
-              <h1 className="mt-2 text-3xl font-semibold sm:text-4xl">
-                Choose your workspace
-              </h1>
-              <p className="mt-3 text-sm text-[#655f56]">
-                Nothing paid is preselected. Unavailable items save as setup
-                requests and are not charged.
-              </p>
-              <div className="mt-7 grid gap-6 lg:grid-cols-2">
-                <fieldset>
-                  <legend className="font-bold">Included modules</legend>
-                  <div className="mt-3 space-y-2">
-                    {PLAN_MODULES.map(([id, name]) => (
-                      <label
-                        key={id}
-                        className="flex min-h-12 items-center gap-3 rounded-xl border border-[#191714]/10 p-3 text-sm"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={draft.modules.includes(id)}
-                          onChange={() => toggle("modules", id)}
-                        />
-                        {name}
-                      </label>
-                    ))}
-                  </div>
-                </fieldset>
-                <fieldset>
-                  <legend className="font-bold">
-                    Optional recurring add-ons
-                  </legend>
-                  <div className="mt-3 space-y-2">
-                    {PLAN_ADDONS.map(([id, name, price, note]) => (
-                      <label
-                        key={id}
-                        className="block rounded-xl border border-[#191714]/10 p-3 text-sm"
-                      >
-                        <span className="flex gap-3">
-                          <input
-                            type="checkbox"
-                            checked={draft.addons.includes(id)}
-                            onChange={() => toggle("addons", id)}
-                          />
-                          <span>
-                            <strong>
-                              {name} · {price}
-                            </strong>
-                            <small className="mt-1 block leading-5 text-[#756e64]">
-                              {note}
-                            </small>
-                          </span>
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </fieldset>
-              </div>
-              <details
-                open={draft.websiteInterest}
-                className="mt-6 rounded-2xl border border-[#191714]/10 bg-[#f7f2e9] p-4"
-              >
-                <summary
-                  className="cursor-pointer font-bold"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    set("websiteInterest", !draft.websiteInterest);
-                  }}
+                </span>
+                <input
+                  value={businessName}
+                  onChange={(event) => setBusinessName(event.target.value)}
+                  maxLength={120}
+                  autoComplete="organization"
+                  placeholder="Columbia Auto"
+                  className={studioFieldClass}
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-xs font-semibold text-white/70">
+                  What kind of business is it?
+                </span>
+                <select
+                  value={businessType}
+                  onChange={(event) => setBusinessType(event.target.value)}
+                  className={studioFieldClass}
                 >
-                  Website brief & sample concept ·{" "}
-                  {draft.websiteInterest ? "selected" : "optional"}
-                </summary>
-                {draft.websiteInterest ? (
-                  <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                    <label className="text-sm">
-                      Desired sections
-                      <textarea
-                        value={draft.websiteSections}
-                        onChange={(e) => set("websiteSections", e.target.value)}
-                        className={textareaClass}
-                      />
-                    </label>
-                    <label className="text-sm">
-                      Website goal
-                      <textarea
-                        value={draft.websiteGoals}
-                        onChange={(e) => set("websiteGoals", e.target.value)}
-                        className={textareaClass}
-                      />
-                    </label>
-                    <div className="rounded-2xl bg-white p-4 sm:col-span-2">
-                      <p className="text-xs font-bold uppercase tracking-[.14em] text-[#756e64]">
-                        Generated sample concept · preview only
-                      </p>
-                      <div
-                        className="mt-3 rounded-xl p-5"
-                        style={{
-                          background: `linear-gradient(135deg, ${draft.colors[0]}22, ${draft.colors[1]}18)`,
-                        }}
-                      >
-                        <h3 className="text-2xl font-semibold">
-                          {draft.businessName || "Your business"}
-                        </h3>
-                        <p className="mt-2 text-sm">
-                          A mobile-first {draft.websiteSections || "service"}{" "}
-                          layout focused on{" "}
-                          {draft.websiteGoals || draft.goals || "your goal"}.
-                        </p>
-                      </div>
-                      <p className="mt-2 text-xs text-[#756e64]">
-                        Not a hosted or published website.
-                      </p>
-                    </div>
-                  </div>
-                ) : null}
-              </details>
-              <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                <label className="text-sm">
-                  Employee invite draft
-                  <input
-                    type="email"
-                    value={draft.employeeEmail}
-                    onChange={(e) => set("employeeEmail", e.target.value)}
-                    placeholder="employee@business.com"
-                    className={inputClass}
-                  />
-                  <small className="mt-2 block leading-5 text-[#756e64]">
-                    Saved privately; no invite or seat charge until WOVO Teams
-                    is released and confirmed.
-                  </small>
-                </label>
-                <label className="text-sm">
-                  Draft permission
-                  <select
-                    value={draft.employeePermission}
-                    onChange={(e) => set("employeePermission", e.target.value)}
-                    className={inputClass}
-                  >
-                    <option value="view">View</option>
-                    <option value="draft">View & draft</option>
-                    <option value="approve">View, draft & approve</option>
-                    <option value="schedule">
-                      View, draft, approve & schedule
+                  {WORKSPACE_BUSINESS_TYPES.map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
                     </option>
-                  </select>
-                </label>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="text-xs font-semibold text-white/70">
+                  City or area you serve
+                </span>
+                <input
+                  value={location}
+                  onChange={(event) => setLocation(event.target.value)}
+                  maxLength={240}
+                  placeholder="Columbia, MO"
+                  className={studioFieldClass}
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-xs font-semibold text-white/70">
+                  Website{" "}
+                  <span className="font-normal text-white/35">(optional)</span>
+                </span>
+                <input
+                  value={websiteUrl}
+                  onChange={(event) => setWebsiteUrl(event.target.value)}
+                  maxLength={300}
+                  inputMode="url"
+                  placeholder="columbiaauto.com"
+                  className={studioFieldClass}
+                />
+              </label>
+
+              <div>
+                <span className="text-xs font-semibold text-white/70">
+                  Where do you post?{" "}
+                  <span className="font-normal text-white/35">(optional)</span>
+                </span>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {WORKSPACE_PLATFORMS.map(([value, label]) => {
+                    const on = platforms.includes(value);
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        aria-pressed={on}
+                        onClick={() => togglePlatform(value)}
+                        className={`inline-flex min-h-10 items-center rounded-xl border px-3.5 text-xs font-semibold transition ${on ? "border-[#f05a3a] bg-[#f05a3a]/12 text-[#ff8c70]" : "border-white/12 bg-white/[.03] text-white/55 hover:border-white/25 hover:text-white"}`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-              <fieldset className="mt-6">
-                <legend className="font-bold">Quote-only human services</legend>
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  {PLAN_SERVICES.map(([id, name]) => (
-                    <label
-                      key={id}
-                      className="flex min-h-12 items-center gap-3 rounded-xl border border-[#191714]/10 p-3 text-sm"
+
+              <div>
+                <span className="text-xs font-semibold text-white/70">
+                  Roughly how many posts a week?
+                </span>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {[1, 2, 3, 4, 5, 6, 7].map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      aria-pressed={cadence === value}
+                      onClick={() => setCadence(value)}
+                      className={`inline-flex h-11 w-11 items-center justify-center rounded-xl border text-sm font-bold transition ${cadence === value ? "border-[#f05a3a] bg-[#f05a3a] text-[#140b08]" : "border-white/12 bg-white/[.03] text-white/55 hover:border-white/25 hover:text-white"}`}
                     >
-                      <input
-                        type="checkbox"
-                        checked={draft.services.includes(id)}
-                        onChange={() => toggle("services", id)}
-                      />
-                      {name}
-                    </label>
+                      {value}
+                    </button>
                   ))}
                 </div>
-              </fieldset>
-            </section>
-          ) : null}
-          {step === 2 ? (
-            <PlanSelection
-              draft={draft}
-              availableAddons={availableAddons}
-              onSet={set}
-              onToggle={toggle}
-            />
-          ) : null}
-          {step === 3 ? (
-            <section>
-              <p className="mt-2 font-bold text-[#d94326]">
-                Your WOVO workspace is ready to activate
-              </p>
-              <h1 className="mt-1 text-3xl font-semibold sm:text-4xl">
-                Review your tailored plan
-              </h1>
-              <div className="mt-7 grid gap-4 lg:grid-cols-[1.15fr_.85fr]">
-                <div className="space-y-4">
-                  <article className="rounded-2xl border border-[#191714]/10 p-5">
-                    <h2 className="font-bold">{draft.businessName}</h2>
-                    <p className="mt-1 text-sm text-[#655f56]">
-                      {draft.businessType.replaceAll("_", " ")} ·{" "}
-                      {draft.location} · {draft.cadence} posts/week
-                    </p>
-                    <p className="mt-3 text-sm">
-                      {draft.modules.length
-                        ? draft.modules
-                            .map(
-                              (id) =>
-                                PLAN_MODULES.find(([key]) => key === id)?.[1],
-                            )
-                            .join(" · ")
-                        : "No optional modules selected."}
-                    </p>
-                  </article>
-                  <article className="rounded-2xl border border-[#f05a3a]/25 bg-[#f05a3a]/[.06] p-5">
-                    <p className="text-xs font-bold uppercase tracking-[.14em] text-[#a9341f]">
-                      Estimated time WOVO can take off your plate
-                    </p>
-                    <p className="mt-2 text-3xl font-semibold">
-                      {weeklyLow}–{weeklyHigh} hours/week
-                    </p>
-                    <p className="mt-1 text-sm text-[#655f56]">
-                      About {Math.round(weeklyLow * 4.33)}–
-                      {Math.round(weeklyHigh * 4.33)} hours/month.
-                    </p>
-                    <div className="mt-4 grid grid-cols-3 gap-2">
-                      {projections.map((item) => (
-                        <div
-                          key={item.months}
-                          className="rounded-xl bg-white p-3 text-center"
-                        >
-                          <strong className="block">
-                            {item.low}–{item.high}h
-                          </strong>
-                          <span className="text-xs text-[#756e64]">
-                            {item.months} months
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                    <details className="mt-4 text-xs leading-5 text-[#655f56]">
-                      <summary className="cursor-pointer font-bold">
-                        How we estimate this
-                      </summary>
-                      <p className="mt-2">
-                        A conservative planning range based on selected posting
-                        cadence, content setup, asset organization,
-                        website-brief upkeep, and optional inbox-draft workflow.
-                        It is a projection—not past results or guaranteed
-                        savings—and excludes setup time, approvals, provider
-                        outages, and work you keep manual.
-                      </p>
-                    </details>
-                  </article>
-                  {draft.addons.length ? (
-                    <article className="rounded-2xl border border-[#c58b21]/30 bg-[#fff3cf] p-5">
-                      <h2 className="font-bold">Selected add-ons</h2>
-                      {PLAN_ADDONS.filter(([id]) =>
-                        draft.addons.includes(id),
-                      ).map(([id, name, price]) => (
-                        <div
-                          key={id}
-                          className="mt-3 flex justify-between gap-3 text-sm"
-                        >
-                          <span>{name}</span>
-                          <strong>{price}</strong>
-                        </div>
-                      ))}
-                    </article>
-                  ) : null}
-                  {draft.services.length ? (
-                    <article className="rounded-2xl border border-[#191714]/10 p-5">
-                      <h2 className="font-bold">Quote-only interests</h2>
-                      <p className="mt-2 text-sm text-[#655f56]">
-                        {PLAN_SERVICES.filter(([id]) =>
-                          draft.services.includes(id),
-                        )
-                          .map(([, name]) => name)
-                          .join(" · ")}
-                        . No charge today.
-                      </p>
-                    </article>
-                  ) : null}
-                </div>
-                <aside className="rounded-2xl bg-[#191714] p-5 text-white sm:p-6">
-                  <p className="text-xs font-bold uppercase tracking-[.16em] text-[#ff8c72]">
-                    Choose plan and billing period
-                  </p>
-                  <BillingPlanSelector options={billingOptions} value={billingPlan} onChange={setBillingPlan} dark />
-                  <BillingPeriodSelector
-                    options={billingOptions.filter((option) => option.planId === billingPlan)}
-                    value={selectedBillingOption?.frequency ?? "monthly"}
-                    onChange={setBillingFrequency}
-                    dark
-                  />
-                  <div className="mt-5 border-t border-white/15 pt-4">
-                    <div className="flex items-baseline justify-between gap-4">
-                      <span className="text-sm text-white/65">
-                        Total due today
-                      </span>
-                      <strong className="text-3xl">
-                        {selectedBillingOption
-                          ? formatMoney(selectedBillingOption.amountCents)
-                          : "Unavailable"}
-                      </strong>
-                    </div>
-                    <p className="mt-2 text-xs leading-5 text-white/60">
-                      {selectedBillingOption
-                        ? `${selectedBillingOption.renewalLabel}. ${formatMoney(selectedBillingOption.effectiveMonthlyCents)} effective monthly.`
-                        : "Billing is temporarily unavailable."}
-                    </p>
-                  </div>
-                  <p className="mt-5 text-xs leading-5 text-white/65">
-                    Includes the brand profile, weekly plan, approval queue,
-                    calendar, private assets, and WOVO team inbox. Paid features
-                    activate only after a verified Stripe webhook.
-                  </p>
-                </aside>
+                <p className="mt-2 text-[11px] text-white/32">
+                  A starting point for planning. You can change it any time.
+                </p>
               </div>
-            </section>
-          ) : null}
-          {localError || error ? (
-            <p
-              role="alert"
-              className="mt-6 rounded-xl border border-[#b42318]/25 bg-[#fff1ed] p-3 text-sm text-[#8f2118]"
+
+              <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-white/10 bg-white/[.03] p-4">
+                <input
+                  type="checkbox"
+                  checked={rights}
+                  onChange={(event) => setRights(event.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-[#f05a3a]"
+                />
+                <span className="text-xs leading-5 text-white/55">
+                  I own, or have permission to use, the logos, photos and other
+                  material I bring into WOVO.
+                </span>
+              </label>
+            </div>
+
+            {message ? (
+              <p
+                role="alert"
+                className="mt-5 rounded-xl border border-[#b42318]/35 bg-[#b42318]/10 p-3.5 text-sm text-[#ffb4a6]"
+              >
+                {message}
+              </p>
+            ) : null}
+
+            <button
+              type="submit"
+              disabled={busy === "onboard"}
+              className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-[#f05a3a] px-5 text-sm font-black text-[#140b08] transition hover:bg-[#ff7659] disabled:cursor-not-allowed disabled:opacity-55"
             >
-              {localError || error}
-            </p>
-          ) : null}
-          <div className="mt-8 flex flex-col-reverse gap-3 border-t border-[#191714]/10 pt-5 sm:flex-row sm:justify-between">
-            {step > 0 ? (
-              <button
-                type="button"
-                className={secondaryButton}
-                onClick={() => {
-                  setLocalError("");
-                  setStep(step - 1);
-                  window.scrollTo({ top: 0 });
-                }}
-              >
-                Back and edit
-              </button>
-            ) : (
-              <span />
-            )}
-            {step < 3 ? (
-              <button type="button" className={primaryButton} onClick={next}>
-                Continue
-              </button>
-            ) : (
-              <button
-                disabled={Boolean(busy) || !selectedBillingOption}
-                className={primaryButton}
-              >
-                {busy
-                  ? "Preparing your workspace…"
-                  : selectedBillingOption
-                    ? "Confirm plan & continue to secure checkout"
-                    : "Billing setup required"}
-              </button>
-            )}
+              {busy === "onboard"
+                ? "Setting up your workspace…"
+                : "Create workspace and claim 10 credits"}
+            </button>
           </div>
-          <p className="mt-5 text-xs leading-5 text-[#7a7369]">
-            By confirming, you agree to the{" "}
-            <Link href="/terms-of-use" className="underline">
-              Terms
-            </Link>
-            , acknowledge the{" "}
-            <Link href="/privacy-policy" className="underline">
-              Privacy Policy
-            </Link>
-            .
-          </p>
         </form>
       </div>
     </main>
@@ -1773,310 +888,6 @@ function BillingPlanSelector({ options, value, onChange, dark = false }: { optio
   return <div className="mt-4 grid grid-cols-3 gap-2" role="radiogroup" aria-label="WOVO plan">{plans.map((option) => <button key={option.planId} type="button" role="radio" aria-checked={option.planId === value} onClick={() => onChange(option.planId)} className={`min-h-14 rounded-xl border px-2 text-left ${option.planId === value ? (dark ? "border-[#ff8c72] bg-white/10" : "border-[#f05a3a] bg-[#f05a3a]/10") : dark ? "border-white/15" : "border-[#191714]/12"}`}><strong className="block text-xs">{option.planName}</strong><span className={`mt-1 block text-[10px] ${dark ? "text-white/50" : "text-[#6d665d]"}`}>{option.monthlyCredits} credits/mo</span></button>)}</div>;
 }
 
-function PlanSelection({
-  draft,
-  availableAddons,
-  onSet,
-  onToggle,
-}: {
-  draft: PlanDraft;
-  availableAddons: string[];
-  onSet: <K extends keyof PlanDraft>(key: K, value: PlanDraft[K]) => void;
-  onToggle: (
-    key: "platforms" | "modules" | "addons" | "services",
-    value: string,
-  ) => void;
-}) {
-  const websiteSelected =
-    draft.websiteInterest || draft.modules.includes("website_brief");
-  const sectionChips = [
-    "Home",
-    "Services",
-    "Menu / offerings",
-    "About",
-    "Contact",
-  ];
-  const addSection = (section: string) => {
-    const sections = draft.websiteSections
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean);
-    onSet(
-      "websiteSections",
-      sections.includes(section)
-        ? sections.filter((item) => item !== section).join(", ")
-        : [...sections, section].join(", "),
-    );
-  };
-  const launchAddons = PLAN_ADDONS.filter(([id]) =>
-    availableAddons.includes(id),
-  );
-  return (
-    <section>
-      <div className="max-w-2xl">
-        <h1 className="mt-2 text-3xl font-semibold sm:text-4xl">
-          Shape the workspace around your week
-        </h1>
-        <p className="mt-3 text-sm leading-6 text-[#655f56]">
-          Choose only what helps now. Core modules are included; human
-          production requests are scoped and quoted separately.
-        </p>
-      </div>
-
-      <div className="mt-8">
-        <div className="flex items-end justify-between gap-4">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[.15em] text-[#d94326]">
-              Included with the workspace
-            </p>
-            <h2 className="mt-1 text-xl font-semibold">
-              Pick your working tools
-            </h2>
-          </div>
-          <span className="rounded-full bg-[#191714]/[.06] px-3 py-1 text-xs font-bold">
-            No extra charge
-          </span>
-        </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {PLAN_MODULES.map(([id, name]) => {
-            const selected = draft.modules.includes(id);
-            const benefit: Record<string, string> = {
-              content: "Turn cadence into a reviewable weekly plan.",
-              website_brief:
-                "Explore pages and a branded concept before hosting.",
-              listing_ad:
-                "Build an ad brief from facts and assets you may use.",
-              meetings: "Request organization-level consultations.",
-              jobs: "Organize private roles and applications without automated hiring.",
-            };
-            return (
-              <button
-                key={id}
-                type="button"
-                aria-pressed={selected}
-                onClick={() => {
-                  onToggle("modules", id);
-                  if (id === "website_brief")
-                    onSet("websiteInterest", !selected);
-                }}
-                className={`min-h-24 rounded-xl border p-4 text-left transition ${selected ? "border-[#f05a3a] bg-[#f05a3a]/[.07]" : "border-[#191714]/10 bg-white hover:border-[#f05a3a]/40"}`}
-              >
-                <span className="flex items-start justify-between gap-3">
-                  <strong className="text-sm">{name}</strong>
-                  <span
-                    className={`text-[10px] font-bold uppercase tracking-[.1em] ${selected ? "text-[#a9341f]" : "text-[#756e64]"}`}
-                  >
-                    {selected ? "Added" : "Choose"}
-                  </span>
-                </span>
-                <span className="mt-2 block text-xs leading-5 text-[#655f56]">
-                  {benefit[id]}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {websiteSelected ? (
-        <div className="mt-8 grid gap-6 rounded-[28px] border border-[#191714]/10 bg-[#f7f2e9] p-4 sm:p-6 lg:grid-cols-[.8fr_1.2fr]">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[.15em] text-[#d94326]">
-              Website concept setup
-            </p>
-            <h2 className="mt-2 text-2xl font-semibold">
-              Give the concept a direction
-            </h2>
-            <p className="mt-2 text-sm leading-6 text-[#655f56]">
-              Choose a few page sections, then add one outcome in your own
-              words.
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {sectionChips.map((section) => {
-                const selected = draft.websiteSections
-                  .split(",")
-                  .map((item) => item.trim())
-                  .includes(section);
-                return (
-                  <button
-                    key={section}
-                    type="button"
-                    aria-pressed={selected}
-                    onClick={() => addSection(section)}
-                    className={`min-h-10 rounded-full border px-3 text-xs font-bold ${selected ? "border-[#f05a3a] bg-[#f05a3a]/10 text-[#8f301f]" : "border-[#191714]/15 bg-white text-[#655f56]"}`}
-                  >
-                    {section}
-                  </button>
-                );
-              })}
-            </div>
-            <label className="mt-5 block text-sm font-bold">
-              Primary website goal
-              <input
-                value={draft.websiteGoals}
-                onChange={(event) => onSet("websiteGoals", event.target.value)}
-                maxLength={600}
-                placeholder="Example: help visitors request a project estimate"
-                className={inputClass}
-              />
-            </label>
-            <details className="mt-4 rounded-xl border border-[#191714]/10 bg-white/70 p-3 text-sm">
-              <summary className="cursor-pointer font-bold">
-                Add custom page details
-              </summary>
-              <textarea
-                value={draft.websiteSections}
-                onChange={(event) =>
-                  onSet("websiteSections", event.target.value)
-                }
-                maxLength={600}
-                className={`${inputClass} min-h-20 py-3`}
-                aria-label="Custom website sections"
-              />
-            </details>
-          </div>
-          <div className="border-[5px] border-[#191714] bg-[#191714] p-1 shadow-[0_24px_50px_rgba(25,23,20,.16)]">
-            <div className="overflow-hidden bg-[#fffdf8]">
-              <div className="flex items-center justify-between border-b border-[#191714]/10 px-4 py-3">
-                <strong className="text-sm">{draft.businessName}</strong>
-                <span
-                  className="h-2 w-14"
-                  style={{ backgroundColor: draft.colors[0] }}
-                />
-              </div>
-              <div
-                className="grid min-h-56 place-items-center border-l-8 px-5 py-9 text-center"
-                style={{ borderLeftColor: draft.colors[0] }}
-              >
-                <div>
-                  <span
-                    className="text-[10px] font-bold uppercase tracking-[.18em]"
-                    style={{ color: draft.colors[0] }}
-                  >
-                    Website concept
-                  </span>
-                  <h3 className="mx-auto mt-3 max-w-sm text-3xl font-semibold leading-tight">
-                    A clearer next step for every visitor.
-                  </h3>
-                  <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#655f56]">
-                    {draft.websiteGoals.trim() ||
-                      `A focused ${draft.businessType.replaceAll("_", " ")} concept designed to turn interest into a useful conversation.`}
-                  </p>
-                  <span
-                    className="mt-5 inline-flex min-h-10 items-center px-4 text-xs font-bold text-white"
-                    style={{ backgroundColor: draft.colors[1] }}
-                  >
-                    Start a request
-                  </span>
-                </div>
-              </div>
-              <div className="grid border-t border-[#191714]/10 sm:grid-cols-3">
-                {["What you offer", "Why it fits", "How to begin"].map(
-                  (title, index) => (
-                    <div
-                      key={title}
-                      className={`bg-white p-3 ${index ? "border-t border-[#191714]/10 sm:border-l sm:border-t-0" : ""}`}
-                    >
-                      <span
-                        className="text-[10px] font-bold"
-                        style={{ color: draft.colors[0] }}
-                      >
-                        0{index + 1}
-                      </span>
-                      <p className="mt-2 text-xs font-bold">{title}</p>
-                      <p className="mt-1 text-[10px] leading-4 text-[#756e64]">
-                        Concise, editable brand-led content.
-                      </p>
-                    </div>
-                  ),
-                )}
-              </div>
-              <div className="border-t border-[#191714]/10 px-4 py-3 text-center text-[10px] font-bold uppercase tracking-[.15em] text-[#756e64]">
-                Concept preview · not published
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {launchAddons.length ? (
-        <div className="mt-8">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[.15em] text-[#d94326]">
-              Optional upgrades
-            </p>
-            <h2 className="mt-1 text-xl font-semibold">
-              Add only what you want
-            </h2>
-          </div>
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            {launchAddons.map(([id, name, price, note]) => {
-              const selected = draft.addons.includes(id);
-              return (
-                <div
-                  key={id}
-                  className={`rounded-2xl border p-4 ${selected ? "border-[#f05a3a] bg-[#f05a3a]/[.06]" : "border-[#191714]/10 bg-white"}`}
-                >
-                  <button
-                    type="button"
-                    aria-pressed={selected}
-                    onClick={() => onToggle("addons", id)}
-                    className="flex min-h-12 w-full items-start justify-between gap-3 text-left"
-                  >
-                    <span>
-                      <strong>{name}</strong>
-                      <span className="mt-1 block text-sm font-bold text-[#a9341f]">
-                        {price}
-                      </span>
-                    </span>
-                    <span
-                      className={`rounded-full px-3 py-1 text-xs font-bold ${selected ? "bg-[#f05a3a]" : "bg-[#191714]/[.06] text-[#655f56]"}`}
-                    >
-                      {selected ? "Selected" : "Add"}
-                    </span>
-                  </button>
-                  {selected ? (
-                    <p className="mt-3 border-t border-[#191714]/10 pt-3 text-xs leading-5 text-[#655f56]">
-                      {note}
-                    </p>
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ) : null}
-
-      <details className="mt-8 rounded-2xl border border-[#191714]/10 bg-white p-4">
-        <summary className="cursor-pointer font-bold">
-          Interested in human production services?
-        </summary>
-        <p className="mt-2 text-sm leading-6 text-[#655f56]">
-          Choose an interest for the plan summary. WOVO will scope availability
-          and quote it separately—no booking or charge is created now.
-        </p>
-        <div className="mt-4 grid gap-2 sm:grid-cols-2">
-          {PLAN_SERVICES.map(([id, name]) => {
-            const selected = draft.services.includes(id);
-            return (
-              <button
-                key={id}
-                type="button"
-                aria-pressed={selected}
-                onClick={() => onToggle("services", id)}
-                className={`min-h-12 rounded-xl border px-4 text-left text-sm font-bold ${selected ? "border-[#f05a3a] bg-[#f05a3a]/10" : "border-[#191714]/10"}`}
-              >
-                {selected ? "Added · " : ""}
-                {name}
-              </button>
-            );
-          })}
-        </div>
-      </details>
-    </section>
-  );
-}
-
 function BillingCard({
   snapshot,
   account,
@@ -2113,22 +924,15 @@ function BillingCard({
       <div className="grid gap-6 lg:grid-cols-[1fr_360px] lg:items-start">
         <div className="max-w-2xl">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#d94326]">
-            Keep building this workspace
+            When you want more than 10 credits
           </p>
           <h2 className="mt-2 text-3xl font-semibold tracking-[-.03em]">
-            Your preview is ready. Unlock the working version.
+            A plan adds monthly credits.
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-[#5f574e]">
-            Includes your industry-specific brand profile, weekly planning
-            workflow, approval/manual posting queue, private asset library,
-            calendar, private team inbox, and one assigned WOVO representative
-            for consultations. Automatic social publishing and human production
-            labor are not included.
-          </p>
-          <p className="mt-2 text-sm text-[#655f56]">
-            Separate paid add-ons or quotes: in-person shoots, drone work,
-            bespoke website creation, custom editing, extra participants, and
-            additional staff time.
+            Your workspace already works. Everything you make is yours to
+            download, and your starter credits do not expire. A plan simply adds
+            credits every month so you can keep going without buying packs.
           </p>
           <p className="mt-3 text-xs leading-5 text-[#7a7369]">
             Stripe displays the final price and renewal cadence before payment.
@@ -2180,7 +984,6 @@ function BillingCard({
 }
 
 function Overview({
-  snapshot,
   account,
   content,
   orders,
@@ -2195,7 +998,6 @@ function Overview({
   setError,
   setNotice,
 }: {
-  snapshot: PortalSnapshot;
   account: PortalAccount;
   content: PortalContentItem[];
   orders: PortalOrder[];
@@ -2323,56 +1125,27 @@ function Overview({
   const profileReady = Boolean(
     account.brand_voice && account.audience && account.goals,
   );
-  const firstPlanReady = content.length > 0;
-  const approvalReady = content.some((item) =>
-    ["approved", "queued", "manual_posted"].includes(item.status),
-  );
-  const progress = [profileReady, hasBrandAsset, firstPlanReady, approvalReady];
-  const progressCount = progress.filter(Boolean).length;
-  const nextAction = !profileReady
-    ? "Tighten your brand profile"
-    : missingRequiredAssets
-      ? "Upload required brand assets"
-      : !firstPlanReady
-        ? "Create your first content plan"
-        : awaiting.length
-          ? `Review ${awaiting.length} queued item${awaiting.length === 1 ? "" : "s"}`
-          : "Check the upcoming schedule";
   return (
     <div className="space-y-5">
-      <section className="overflow-hidden rounded-[28px] bg-[#191714] p-5 text-white shadow-[0_24px_80px_rgba(25,23,20,.16)] sm:p-7">
+      <section className="overflow-hidden rounded-[28px] border border-white/10 bg-[#191714] p-5 text-white shadow-[0_24px_80px_rgba(25,23,20,.16)] sm:p-7">
         <p className="text-xs font-bold uppercase tracking-[.18em] text-[#ff8c70]">
-          Welcome to {account.business_name}
+          {account.business_name}
         </p>
-        <div className="mt-4 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
-          <div>
-            <h1 className="max-w-3xl text-3xl font-medium leading-tight tracking-[-.035em] sm:text-5xl">
-              {nextAction}.
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/70">
-              WOVO keeps the week simple: prepare the brand, create drafts,
-              approve what is accurate, then move approved work into the posting
-              schedule.
-            </p>
-          </div>
-          <div className="min-w-56 rounded-2xl border border-white/10 bg-white/[.06] p-4">
-            <div className="flex items-center justify-between text-xs">
-              <span>Workspace progress</span>
-              <strong>{progressCount}/4</strong>
-            </div>
-            <div
-              className="mt-3 grid grid-cols-4 gap-1"
-              aria-label={`${progressCount} of 4 setup steps complete`}
-            >
-              {progress.map((ready, index) => (
-                <span
-                  key={index}
-                  className={`h-2 rounded-full ${ready ? "bg-[#f05a3a]" : "bg-white/15"}`}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
+        <h1 className="mt-4 max-w-3xl text-3xl font-medium leading-tight tracking-[-.035em] sm:text-5xl">
+          What do you want WOVO to handle?
+        </h1>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-white/60">
+          Describe the job in your own words and WOVO routes it — an image, a
+          video, a caption, a plan for the week. Every job shows its exact credit
+          cost before it runs.
+        </p>
+        <button
+          type="button"
+          onClick={() => onNavigate("queue")}
+          className="mt-6 inline-flex min-h-12 items-center justify-center rounded-xl bg-[#f05a3a] px-6 text-sm font-black text-[#140b08] transition hover:bg-[#ff7659]"
+        >
+          Open the composer
+        </button>
       </section>
 
       <section
@@ -2396,9 +1169,9 @@ function Overview({
             "calendar",
           ],
           [
-            "Message WOVO",
-            "Open your private shared support channel.",
-            "inbox",
+            "Your projects",
+            "Media, drafts and revisions you have already made.",
+            "studio",
           ],
         ].map(([title, copy, target]) => (
           <button
@@ -2411,10 +1184,10 @@ function Overview({
                     ?.scrollIntoView({ behavior: "smooth", block: "start" })
                 : onNavigate(target as Tab)
             }
-            className="group min-h-36 rounded-2xl border border-[#191714]/10 bg-[#fffdf8] p-5 text-left transition hover:-translate-y-0.5 hover:border-[#f05a3a]/45 hover:shadow-[0_16px_45px_rgba(25,23,20,.1)]"
+            className="group min-h-36 rounded-2xl border border-white/10 bg-white/[.035] p-5 text-left text-[#f7f4ee] transition hover:-translate-y-0.5 hover:border-[#f05a3a]/45 hover:bg-white/[.06]"
           >
             <p className="font-semibold">{title}</p>
-            <p className="mt-2 text-sm leading-6 text-[#6b645b]">{copy}</p>
+            <p className="mt-2 text-sm leading-6 text-white/50">{copy}</p>
             <span className="mt-4 inline-flex text-xs font-bold uppercase tracking-[.12em] text-[#d94326]">
               Open →
             </span>
@@ -2713,18 +1486,11 @@ function Overview({
 
       <section className="rounded-2xl border border-[#191714]/10 bg-white/60 p-4 text-sm leading-6 text-[#655f56]">
         <p>
-          <strong className="text-[#191714]">Need context?</strong>{" "}
-          Notifications are private WOVO team updates; the posting queue is your
-          review path; scheduled items appear on Calendar; support always goes
-          to the shared WOVO team, never an employee&apos;s personal account.
+          <strong className="text-[#191714]">Where things live:</strong>{" "}
+          the composer makes the work, Projects holds everything you have made,
+          and anything scheduled shows up on Calendar.
         </p>
         <div className="mt-3 flex flex-wrap gap-3">
-          <button
-            onClick={() => onNavigate("inbox")}
-            className="font-bold text-[#d94326]"
-          >
-            Message WOVO
-          </button>
           <button
             onClick={() => onNavigate("studio")}
             className="font-bold text-[#d94326]"
@@ -2733,39 +1499,6 @@ function Overview({
           </button>
         </div>
       </section>
-      {snapshot.mode === "staff" ? (
-        <section className={cardClass}>
-          <h2 className="text-lg font-semibold">Team notifications</h2>
-          <div className="mt-4 space-y-3">
-            {snapshot.notifications
-              .filter((item) => item.account_id === account.id)
-              .slice(0, 8)
-              .map((item) => (
-                <div
-                  key={item.id}
-                  className="rounded-xl border border-[#191714]/10 bg-[#191714]/[.035] p-3"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-medium">{item.title}</p>
-                    <p className="text-xs text-[#7a7369]">
-                      {formatDate(item.created_at)}
-                    </p>
-                  </div>
-                  {item.body ? (
-                    <p className="mt-1 text-sm text-[#655f56]">{item.body}</p>
-                  ) : null}
-                </div>
-              ))}
-            {!snapshot.notifications.some(
-              (item) => item.account_id === account.id,
-            ) ? (
-              <p className="text-sm text-[#7a7369]">
-                No new operational notifications.
-              </p>
-            ) : null}
-          </div>
-        </section>
-      ) : null}
     </div>
   );
 }
@@ -4932,241 +3665,6 @@ function Calendar({
   );
 }
 
-function Inbox({
-  account,
-  thread,
-  messages,
-  assignments,
-  staff,
-  canAssign,
-  busy,
-  onAction,
-}: {
-  account: PortalAccount;
-  thread: PortalThread | null;
-  messages: PortalSnapshot["messages"];
-  assignments: PortalSnapshot["threadAssignments"];
-  staff: boolean;
-  canAssign: boolean;
-  busy: string;
-  onAction: (
-    payload: Record<string, unknown>,
-    success: string,
-  ) => Promise<unknown>;
-}) {
-  const [internal, setInternal] = useState(false);
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const data = new FormData(form);
-    await onAction(
-      {
-        action: "send_message",
-        accountId: account.id,
-        threadId: thread?.id,
-        message: data.get("message"),
-        visibility: internal ? "internal" : "client",
-      },
-      internal
-        ? "Internal note added for the WOVO team."
-        : `Message sent. Case ${thread?.case_reference ?? ""}.`,
-    );
-    form.reset();
-  }
-  return (
-    <div className="space-y-5">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-[.16em] text-[#d94326]">
-          Private shared channel
-        </p>
-        <h1 className="mt-2 text-3xl font-semibold">WOVO team inbox</h1>
-        <p className="mt-2 text-sm text-[#655f56]">
-          A client-scoped support channel with internal assignment and role
-          visibility—not a public community server.
-        </p>
-        {thread ? (
-          <p className="mt-3 font-mono text-sm text-[#a9341f]">
-            Case {thread.case_reference}
-          </p>
-        ) : null}
-      </div>
-      {staff && thread ? (
-        <section className={cardClass}>
-          <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-end">
-            <div>
-              <p className="text-sm font-semibold">Case ownership & status</p>
-              <p className="mt-1 text-xs text-[#7a7369]">
-                Assigned to{" "}
-                <strong className="text-[#191714]">
-                  {thread.assigned_role?.replaceAll("_", " ") ??
-                    "the shared support queue"}
-                </strong>{" "}
-                · status{" "}
-                <strong className="text-[#191714]">
-                  {thread.status.replaceAll("_", " ")}
-                </strong>
-                .
-              </p>
-            </div>
-            {canAssign ? (
-              <div className="grid gap-2 sm:grid-cols-2">
-                <form
-                  className="flex flex-col gap-2 sm:flex-row"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    const data = new FormData(event.currentTarget);
-                    void onAction(
-                      {
-                        action: "assign_thread",
-                        accountId: account.id,
-                        threadId: thread.id,
-                        assignedRole: data.get("assignedRole"),
-                      },
-                      `Case ${thread.case_reference} assigned.`,
-                    );
-                  }}
-                >
-                  <select
-                    name="assignedRole"
-                    defaultValue={thread.assigned_role ?? "support"}
-                    className={inputClass}
-                  >
-                    <option value="support">Support</option>
-                    <option value="manager">Manager</option>
-                    <option value="video_editor">Video editor</option>
-                    <option value="website_designer">Website designer</option>
-                    <option value="admin">Admin</option>
-                    <option value="owner">President / owner</option>
-                  </select>
-                  <button
-                    disabled={busy === "assign_thread"}
-                    className={secondaryButton}
-                  >
-                    Reassign
-                  </button>
-                </form>
-                <form
-                  className="flex flex-col gap-2 sm:flex-row"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    const data = new FormData(event.currentTarget);
-                    void onAction(
-                      {
-                        action: "update_thread_status",
-                        accountId: account.id,
-                        threadId: thread.id,
-                        status: data.get("status"),
-                      },
-                      `Case ${thread.case_reference} status updated.`,
-                    );
-                  }}
-                >
-                  <select
-                    name="status"
-                    defaultValue={thread.status}
-                    className={inputClass}
-                  >
-                    <option value="open">Open / reopen</option>
-                    <option value="in_progress">In progress</option>
-                    <option value="resolved">Resolved</option>
-                  </select>
-                  <button
-                    disabled={busy === "update_thread_status"}
-                    className={secondaryButton}
-                  >
-                    Save status
-                  </button>
-                </form>
-              </div>
-            ) : null}
-          </div>
-          {assignments.length ? (
-            <details className="mt-4 rounded-xl border border-[#191714]/10 bg-[#f7f2e9] p-3 text-sm">
-              <summary className="cursor-pointer font-semibold">
-                Assignment history ({assignments.length})
-              </summary>
-              <div className="mt-3 space-y-2 text-xs text-[#6b645b]">
-                {assignments.map((item) => (
-                  <p key={item.id}>
-                    {formatDate(item.created_at)} · assigned to{" "}
-                    {item.assigned_role?.replaceAll("_", " ") ?? "shared queue"}
-                    {item.note ? ` · ${item.note}` : ""}
-                  </p>
-                ))}
-              </div>
-            </details>
-          ) : (
-            <p className="mt-4 text-xs text-[#756e64]">
-              No prior assignment changes.
-            </p>
-          )}
-        </section>
-      ) : null}
-      <section className={cardClass}>
-        <div className="max-h-[520px] space-y-3 overflow-y-auto pr-1">
-          {messages.map((message) => (
-            <article
-              key={message.id}
-              className={`max-w-[92%] rounded-2xl border p-4 sm:max-w-[78%] ${message.sender_label === "Client" ? "ml-auto border-[#f05a3a]/20 bg-[#f05a3a]/10" : message.visibility === "internal" ? "border-amber-300/20 bg-amber-300/10" : "border-[#191714]/10 bg-[#191714]/[.035]"}`}
-            >
-              <div className="flex items-center justify-between gap-3 text-xs">
-                <span className="font-semibold">
-                  {message.visibility === "internal"
-                    ? "Internal WOVO note"
-                    : message.sender_label}
-                </span>
-                <span className="text-[#7a7369]">
-                  {formatDate(message.created_at)}
-                </span>
-              </div>
-              <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[#3f3b35]">
-                {message.body}
-              </p>
-            </article>
-          ))}
-          {!messages.length ? (
-            <div className="rounded-2xl border border-dashed border-[#191714]/15 p-8 text-center">
-              <p className="font-medium">Start the conversation</p>
-              <p className="mt-2 text-sm text-[#7a7369]">
-                Ask about a post, booking, website request, restaurant special,
-                or property asset.
-              </p>
-            </div>
-          ) : null}
-        </div>
-        <form
-          onSubmit={(event) => void submit(event)}
-          className="mt-5 border-t border-[#191714]/10 pt-5"
-        >
-          <textarea
-            required
-            name="message"
-            maxLength={5000}
-            placeholder="Message the WOVO team..."
-            className={textareaClass}
-          />
-          {staff ? (
-            <label className="mt-3 flex min-h-11 items-center gap-2 text-sm text-[#5f574e]">
-              <input
-                type="checkbox"
-                checked={internal}
-                onChange={(event) => setInternal(event.target.checked)}
-              />
-              Internal note (hidden from client)
-            </label>
-          ) : null}
-          <button
-            disabled={!thread || busy === "send_message"}
-            className={`${primaryButton} mt-3`}
-          >
-            Send to shared channel
-          </button>
-        </form>
-      </section>
-    </div>
-  );
-}
-
 function KnowledgeStudio({
   account,
   notes,
@@ -6183,14 +4681,12 @@ function Services({
   account,
   orders,
   addons,
-  ownerProtected,
   busy,
   onAction,
 }: {
   account: PortalAccount;
   orders: PortalOrder[];
   addons: PortalSnapshot["setup"]["addonsConfigured"];
-  ownerProtected: boolean;
   busy: string;
   onAction: (
     payload: Record<string, unknown>,
@@ -6215,18 +4711,6 @@ function Services({
   }
   return (
     <div className="space-y-5">
-      {ownerProtected ? (
-        <section className="rounded-[24px] border border-[#f05a3a]/30 bg-[#171513] p-5 text-white shadow-xl">
-          <p className="text-[10px] font-bold uppercase tracking-[.18em] text-[#ff8c70]">Owner-protected settings</p>
-          <div className="mt-3 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-            <div>
-              <h2 className="text-xl font-semibold">Studio preview and cross-client controls</h2>
-              <p className="mt-1 text-sm leading-6 text-white/50">Available only to the authenticated WOVO owner role. Client users cannot see or open these controls.</p>
-            </div>
-            <span className="w-fit rounded-full border border-white/15 px-3 py-2 text-xs font-bold text-white/70">Account protected</span>
-          </div>
-        </section>
-      ) : null}
       <div>
         <p className="text-xs font-semibold uppercase tracking-[.16em] text-[#d94326]">
           Workspace settings

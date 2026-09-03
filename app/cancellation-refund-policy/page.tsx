@@ -22,7 +22,7 @@ export default function CancellationRefundPolicyPage() {
           <section className="py-7"><h2 className="text-2xl font-medium">Billing or access issue</h2><p className="mt-3 text-sm leading-7 text-[#5f5951]">Use the private WOVO support inbox or contact <a href={`mailto:${brand.supportEmail}`} className="font-bold text-[#d94326] underline underline-offset-4">{brand.supportEmail}</a>. Support can investigate an issue but is not required merely to turn off subscription renewal.</p></section>
         </div>
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-          <Link href="/portal" className="inline-flex min-h-12 items-center justify-center rounded-full bg-[#191714] px-6 text-sm font-bold text-white">Open client workspace</Link>
+          <Link href="/portal" className="inline-flex min-h-12 items-center justify-center rounded-full bg-[#191714] px-6 text-sm font-bold text-white">Open your workspace</Link>
           <Link href="/terms-of-use" className="inline-flex min-h-12 items-center justify-center rounded-full border border-[#191714]/20 px-6 text-sm font-bold">Terms of Use</Link>
           <Link href="/privacy-policy" className="inline-flex min-h-12 items-center justify-center rounded-full border border-[#191714]/20 px-6 text-sm font-bold">Privacy Policy</Link>
         </div>

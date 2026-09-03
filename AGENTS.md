@@ -128,15 +128,27 @@ browser QA, local database inspection.
 
 ## Repository facts you will need
 
-- Canonical git directory: `C:\Users\1xpay\OneDrive\Desktop\wovo-media`
-- Working tree in active use: `C:\Users\1xpay\.codex\worktrees\a051\wovo-media`
+- **The one canonical repository is `C:\Users\1xpay\wovo-media`.** Working tree
+  and `.git` in one place, on branch `wovo-v2`. Everything — Claude, Codex, VS
+  Code, the Desktop scripts — points here. There is no second checkout.
 - Remote: `https://github.com/wovomedia/wovo-media.git`
-- The repo lives on OneDrive, so CRLF churn will inflate diffs. Stage specific
-  paths rather than `git add -A`, and normalise a file to LF before staging it.
-- Deployment is run by the owner from the desktop script `Deploy WOVO.bat`.
-  Agents have no Vercel credentials here. If a change needs to ship, say plainly
-  that one manual run of that script is required — do not claim it deployed.
+- Retired on 2026-09-03, kept only as a safety net until `wovo-v2` is pushed:
+  `OneDrive\Desktop\wovo-media` (the old repo) and
+  `.codex\worktrees\a051\wovo-media` (the old worktree). Both carry a
+  `README-RETIRED.md`. Do not edit files in either. `~/wovomedia` and
+  `~/wovomedia-site` are unrelated scratch projects, also marked.
+- The repo deliberately sits **outside OneDrive**. The old location was inside
+  it, which caused CRLF churn, multi-minute git commands and files git could not
+  unlink. Do not move it back under `OneDrive\`.
+- Desktop scripts, all pointing at the canonical folder: `Deploy WOVO.bat`
+  (production), `Back up WOVO to GitHub.bat`, `Run WOVO Locally.bat`,
+  `Open WOVO Folder.bat`.
+- Deployment is run by the owner from `Deploy WOVO.bat`. Agents have no Vercel
+  credentials. If a change needs to ship, say plainly that one manual run of that
+  script is required — do not claim it deployed.
 - Documentation-only changes do not require a redeploy.
+- `npm ci` takes about 20 seconds here and `npm test`, `npx tsc --noEmit` and
+  `npm run lint` all run locally, so there is no excuse for shipping unverified.
 
 Stack: Next.js 16 App Router, React 19, TypeScript, Tailwind CSS 4, Vercel,
 Supabase (hand-rolled REST client in `lib/supabase/`, not `supabase-js`), Stripe.

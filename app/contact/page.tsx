@@ -24,7 +24,7 @@ export default function ContactPage() {
             <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#ff8c70]">Existing clients</p>
             <h2 className="mt-5 text-4xl font-medium tracking-[-0.04em]">Use the private support inbox.</h2>
             <p className="mt-4 text-sm leading-6 text-white/60">Create a case, keep its reference, and receive replies from WOVO Media without exposing individual staff contact details.</p>
-            <Link href="/portal" className="mt-8 inline-flex min-h-12 items-center justify-center rounded-full bg-[#f05a3a] px-6 text-sm font-bold text-[#191714]">Open client workspace</Link>
+            <Link href="/portal" className="mt-8 inline-flex min-h-12 items-center justify-center rounded-full bg-[#f05a3a] px-6 text-sm font-bold text-[#191714]">Open your workspace</Link>
           </article>
           <PublicInquiryForm />
         </div>

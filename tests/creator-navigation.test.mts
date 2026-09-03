@@ -4,25 +4,27 @@ import test from "node:test";
 
 const portal = readFileSync("app/portal/page.tsx", "utf8");
 
-test("creation-tool shortcuts open their matching workbench modes", () => {
-  const expectedModes = [
-    ["AI Images", "post"],
-    ["AI Video", "video"],
-    ["Cartoon Studio", "episode"],
-    ["Social Campaigns", "campaign"],
-    ["Website Builder", "website"],
-    ["AI Music", "music"],
-  ] as const;
+// The signed-in workspace used to open on an agency-style dashboard with a
+// "WOVO creation tools" sidebar of product tiles. That shell is gone: the
+// composer is the landing surface, and these guards exist so it does not come
+// back the next time someone reaches for a familiar-looking pattern.
+test("the workspace opens on the composer, not the old dashboard", () => {
+  assert.match(portal, /const \[tab, setTab\] = useState<Tab>\("queue"\)/);
+});
 
-  for (const [label, mode] of expectedModes) {
-    assert.match(
+test("the legacy creation-tool tile strip stays deleted", () => {
+  assert.doesNotMatch(portal, /WOVO creation tools/i);
+  assert.doesNotMatch(portal, /const WOVO_PRODUCTS/);
+  for (const label of ["Cartoon Studio", "Social Campaigns", "Website Builder"]) {
+    assert.doesNotMatch(
       portal,
-      new RegExp(`label: "${label}"[^\\n]+target: "queue"[^\\n]+mode: "${mode}"`),
+      new RegExp(`label: "${label}"`),
+      `${label} tile is back in the portal sidebar`,
     );
   }
 });
 
-test("the workbench mode is controlled by portal navigation", () => {
+test("the workbench mode is still controlled by portal navigation", () => {
   assert.match(portal, /creatorMode=\{creatorMode\}/);
   assert.match(portal, /onCreatorModeChange=\{setCreatorMode\}/);
   assert.match(portal, /mode=\{creatorMode\}/);
