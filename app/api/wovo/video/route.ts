@@ -9,6 +9,7 @@ import { checkAiRateLimit } from "@/lib/wovo-ai/rate-limit";
 import { assertPortalAccountAccess, PortalHttpError, requirePortalContext } from "@/lib/portal/server";
 import { signedMediaUrl } from "@/lib/wovo-ai/media-token";
 import { ensureWorkspaceUsagePolicy } from "@/lib/wovo-ai/usage-policy";
+import { customerSafeMessage, internalErrorCode } from "@/lib/errors/customer-safe";
 
 type CreateVideoBody = {
   prompt?: string;
@@ -62,7 +63,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ jobs: rows.map((row) => visibleVideoJob(request.url, row)) }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     const status = error instanceof PortalHttpError ? error.status : 401;
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to load video projects." }, { status });
+    return NextResponse.json({ error: customerSafeMessage(error, "Unable to load video projects.") }, { status });
   }
 }
 
@@ -278,7 +279,7 @@ export async function POST(request: Request) {
     }
     const message = error instanceof Error ? error.message : "";
     if (error instanceof PortalHttpError) {
-      return NextResponse.json({ error: error.message }, { status: error.status });
+      return NextResponse.json({ error: customerSafeMessage(error, "Unable to start the video.") }, { status: error.status });
     }
     if (message.includes("Missing bearer token") || message.includes("Unable to verify session")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

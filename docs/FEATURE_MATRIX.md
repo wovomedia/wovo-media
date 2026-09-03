@@ -37,7 +37,7 @@ That rule is why so few rows below say WORKING.
 | Pricing page | **PARTIAL** | Renders; term selector works. Not re-checked for overlap on mobile this session. |
 | Pricing economics | **SAFE** | Worst enabled case is an 81.3% margin at the lowest legitimate revenue per credit ($0.08333) and 100% utilisation. |
 | Health endpoint | **WORKING** | Reports database, billing, generation and storage independently. Verified live. |
-| Customer-safe errors | **PARTIAL** | `lib/errors/customer-safe.ts` applied to image, caption and chat. **Not yet applied to video, music or cartoon.** |
+| Customer-safe errors | **WORKING** | `lib/errors/customer-safe.ts` now filters image, caption, chat, video, music and cartoon. A test asserts no media route returns a raw `error.message`. |
 
 ## Removed on purpose
 
@@ -140,6 +140,5 @@ The nearest real gaps, in the order the spec itself puts them:
 
 1. No image canary has ever been run. The core promise is unverified.
 2. Free-tier social connection limits are not enforced at all.
-3. Customer-safe errors are missing from video, music and cartoon.
-4. Adam cannot touch Projects or Assets.
-5. Cartoon Studio has no character references, voices or episode memory.
+3. Adam cannot touch Projects or Assets.
+4. Cartoon Studio has no character references, voices or episode memory.

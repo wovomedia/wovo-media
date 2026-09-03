@@ -7,6 +7,7 @@ import { getEnv } from "@/lib/env";
 import { requireServerUser, supabaseServiceRoleRequest } from "@/lib/supabase/server";
 import { asRecord, asString, isEligibleFeedPost } from "@/lib/wovo-ai/feed-utils";
 import { signedMediaUrl, verifyMediaAccess } from "@/lib/wovo-ai/media-token";
+import { customerSafeMessage, internalErrorCode } from "@/lib/errors/customer-safe";
 
 type VideoJobRow = {
   id: string;
@@ -267,7 +268,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ jobI
     } catch (pollError) {
       return NextResponse.json({
         job: row,
-        warning: pollError instanceof Error ? pollError.message : "Unable to refresh video job state.",
+        warning: customerSafeMessage(pollError, "Unable to refresh video job state."),
       });
     }
   } catch (error) {
@@ -275,7 +276,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ jobI
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unable to load video job." },
+      { error: customerSafeMessage(error, "Unable to load video job.") },
       { status: 500 },
     );
   }

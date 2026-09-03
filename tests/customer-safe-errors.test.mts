@@ -53,3 +53,33 @@ test("the legacy generation routes no longer return raw provider text", () => {
     );
   }
 });
+
+test("every media route sends customer-facing errors through the safe filter", () => {
+  // Video, music and cartoon used to return `error.message` straight to the
+  // browser. A provider outage message therefore reached the customer with the
+  // provider's name in it, which breaks the rule that WOVO never names its
+  // suppliers.
+  for (const route of [
+    "app/api/wovo/video/route.ts",
+    "app/api/wovo/music/route.ts",
+    "app/api/wovo/video/[jobId]/route.ts",
+    "app/api/portal/cartoon/route.ts",
+  ]) {
+    const source = readFileSync(route, "utf8");
+    assert.match(
+      source,
+      /customerSafeMessage/,
+      `${route} does not use customerSafeMessage`,
+    );
+    assert.doesNotMatch(
+      source,
+      /error:\s*error instanceof Error \? error\.message/,
+      `${route} still returns a raw provider message to the customer`,
+    );
+    assert.doesNotMatch(
+      source,
+      /error:\s*error\.message\s*\}/,
+      `${route} still returns a raw error message to the customer`,
+    );
+  }
+});

@@ -7,14 +7,15 @@ import { cartoonProviderStatus, getValidatedCartoonSeriesPrice } from "@/lib/por
 import { assertPortalAccountAccess, isUuid, optionalString, PortalHttpError, requiredString, requirePortalContext, type PortalContext } from "@/lib/portal/server";
 import { supabaseServiceRoleRequest } from "@/lib/supabase/server";
 import { ensureStripeCustomerForUser } from "@/lib/wovo-ai/billing";
+import { customerSafeMessage, internalErrorCode } from "@/lib/errors/customer-safe";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 function errorResponse(error: unknown) {
-  if (error instanceof PortalHttpError) return NextResponse.json({ error: error.message }, { status: error.status });
-  const message = error instanceof Error ? error.message : "Cartoon request failed.";
+  if (error instanceof PortalHttpError) return NextResponse.json({ error: customerSafeMessage(error, "Cartoon request failed.") }, { status: error.status });
+  const message = customerSafeMessage(error, "Cartoon request failed.");
   if (message.includes("Missing bearer token") || message.includes("Unable to verify session")) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   console.error("Cartoon Episodes request failed", { name: error instanceof Error ? error.name : "UnknownError", message: message.slice(0, 160) });
   return NextResponse.json({ error: "WOVO could not complete that request. Nothing was published or charged." }, { status: 500 });

@@ -9,6 +9,7 @@ import { checkAiRateLimit } from "@/lib/wovo-ai/rate-limit";
 import { isUuid } from "@/lib/wovo-ai/feed-utils";
 import { signedMediaUrl } from "@/lib/wovo-ai/media-token";
 import { ensureWorkspaceUsagePolicy } from "@/lib/wovo-ai/usage-policy";
+import { customerSafeMessage, internalErrorCode } from "@/lib/errors/customer-safe";
 
 export const runtime = "nodejs";
 
@@ -68,7 +69,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ jobs: rows.map((row) => visibleJob(request.url, row)) }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     const status = error instanceof PortalHttpError ? error.status : 401;
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to load music projects." }, { status });
+    return NextResponse.json({ error: customerSafeMessage(error, "Unable to load music projects.") }, { status });
   }
 }
 
@@ -195,7 +196,7 @@ export async function POST(request: Request) {
       : error instanceof Error && error.message.includes("Insufficient AI credits") ? 402
         : 500;
     const message = error instanceof PortalHttpError
-      ? error.message
+      ? customerSafeMessage(error, "Unable to start that music track.")
       : status === 401
         ? "Unauthorized"
       : status === 402
