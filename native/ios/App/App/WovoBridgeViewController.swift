@@ -46,11 +46,13 @@ private final class WovoWebViewDelegate: NSObject, WKNavigationDelegate, WKUIDel
     private weak var owner: UIViewController?
     private weak var navigation: WKNavigationDelegate?
     private weak var ui: WKUIDelegate?
+    private let downloads: WovoDownloadCoordinator
 
     init(owner: UIViewController, navigation: WKNavigationDelegate?, ui: WKUIDelegate?) {
         self.owner = owner
         self.navigation = navigation
         self.ui = ui
+        self.downloads = WovoDownloadCoordinator(owner: owner)
         super.init()
     }
 
@@ -68,6 +70,13 @@ private final class WovoWebViewDelegate: NSObject, WKNavigationDelegate, WKUIDel
         guard let url = action.request.url else { decisionHandler(.cancel); return }
         // Capacitor's bridge proxy must never fetch another origin behind our origin.
         guard !url.path.hasPrefix("/_capacitor_http_interceptor_") else { decisionHandler(.cancel); return }
+        if action.shouldPerformDownload {
+            let approved = mayDownload(action, in: webView) && downloads.begin(action)
+            decisionHandler(approved ? .download : .cancel)
+            if !approved, action.navigationType == .linkActivated, action.sourceFrame.isMainFrame,
+               webView.url.map(WovoNavigationPolicy.isStudio) == true { downloads.unavailable() }
+            return
+        }
         if WovoNavigationPolicy.mayLoadInside(url) {
             decisionHandler(.allow)
             return
@@ -79,6 +88,24 @@ private final class WovoWebViewDelegate: NSObject, WKNavigationDelegate, WKUIDel
            WovoNavigationPolicy.mayOfferExternal(url) {
             offerExternal(url)
         }
+    }
+
+    private func mayDownload(_ action: WKNavigationAction, in webView: WKWebView) -> Bool {
+        guard let url = action.request.url else { return false }
+        return WovoDownloadPolicy.mayStart(url: url, topLevel: webView.url, source: action.sourceFrame.request.url,
+            mainSource: action.sourceFrame.isMainFrame, mainTarget: action.targetFrame == nil || action.targetFrame?.isMainFrame == true,
+            explicitLink: action.navigationType == .linkActivated, downloadAttribute: action.shouldPerformDownload,
+            method: action.request.httpMethod)
+    }
+
+    func webView(_ webView: WKWebView, navigationAction action: WKNavigationAction, didBecome download: WKDownload) {
+        guard mayDownload(action, in: webView) else { download.cancel(nil); return }
+        downloads.attach(download, action: action)
+    }
+
+    func webView(_ webView: WKWebView, navigationResponse response: WKNavigationResponse, didBecome download: WKDownload) {
+        // An unsolicited attachment/response must not bypass an explicit action.
+        download.cancel(nil)
     }
 
     func webView(_ webView: WKWebView, decidePolicyFor response: WKNavigationResponse, decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {

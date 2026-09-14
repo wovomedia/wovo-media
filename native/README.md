@@ -1,7 +1,8 @@
 # WOVO iOS — internal-test foundation
 
-This directory is isolated from the Next.js website. **No signed IPA, TestFlight
-release or App Store submission has been produced or verified.** The first
+This directory is isolated from the Next.js website. **The first cloud Mac
+simulator compile passed; no signed IPA, TestFlight release or App Store
+submission has been produced or verified.** The first
 foundation opens the existing online studio, with native navigation, strict
 origin handling and a packaged offline page. It is not Store-ready.
 
@@ -19,7 +20,8 @@ It uses Swift Package Manager and includes a shared `App` scheme. Do not re-run
 `cap add ios` over the customized native files. `cap sync ios` is the normal step.
 Root verified and registered bundle ID `com.wovomedia.wovo` on2026-09-14 for
 Wovo Media LLC, Apple Team `SD667C7LAG`. These are nonsecret identifiers, not
-signing credentials. App Store Connect record and signing still need verification.
+signing credentials. Root created App Store Connect app6811810017, WOVO Media,
+v1.0 Prepare for Submission. Signing still needs verification.
 
 ## Mac build
 
@@ -32,6 +34,9 @@ bash scripts/build-simulator.sh
 This creates an unsigned simulator `.app`, **not an iPhone-installable IPA**.
 The script runs Foundation-only Swift URL-policy tests before compiling UIKit
 and WebKit code. A passing Node check alone does not prove Swift compilation.
+The first real cloud run34820670042 passed on Xcode26.6:11 Node checks,25 Swift
+policy assertions, arm64/x86_64 Swift compile and simulator ZIP upload. It did
+not launch the app or verify phone authentication/media flows.
 `ci/github-ios-simulator.yml.example` is a dormant, manual-only workflow template.
 It is not an active workflow and does not sign, upload or submit anything.
 
@@ -57,8 +62,10 @@ the binary works. Never commit or paste signing keys into chat/source/logs.
 - Google/social OAuth redirects intentionally cannot navigate the bridged view
   to external domains. A system-auth session and verified callback/session
   handoff are **not implemented**. Do not advertise Google sign-in as verified.
-- No native push, native save-to-Photos/share integration or background rendering
-  service is implemented. Existing web controls are not evidence of native support.
+- Native Download-to-share-sheet source now handles explicit WOVO video/audio
+  exports, with foreground cancellation and size/time limits. It is NOT yet
+  verified on an authenticated iPhone. Native push, direct save-to-Photos and
+  background rendering are not implemented.
 - The microphone/camera descriptions explain existing web requests. Permission
   decisions prompt only for the top-level exact WOVO origin; other frames are
   denied. Permissions and upload results still require real-device tests.

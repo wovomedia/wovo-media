@@ -13,6 +13,8 @@ npm run sync
 mkdir -p build/policy
 swiftc ios/App/App/WovoNavigationPolicy.swift tests/navigation-policy-tests.swift -o build/policy/navigation-tests
 build/policy/navigation-tests
+swiftc ios/App/App/WovoNavigationPolicy.swift ios/App/App/WovoDownloadPolicy.swift tests/download-policy-tests.swift -o build/policy/download-tests
+build/policy/download-tests
 # Deliberately no -allowProvisioningUpdates: cannot create/alter Apple credentials.
 # An authorized operator must install the certificate/private key and matching profile.
 xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release \

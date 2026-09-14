@@ -19,9 +19,13 @@ test('active simulator workflow is restricted to the authorized repository and i
     'actions/checkout@11d5960a326750d5838078e36cf38b85af677262',
     'actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020',
     'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02',
+    'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02',
   ]);
   assert.match(body, /run: npm ci --ignore-scripts --no-audit --no-fund/);
   assert.match(body, /working-directory: native\n        run: bash scripts\/build-simulator\.sh/);
+  assert.match(body, /working-directory: native\n        timeout-minutes: 8\n        run: node scripts\/smoke-simulator\.mjs/);
+  assert.match(body, /name: WOVO-anonymous-runtime-smoke/);
+  assert.match(body, /native\/build\/runtime-smoke\/anonymous-launch-early\.png\n            native\/build\/runtime-smoke\/anonymous-launch\.png\n            native\/build\/runtime-smoke\/summary\.json/);
   assert.match(body, /path: native\/build\/WOVO-Internal-simulator\.zip\n          retention-days: 3\n          if-no-files-found: error/);
   const compile = await read('scripts/build-simulator.sh');
   assert.match(compile, /swiftc ios\/App\/App\/WovoNavigationPolicy\.swift tests\/navigation-policy-tests\.swift/);

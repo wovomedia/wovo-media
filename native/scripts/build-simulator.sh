@@ -12,6 +12,8 @@ npm run sync
 mkdir -p build/policy
 swiftc ios/App/App/WovoNavigationPolicy.swift tests/navigation-policy-tests.swift -o build/policy/navigation-tests
 build/policy/navigation-tests
+swiftc ios/App/App/WovoNavigationPolicy.swift ios/App/App/WovoDownloadPolicy.swift tests/download-policy-tests.swift -o build/policy/download-tests
+build/policy/download-tests
 xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug \
   -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
   -derivedDataPath build/simulator CODE_SIGNING_ALLOWED=NO build
