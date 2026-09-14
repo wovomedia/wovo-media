@@ -102,22 +102,72 @@ export function childEnvironment(env) {
   return Object.fromEntries(Object.entries(env).filter(([key]) => !SECRET_NAMES.includes(key) && !key.startsWith('WOVO_ASC_')));
 }
 
+const TRANSPORTER_CATEGORIES = ['tool-unavailable', 'interrupted', 'output-limit', 'private-key-unavailable',
+  'authentication-rejected', 'network-failure', 'asset-validation', 'unsupported-option', 'unclassified'];
+const DIAGNOSTIC_STREAM_LIMIT = 64 * 1024;
+
+// Raw output is never attached to an error or written to a log. Only fixed
+// categories and tightly contextualized numeric Apple/ITMS codes can leave here.
+export function classifyTransporterFailure({ stdout = '', stderr = '', exitCode = null, outputLimitExceeded = false, spawnCode = '' } = {}) {
+  const output = `${String(stdout).slice(-DIAGNOSTIC_STREAM_LIMIT)}\n${String(stderr).slice(-DIAGNOSTIC_STREAM_LIMIT)}`;
+  const itmsCodes = [...new Set([...output.matchAll(/\bITMS-(\d{5})(?=$|[\s:;,.)\]}"'])/g)].map(match => Number(match[1])))].slice(0, 8);
+  const errorCodes = new Set();
+  for (const pattern of [
+    /\b(?:ERROR|Error code)\s*:\s*(-?\d{3,6})(?=$|[\s:;,.)\]}"'])/gi,
+    /\b(?:Asset validation failed|Validation failed)\s*\((-?\d{3,6})\)(?=$|[\s:;,.)\]}"'])/gi,
+    /\bError Domain=[A-Za-z][A-Za-z0-9.]{0,80}\s+Code=(-?\d{3,6})(?=$|[\s:;,.)\]}"'])/g,
+  ]) for (const match of output.matchAll(pattern)) errorCodes.add(Number(match[1]));
+  const categories = [];
+  if (['ENOENT', 'EACCES'].includes(spawnCode) || /unable to find utility|could not find or load main class|unable to locate a java runtime|java: command not found/i.test(output)) categories.push('tool-unavailable');
+  if (spawnCode === 'ABORT_ERR') categories.push('interrupted');
+  if (outputLimitExceeded) categories.push('output-limit');
+  if (/could not find (?:the )?private key|cannot find (?:the )?private key|private key (?:file )?(?:not found|is missing)|unable to (?:load|read) (?:the )?private key/i.test(output)) categories.push('private-key-unavailable');
+  if (/authentication (?:failed|failure)|(?:authentication )?credentials (?:are )?(?:missing|invalid)|not authorized|unauthorized|invalid (?:jwt|token)|token (?:has )?expired/i.test(output)) categories.push('authentication-rejected');
+  if (/connection (?:timed out|refused|reset)|unknown host|unable to resolve host|network is unreachable|could not connect|ssl handshake/i.test(output)) categories.push('network-failure');
+  if (itmsCodes.length || /asset validation failed|validation failed|invalid binary|invalid provisioning profile/i.test(output)) categories.push('asset-validation');
+  if (/unrecognized option|unknown option|invalid (?:option|argument)|unsupported (?:option|argument)|not a valid option/i.test(output)) categories.push('unsupported-option');
+  return { exitCode: Number.isInteger(exitCode) && exitCode >= 0 && exitCode <= 255 ? exitCode : null,
+    itmsCodes, errorCodes: [...errorCodes].slice(0, 8), categories: categories.length ? categories : ['unclassified'] };
+}
+
+function safeTransporterDiagnostic(value) {
+  const codes = input => Array.isArray(input) ? [...new Set(input.filter(code => Number.isInteger(code) && Math.abs(code) <= 999999))].slice(0, 8) : [];
+  const categories = Array.isArray(value?.categories) ? value.categories.filter(category => TRANSPORTER_CATEGORIES.includes(category)) : [];
+  return { exitCode: Number.isInteger(value?.exitCode) && value.exitCode >= 0 && value.exitCode <= 255 ? value.exitCode : null,
+    itmsCodes: codes(value?.itmsCodes).filter(code => code >= 10000 && code <= 99999), errorCodes: codes(value?.errorCodes),
+    categories: categories.length ? [...new Set(categories)] : ['unclassified'] };
+}
+
 // Never logs a command, its arguments or raw tool output. Failures identify a stage.
 export function runCommand(command, args, options = {}) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, { cwd: options.cwd, env: options.env, signal: options.signal,
       stdio: ['pipe', 'pipe', 'pipe'], shell: false });
     let output = '';
+    let diagnosticStdout = '';
+    let diagnosticStderr = '';
     let size = 0;
     let failed = false;
+    const failure = (exitCode, spawnCode = '') => {
+      const error = new Error('Command failed.');
+      if (options.diagnosticType === 'transporter') error.transporterDiagnostic = classifyTransporterFailure({
+        stdout: diagnosticStdout, stderr: diagnosticStderr, exitCode, spawnCode, outputLimitExceeded: failed,
+      });
+      return error;
+    };
     child.stdout.on('data', chunk => {
       size += chunk.length;
+      if (options.diagnosticType === 'transporter') diagnosticStdout = (diagnosticStdout + chunk.toString()).slice(-DIAGNOSTIC_STREAM_LIMIT);
       if (size > 32 * 1024 * 1024) { failed = true; child.kill('SIGTERM'); }
       else output += chunk.toString();
     });
-    child.stderr.on('data', chunk => { size += chunk.length; if (size > 32 * 1024 * 1024) { failed = true; child.kill('SIGTERM'); } });
-    child.on('error', () => reject(new Error('Command failed.')));
-    child.on('close', code => code === 0 && !failed ? resolve(output) : reject(new Error('Command failed.')));
+    child.stderr.on('data', chunk => {
+      size += chunk.length;
+      if (options.diagnosticType === 'transporter') diagnosticStderr = (diagnosticStderr + chunk.toString()).slice(-DIAGNOSTIC_STREAM_LIMIT);
+      if (size > 32 * 1024 * 1024) { failed = true; child.kill('SIGTERM'); }
+    });
+    child.on('error', error => reject(failure(null, error.code)));
+    child.on('close', code => code === 0 && !failed ? resolve(output) : reject(failure(code)));
     child.stdin.on('error', () => {});
     child.stdin.end(options.input);
   });
@@ -138,7 +188,8 @@ export async function release({ env = process.env, platform = process.platform, 
   let previousKeychains = [];
   const installedProfiles = [];
   let cleanupFailed = false;
-  const command = async (name, args, input, cwd = root) => run(name, args, { env: cleanEnv, input, cwd, signal });
+  const command = async (name, args, input, cwd = root) => run(name, args, { env: cleanEnv, input, cwd, signal,
+    diagnosticType: name === 'xcrun' && args[0] === 'iTMSTransporter' ? 'transporter' : undefined });
   const plist = async input => JSON.parse(await command('plutil', ['-convert', 'json', '-o', '-', '--', '-'], input));
   try {
     requireTrue((await command('git', ['rev-parse', 'HEAD'])).trim() === config.sha, 'Checked-out source changed.');
@@ -249,7 +300,10 @@ export async function release({ env = process.env, platform = process.platform, 
     log(JSON.stringify({ result: config.operation === 'upload-to-testflight' ? 'upload-command-succeeded-processing-unverified' : 'validation-command-succeeded-no-upload',
       bundleId: BUNDLE_ID, version: config.version, build: config.build, sourceSha: config.sha, ipaSha256: ipaHash }));
     return { operation: config.operation, ipaSha256: ipaHash };
-  } catch {
+  } catch (error) {
+    if ((stage === 'Apple validation' || stage === 'Apple upload (acceptance may be uncertain on interruption)') && error?.transporterDiagnostic) {
+      log(JSON.stringify({ event: 'apple-transporter-failure', ...safeTransporterDiagnostic(error.transporterDiagnostic) }));
+    }
     throw new Error(`Native release stopped at ${stage}. Raw credential/tool output is suppressed. If upload started, check App Store Connect before another attempt; acceptance is unconfirmed.`);
   } finally {
     // Fresh hosted runner only. Never delete pre-existing or subsequently changed profiles.

@@ -4,7 +4,7 @@ import { createHash, generateKeyPairSync } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { BUNDLE_ID, PROFILE_JSON_ADAPTER, childEnvironment, decodeSecret, exportOptions, matchingIdentity, release, runCommand, transportArguments,
+import { BUNDLE_ID, PROFILE_JSON_ADAPTER, childEnvironment, classifyTransporterFailure, decodeSecret, exportOptions, matchingIdentity, release, runCommand, transportArguments,
   validateDistributionProfile, validateReleaseEnvironment } from '../scripts/testflight-release.mjs';
 
 const team = 'ABCDE12345';
@@ -43,10 +43,11 @@ async function fixture(t, overrides = {}, failAt) {
   const runnerHome = path.join(directory, 'home');
   await mkdir(runnerHome);
   const run = async (name, args, options) => {
-    calls.push({ name, args, env: options.env, cwd: options.cwd });
+    calls.push({ name, args, env: options.env, cwd: options.cwd, diagnosticType: options.diagnosticType });
     assert.equal(options.env.WOVO_P12_PASSWORD, undefined);
     assert.equal(options.env.WOVO_ASC_P8_BASE64, undefined);
-    if (failAt?.(name, args)) throw new Error(`should never leak ${env.WOVO_P12_PASSWORD}`);
+    const injectedFailure = failAt?.(name, args);
+    if (injectedFailure) throw injectedFailure instanceof Error ? injectedFailure : new Error(`should never leak ${env.WOVO_P12_PASSWORD}`);
     if (name === 'git') return env.GITHUB_SHA;
     if (name === 'xcodebuild' && args[0] === '-version') return 'Xcode 26.6\nBuild version 26F01';
     if (name === 'xcrun' && args.includes('--show-sdk-version')) return '26.6';
@@ -142,6 +143,67 @@ test('secret decoding and child environments do not forward signing secrets', ()
   assert.deepEqual(Object.keys(childEnvironment({ WOVO_P12_PASSWORD: 'no', WOVO_ASC_P8_BASE64: 'no' })), []);
   assert.throws(() => exportOptions({ team: '<bad>' }, uuid, certHash));
   assert.throws(() => transportArguments('submit-review', 'App.ipa', {}));
+});
+
+test('Transporter classifier emits only bounded numeric contextual codes and fixed categories', () => {
+  const sensitive = '/private/runner/AuthKey_PRIVATE123.p8 account@example.invalid eyJ.never.log.this';
+  const result = classifyTransporterFailure({ exitCode: 1,
+    stdout: `ERROR ITMS-90161: ${sensitive}\nITMS-90161\nITMS-123456\nkeyId=1234567890`,
+    stderr: `Error Domain=ContentDelivery Code=-1011 ${sensitive}\nAsset validation failed (90035)\nERROR: -18000\nAuthentication failed`,
+  });
+  assert.deepEqual(result, { exitCode: 1, itmsCodes: [90161], errorCodes: [-18000, 90035, -1011],
+    categories: ['authentication-rejected', 'asset-validation'] });
+  assert.doesNotMatch(JSON.stringify(result), /private|PRIVATE123|example|eyJ|ContentDelivery|1234567890/);
+  assert.deepEqual(classifyTransporterFailure({ exitCode: '1', stdout: 'ITMS-12345\n' + 'x'.repeat(70_000) }),
+    { exitCode: null, itmsCodes: [], errorCodes: [], categories: ['unclassified'] });
+  assert.equal(classifyTransporterFailure({ stderr: Array.from({ length: 30 }, (_, i) => `ITMS-${90000 + i}`).join('\n') }).itmsCodes.length, 8);
+  for (const suffix of ['PRIVATE_TOKEN', '_PRIVATE_TOKEN', '-PRIVATE_TOKEN', '/PRIVATE_TOKEN', '=PRIVATE_TOKEN', '+PRIVATE_TOKEN', '@PRIVATE_TOKEN']) {
+    const fakeCodes = classifyTransporterFailure({ stderr: `Error: 123456${suffix}\nError Domain=Service Code=-123${suffix}\nITMS-90161${suffix}\nAsset validation failed (90035)${suffix}` });
+    assert.deepEqual(fakeCodes.itmsCodes, []);
+    assert.deepEqual(fakeCodes.errorCodes, []);
+  }
+  for (const [input, category] of [
+    [{ spawnCode: 'ENOENT' }, 'tool-unavailable'], [{ spawnCode: 'ABORT_ERR' }, 'interrupted'],
+    [{ outputLimitExceeded: true }, 'output-limit'], [{ stderr: 'Cannot find private key at /private/secret.p8' }, 'private-key-unavailable'],
+    [{ stderr: 'Connection timed out' }, 'network-failure'], [{ stderr: 'Unknown option -private-secret' }, 'unsupported-option'],
+  ]) assert.ok(classifyTransporterFailure(input).categories.includes(category));
+});
+
+test('actual child diagnostics retain stdout/stderr error codes without raw output and other commands stay generic', async () => {
+  const script = 'process.stdout.write("ERROR ITMS-90161: /private/no-output"); process.stderr.write("Error Domain=ContentDelivery Code=-1011 token=DO_NOT_LOG"); process.exitCode=7;';
+  await assert.rejects(() => runCommand(process.execPath, ['-e', script], { diagnosticType: 'transporter' }), error => {
+    assert.equal(error.message, 'Command failed.');
+    assert.deepEqual(error.transporterDiagnostic, { exitCode: 7, itmsCodes: [90161], errorCodes: [-1011], categories: ['asset-validation'] });
+    assert.doesNotMatch(JSON.stringify(error), /private|DO_NOT_LOG|ContentDelivery/);
+    assert.equal(error.stdout, undefined);
+    assert.equal(error.stderr, undefined);
+    return true;
+  });
+  await assert.rejects(() => runCommand(process.execPath, ['-e', script]), error => {
+    assert.equal(error.message, 'Command failed.');
+    assert.equal(error.transporterDiagnostic, undefined);
+    assert.doesNotMatch(JSON.stringify(error), /private|DO_NOT_LOG|ITMS|1011/);
+    return true;
+  });
+});
+
+test('release logs revalidated safe Transporter diagnostics only at Apple failure and never uploads after failed verify', async t => {
+  const failure = new Error('raw /private/path and secret MUST_NOT_APPEAR');
+  failure.transporterDiagnostic = { exitCode: 1, itmsCodes: [90161, 'raw-private-value', 1234567890],
+    errorCodes: [-1011, 'secret'], categories: ['asset-validation', 'raw-private-category'], path: '/private/no' };
+  const f = await fixture(t, {}, (name, args) => name === 'xcrun' && args[0] === 'iTMSTransporter' ? failure : false);
+  await assert.rejects(f.execute, /Native release stopped at Apple validation/);
+  assert.deepEqual(f.logs.filter(line => line.startsWith('{')).map(line => JSON.parse(line)), [{
+    event: 'apple-transporter-failure', exitCode: 1, itmsCodes: [90161], errorCodes: [-1011], categories: ['asset-validation'],
+  }]);
+  assert.doesNotMatch(f.logs.filter(line => !line.startsWith('::add-mask::')).join('\n'), /private|MUST_NOT_APPEAR|raw-/);
+  assert.ok(f.calls.filter(call => call.diagnosticType).every(call => call.name === 'xcrun' && call.args[0] === 'iTMSTransporter'));
+  assert.equal(f.calls.filter(call => call.args[0] === 'iTMSTransporter').length, 1);
+  assert.deepEqual((await readdir(f.directory)).filter(name => name.startsWith('wovo-signing-')), []);
+
+  const unrelated = await fixture(t, {}, (name, args) => name === 'security' && args[0] === 'import' ? failure : false);
+  await assert.rejects(unrelated.execute, /Native release stopped at temporary keychain/);
+  assert.ok(!unrelated.logs.some(line => line.includes('apple-transporter-failure')));
 });
 
 test('non-default push trigger still requires its explicit acknowledgement and exact reviewed SHA', () => {
