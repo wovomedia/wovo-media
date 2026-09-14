@@ -57,6 +57,24 @@ export function validateDistributionProfile(profile, team, now = Date.now()) {
   return profile.DeveloperCertificates.map(cert => createHash('sha1').update(decodeSecret(cert, 64_000)).digest('hex').toUpperCase());
 }
 
+// Real provisioning plists contain Date and Data nodes, which plutil cannot
+// convert directly to JSON. Keep the CMS payload in private stdin/stdout and
+// explicitly preserve those types for the strict profile validator above.
+export const PROFILE_JSON_ADAPTER = `import base64, datetime, json, plistlib, sys
+def encode(value):
+    if isinstance(value, bytes):
+        return base64.b64encode(value).decode("ascii")
+    if isinstance(value, datetime.datetime):
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=datetime.timezone.utc)
+        return value.astimezone(datetime.timezone.utc).isoformat().replace("+00:00", "Z")
+    raise TypeError("Unsupported property-list value")
+data = sys.stdin.buffer.read(2000001)
+if len(data) > 2000000:
+    raise ValueError("Property list exceeds limit")
+json.dump(plistlib.loads(data), sys.stdout, default=encode, allow_nan=False, separators=(",", ":"))
+`;
+
 export function matchingIdentity(output, fingerprints) {
   const matches = [...output.matchAll(/\b([A-Fa-f0-9]{40})\s+"Apple Distribution:[^"\r\n]+"/g)]
     .map(match => match[1].toUpperCase()).filter(hash => fingerprints.includes(hash));
@@ -155,7 +173,8 @@ export async function release({ env = process.env, platform = process.platform, 
     await privateWrite(certFile, decodeSecret(env.WOVO_P12_BASE64, 512_000));
     await privateWrite(profileFile, decodeSecret(env.WOVO_PROFILE_BASE64, 1_000_000));
     stage = 'profile verification';
-    const profile = await plist(await command('security', ['cms', '-D', '-i', profileFile]));
+    const profilePayload = await command('security', ['cms', '-D', '-i', profileFile]);
+    const profile = JSON.parse(await command('python3', ['-c', PROFILE_JSON_ADAPTER], profilePayload));
     const fingerprints = validateDistributionProfile(profile, config.team);
     stage = 'temporary keychain';
     await command('security', ['create-keychain', '-p', keychainPassword, keychain]);

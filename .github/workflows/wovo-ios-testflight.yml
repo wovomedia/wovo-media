@@ -1,7 +1,7 @@
-# Reviewed LOCAL activation candidate: validation1 only. Root owns remote mapping,
+# Reviewed LOCAL activation candidate: validation2 only. Root owns remote mapping,
 # secret transfer, environment approval, enable flag and exact reviewed commit SHA.
 # Changing repository variables alone cannot turn this request into an upload.
-name: WOVO signed validation 1
+name: WOVO signed validation 2
 on:
   push:
     branches: [wovo-ios-build]

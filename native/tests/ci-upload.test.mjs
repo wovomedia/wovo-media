@@ -59,9 +59,9 @@ test('reviewed native-only payload maps exactly the simulator, validation-only w
   for (const required of ['native/package.json', 'native/package-lock.json', 'native/capacitor.config.json', 'native/tests/ci-upload.test.mjs', 'native/scripts/build-simulator.sh', 'native/ios/App/App.xcodeproj/xcshareddata/xcschemes/App.xcscheme']) assert.ok(manifest.files.includes(required));
 });
 
-test('validation1 request and mapped workflow cannot become an upload through variable changes', async () => {
+test('validation2 request and mapped workflow cannot become an upload through variable changes', async () => {
   assert.deepEqual(await json('ci/testflight-request.json'), {
-    request: 'validation1', version: '1.0', build: '1', operation: 'validate-only',
+    request: 'validation2', version: '1.0', build: '1', operation: 'validate-only',
   });
   const body = await read('ci/github-ios-testflight.yml');
   assert.match(body, /push:\n    branches: \[wovo-ios-build\]\n    paths: \[native\/ci\/testflight-request\.json\]/);

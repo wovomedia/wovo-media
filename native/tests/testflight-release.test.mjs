@@ -4,7 +4,7 @@ import { createHash, generateKeyPairSync } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { BUNDLE_ID, childEnvironment, decodeSecret, exportOptions, matchingIdentity, release, transportArguments,
+import { BUNDLE_ID, PROFILE_JSON_ADAPTER, childEnvironment, decodeSecret, exportOptions, matchingIdentity, release, runCommand, transportArguments,
   validateDistributionProfile, validateReleaseEnvironment } from '../scripts/testflight-release.mjs';
 
 const team = 'ABCDE12345';
@@ -16,6 +16,16 @@ const b64 = text => Buffer.from(text).toString('base64');
 const profile = () => ({ UUID: uuid, Name: 'WOVO fixture', TeamIdentifier: [team], Platform: ['iOS'],
   ExpirationDate: '2099-01-01T00:00:00Z', DeveloperCertificates: [cert.toString('base64')],
   Entitlements: { 'application-identifier': `${team}.${BUNDLE_ID}`, 'com.apple.developer.team-identifier': team, 'get-task-allow': false } });
+const typedProfileXml = () => `<?xml version="1.0" encoding="UTF-8"?><plist version="1.0"><dict>
+<key>UUID</key><string>${uuid}</string><key>Name</key><string>WOVO fixture</string>
+<key>TeamIdentifier</key><array><string>${team}</string></array><key>Platform</key><array><string>iOS</string></array>
+<key>ExpirationDate</key><date>2099-01-01T00:00:00Z</date>
+<key>DeveloperCertificates</key><array><data>${cert.toString('base64')}</data></array>
+<key>Entitlements</key><dict><key>application-identifier</key><string>${team}.${BUNDLE_ID}</string>
+<key>com.apple.developer.team-identifier</key><string>${team}</string><key>get-task-allow</key><false/></dict>
+</dict></plist>`;
+const pythonCommand = process.platform === 'win32' ? 'python' : 'python3';
+const privatePython = (script, input) => runCommand(pythonCommand, ['-c', script], { input, env: childEnvironment(process.env) });
 const environment = temp => ({ GITHUB_ACTIONS: 'true', RUNNER_ENVIRONMENT: 'github-hosted', RUNNER_OS: 'macOS',
   GITHUB_REPOSITORY: 'wovomedia/wovo-media', GITHUB_REF: 'refs/heads/wovo-ios-build', GITHUB_EVENT_NAME: 'workflow_dispatch',
   GITHUB_SHA: 'a'.repeat(40), WOVO_REVIEWED_SHA: 'a'.repeat(40), WOVO_IOS_SIGNING_ENABLED: 'true',
@@ -40,7 +50,12 @@ async function fixture(t, overrides = {}, failAt) {
     if (name === 'git') return env.GITHUB_SHA;
     if (name === 'xcodebuild' && args[0] === '-version') return 'Xcode 26.6\nBuild version 26F01';
     if (name === 'xcrun' && args.includes('--show-sdk-version')) return '26.6';
-    if (name === 'security' && args[0] === 'cms') return JSON.stringify(profile());
+    if (name === 'security' && args[0] === 'cms') return typedProfileXml();
+    if (name === 'python3') {
+      assert.deepEqual(args, ['-c', PROFILE_JSON_ADAPTER]);
+      assert.equal(options.input, typedProfileXml());
+      return JSON.stringify(profile());
+    }
     if (name === 'security' && args[0] === 'create-keychain') await writeFile(args.at(-1), 'synthetic keychain');
     if (name === 'security' && args[0] === 'find-identity') return `1) ${certHash} "Apple Distribution: Fixture (${team})"`;
     if (name === 'security' && args[0] === 'list-keychains' && !args.includes('-s')) return '"/existing/login.keychain-db"\n';
@@ -92,6 +107,31 @@ test('profile gate rejects expired, development, enterprise, ad-hoc, wildcard an
   }
   assert.throws(() => matchingIdentity(`1) ${'F'.repeat(40)} "Apple Distribution: Wrong"`, [certHash]));
   assert.equal(matchingIdentity(`1) ${certHash} "Apple Distribution: Correct"`, [certHash]), certHash);
+});
+
+test('actual profile adapter preserves typed XML and binary plist dates and certificate bytes', async () => {
+  const binaryBase64 = await privatePython('import base64, plistlib, sys; sys.stdout.write(base64.b64encode(plistlib.dumps(plistlib.loads(sys.stdin.buffer.read()), fmt=plistlib.FMT_BINARY)).decode("ascii"))', typedProfileXml());
+  for (const input of [typedProfileXml(), Buffer.from(binaryBase64, 'base64')]) {
+    const parsed = JSON.parse(await privatePython(PROFILE_JSON_ADAPTER, input));
+    assert.deepEqual(parsed, profile());
+    assert.deepEqual(validateDistributionProfile(parsed, team), [certHash]);
+    assert.throws(() => validateDistributionProfile(parsed, 'OTHER12345'));
+    assert.throws(() => validateDistributionProfile({ ...parsed, ExpirationDate: '2000-01-01T00:00:00Z' }, team));
+  }
+});
+
+test('profile adapter fails closed for malformed or oversized inputs', async () => {
+  await assert.rejects(() => privatePython(PROFILE_JSON_ADAPTER, 'not a plist'));
+  await assert.rejects(() => privatePython(PROFILE_JSON_ADAPTER, 'x'.repeat(2_000_001)));
+});
+
+test('a failed profile decoder stops before importing any signing identity or archiving', async t => {
+  const f = await fixture(t, {}, name => name === 'python3');
+  await assert.rejects(f.execute, /Native release stopped at profile verification/);
+  assert.ok(!f.calls.some(call => call.name === 'security' && ['create-keychain', 'import'].includes(call.args[0])));
+  assert.ok(!f.calls.some(call => call.name === 'xcodebuild' && call.args.at(-1) === 'archive'));
+  assert.ok(!f.calls.some(call => call.args[0] === 'iTMSTransporter'));
+  assert.deepEqual((await readdir(f.directory)).filter(name => name.startsWith('wovo-signing-')), []);
 });
 
 test('secret decoding and child environments do not forward signing secrets', () => {
