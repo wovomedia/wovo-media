@@ -21,12 +21,20 @@
     "native/tests/download.test.mjs",
     "native/tests/recognize-studio.swift",
     "native/tests/simulator-smoke.test.mjs",
+    "native/tests/testflight-release.test.mjs",
     "native/scripts/check-xcode.mjs",
     "native/scripts/build-simulator.sh",
     "native/scripts/archive-device.sh",
     "native/scripts/smoke-simulator.mjs",
     "native/scripts/simulator-smoke-policy.mjs",
+    "native/scripts/simulator-smoke-command.mjs",
+    "native/scripts/testflight-release.mjs",
     "native/ci/github-ios-simulator.yml.example",
+    "native/ci/github-ios-testflight.yml.example",
+    "native/ci/github-ios-testflight-push.yml.example",
+    "native/ci/github-ios-testflight.yml",
+    "native/ci/testflight-request.json",
+    "native/ci/TESTFLIGHT-SIGNING.md",
     "native/ci/github-ios-build.yml",
     "native/ci/vercel.no-deploy.json",
     "native/ci/ExportOptions.plist.example",
@@ -60,9 +68,10 @@
     "firstCommitRequiresAllMappings": true,
     "mappings": [
       { "source": "native/ci/github-ios-build.yml", "destination": ".github/workflows/wovo-ios-build.yml" },
+      { "source": "native/ci/github-ios-testflight.yml", "destination": ".github/workflows/wovo-ios-testflight.yml" },
       { "source": "native/ci/vercel.no-deploy.json", "destination": "vercel.json" }
     ],
-    "note": "Create the reviewed native-only tree and commit before exposing a new branch ref. Do not modify main/default, wovo-v2, productionBranch or existing refs. Native push may start the unsigned simulator workflow; root vercel.json disables Git deployments. No signing, credential upload or App Store action."
+    "note": "Prepare and review the native-only tree and exact commit before updating wovo-ios-build. Do not modify main/default, wovo-v2 or productionBranch, or rewrite remote history. Native push may start the unsigned simulator workflow; root vercel.json disables Git deployments. The separately mapped validation1 signing workflow is fixed to validate-only and also requires protected secrets, environment approval where configured, repository enable flag and exact reviewed SHA. This local manifest does not transfer credentials, enable variables, push a ref or upload a build."
   },
   "workflow": {
     "source": "native/ci/github-ios-simulator.yml.example",

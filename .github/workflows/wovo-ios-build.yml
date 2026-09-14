@@ -33,7 +33,7 @@ jobs:
         run: bash scripts/build-simulator.sh
       - name: Launch anonymous studio on a fresh iPhone simulator
         working-directory: native
-        timeout-minutes: 8
+        timeout-minutes: 12
         run: node scripts/smoke-simulator.mjs
       - name: Preserve anonymous runtime evidence
         if: always()

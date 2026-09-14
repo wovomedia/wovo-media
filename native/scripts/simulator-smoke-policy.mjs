@@ -30,6 +30,16 @@ export function safeFailureCode(error) {
     ? error.message : 'SMOKE_COMMAND_FAILED';
 }
 
+export function createdSimulatorState(payload, createdUdid) {
+  validateUdid(createdUdid);
+  const states = new Set(['Booted', 'Booting', 'Shutdown', 'Shutting Down', 'Creating']);
+  const match = Object.values(payload?.devices ?? {}).flatMap(devices => Array.isArray(devices) ? devices : [])
+    .find(device => typeof device?.udid === 'string' && device.udid.toLowerCase() === createdUdid.toLowerCase());
+  if (!match) return { found: false, state: 'Unknown', isAvailable: null };
+  return { found: true, state: states.has(match.state) ? match.state : 'Unknown',
+    isAvailable: typeof match.isAvailable === 'boolean' ? match.isAvailable : null };
+}
+
 export function pngDimensions(bytes) {
   if (bytes.length < 33 || bytes.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a') throw new Error('SMOKE_SCREENSHOT_INVALID');
   const width = bytes.readUInt32BE(16);

@@ -1,0 +1,51 @@
+# DORMANT. A narrowly scoped alternative when workflow_dispatch cannot run
+# because the default branch must remain untouched. Activate only with owner
+# approval, an exact reviewed commit SHA, protected secrets and a runner budget.
+name: WOVO explicitly requested signed build
+on:
+  push:
+    branches: [wovo-ios-build]
+    paths: [native/ci/testflight-request.json]
+permissions:
+  contents: read
+concurrency:
+  group: wovo-native-signing
+  cancel-in-progress: false
+jobs:
+  signed-build:
+    if: github.repository == 'wovomedia/wovo-media' && github.ref == 'refs/heads/wovo-ios-build' && github.event_name == 'push' && vars.WOVO_IOS_SIGNING_ENABLED == 'true' && vars.WOVO_REVIEWED_SHA == github.sha
+    environment: ios-internal-signing
+    runs-on: macos-26
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Install locked native dependencies without signing secrets
+        working-directory: native
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify and perform only the separately approved release operation
+        working-directory: native
+        env:
+          WOVO_IOS_SIGNING_ENABLED: ${{ vars.WOVO_IOS_SIGNING_ENABLED }}
+          WOVO_REVIEWED_SHA: ${{ vars.WOVO_REVIEWED_SHA }}
+          WOVO_TRIGGER_ACK: REVIEWED_NATIVE_PUSH
+          WOVO_RELEASE_ACK: ${{ vars.WOVO_RELEASE_ACK }}
+          WOVO_UPLOAD_ACK: ${{ vars.WOVO_UPLOAD_ACK }}
+          WOVO_RELEASE_OPERATION: ${{ vars.WOVO_RELEASE_OPERATION }}
+          WOVO_APP_VERSION: ${{ vars.WOVO_APP_VERSION }}
+          WOVO_BUILD_NUMBER: ${{ vars.WOVO_BUILD_NUMBER }}
+          WOVO_APPLE_TEAM_ID: ${{ vars.WOVO_APPLE_TEAM_ID }}
+          WOVO_ASC_KEY_ID: ${{ vars.WOVO_ASC_KEY_ID }}
+          WOVO_ASC_ISSUER_ID: ${{ vars.WOVO_ASC_ISSUER_ID }}
+          WOVO_P12_BASE64: ${{ secrets.WOVO_P12_BASE64 }}
+          WOVO_P12_PASSWORD: ${{ secrets.WOVO_P12_PASSWORD }}
+          WOVO_PROFILE_BASE64: ${{ secrets.WOVO_PROFILE_BASE64 }}
+          WOVO_ASC_P8_BASE64: ${{ secrets.WOVO_ASC_P8_BASE64 }}
+        run: node scripts/testflight-release.mjs
+      # No artifacts or post-build publishing step. Credentials and the IPA are
+      # removed by the script; a killed GitHub-hosted runner is destroyed.

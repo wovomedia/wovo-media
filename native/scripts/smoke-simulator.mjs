@@ -6,14 +6,15 @@ import { mkdir, readFile, writeFile, readdir, stat } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
-import { WOVO_BUNDLE_ID, validateUdid, selectIphoneTemplate, parseLaunchPid, safeFailureCode, pngDimensions } from './simulator-smoke-policy.mjs';
+import { WOVO_BUNDLE_ID, validateUdid, selectIphoneTemplate, parseLaunchPid, safeFailureCode, pngDimensions, createdSimulatorState } from './simulator-smoke-policy.mjs';
+import { runSmokeCommand } from './simulator-smoke-command.mjs';
 
 const execute = promisify(execFile);
 const root = fileURLToPath(new URL('../', import.meta.url));
 const outputDirectory = join(root, 'build', 'runtime-smoke');
 const app = join(root, 'build', 'simulator', 'Build', 'Products', 'Debug-iphonesimulator', 'App.app');
 const started = Date.now();
-const overallDeadline = started + 360_000;
+const overallDeadline = started + 600_000;
 let createdUdid;
 let launchedPid;
 const evidence = {
@@ -26,11 +27,7 @@ const wait = (milliseconds) => new Promise(resolveWait => setTimeout(resolveWait
 async function command(executable, args, limit = 30_000) {
   const remaining = overallDeadline - Date.now();
   if (remaining <= 0) throw new Error('SMOKE_DEADLINE_EXCEEDED');
-  const result = await execute(executable, args, {
-    cwd: root, shell: false, timeout: Math.min(limit, remaining), killSignal: 'SIGTERM',
-    maxBuffer: 2 * 1024 * 1024, encoding: 'utf8',
-  });
-  return result.stdout;
+  return runSmokeCommand(executable, args, { cwd: root, limitMilliseconds: Math.min(limit, remaining) });
 }
 
 async function ensureAppAlive() {
@@ -72,7 +69,7 @@ try {
   evidence.freshSimulatorCreated = true;
   evidence.stage = 'boot_fresh_simulator';
   await command('xcrun', ['simctl', 'boot', createdUdid]);
-  await command('xcrun', ['simctl', 'bootstatus', createdUdid, '-b'], 150_000);
+  await command('xcrun', ['simctl', 'bootstatus', createdUdid, '-b'], 360_000);
   evidence.stage = 'install_compiled_app';
   await command('xcrun', ['simctl', 'install', createdUdid, app], 60_000);
   evidence.stage = 'compile_screenshot_recognizer';
@@ -104,6 +101,19 @@ try {
 } catch (error) {
   evidence.status = 'failed';
   evidence.failureCode = safeFailureCode(error);
+  if (error.commandFailure) evidence.commandFailure = error.commandFailure;
+  if (createdUdid && evidence.stage === 'boot_fresh_simulator') {
+    // A bounded read-only inventory is reduced to this script's own UUID and
+    // fixed state/availability values. Never publish other device metadata.
+    try {
+      const devices = JSON.parse(await runSmokeCommand('xcrun', ['simctl', 'list', 'devices', '--json'], {
+        cwd: root, limitMilliseconds: 15_000,
+      }));
+      evidence.simulatorAfterFailure = createdSimulatorState(devices, createdUdid);
+    } catch (snapshotError) {
+      evidence.simulatorAfterFailure = { snapshotAvailable: false, failureCode: safeFailureCode(snapshotError) };
+    }
+  }
   process.exitCode = 1;
 } finally {
   evidence.elapsedMilliseconds = Date.now() - started;
