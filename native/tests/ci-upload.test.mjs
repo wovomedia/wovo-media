@@ -34,7 +34,7 @@ test('active simulator workflow is restricted to the authorized repository and i
   assert.doesNotMatch(compile, /\.\.\/|prepare-brand|--prod|-allowProvisioningUpdates/);
 });
 
-test('reviewed native-only payload maps exactly the simulator, validation-only workflow and no-deploy guard', async () => {
+test('reviewed native-only payload maps exactly the simulator, gated release workflow and no-deploy guard', async () => {
   const manifest = await json('public-source-manifest.json');
   assert.equal(manifest.upload.repository, 'wovomedia/wovo-media');
   assert.equal(manifest.upload.newBranch, 'wovo-ios-build');
@@ -59,9 +59,9 @@ test('reviewed native-only payload maps exactly the simulator, validation-only w
   for (const required of ['native/package.json', 'native/package-lock.json', 'native/capacitor.config.json', 'native/tests/ci-upload.test.mjs', 'native/scripts/build-simulator.sh', 'native/ios/App/App.xcodeproj/xcshareddata/xcschemes/App.xcscheme']) assert.ok(manifest.files.includes(required));
 });
 
-test('validation4 request and mapped workflow cannot become an upload through variable changes', async () => {
+test('upload1 request is fixed to the reviewed build with separate upload acknowledgement and no review or invites', async () => {
   assert.deepEqual(await json('ci/testflight-request.json'), {
-    request: 'validation4', version: '1.0', build: '1', operation: 'validate-only',
+    request: 'upload1', version: '1.0', build: '1', operation: 'upload-to-testflight',
   });
   const body = await read('ci/github-ios-testflight.yml');
   assert.match(body, /push:\n    branches: \[wovo-ios-build\]\n    paths: \[native\/ci\/testflight-request\.json\]/);
@@ -69,13 +69,14 @@ test('validation4 request and mapped workflow cannot become an upload through va
   assert.match(body, /vars\.WOVO_IOS_SIGNING_ENABLED == 'true' && vars\.WOVO_REVIEWED_SHA == github\.sha/);
   assert.match(body, /environment: ios-internal-signing/);
   assert.match(body, /permissions:\n  contents: read/);
-  assert.match(body, /WOVO_RELEASE_OPERATION: validate-only/);
+  assert.match(body, /WOVO_RELEASE_OPERATION: upload-to-testflight/);
+  assert.match(body, /WOVO_UPLOAD_ACK: UPLOAD_BUILD_ONLY/);
   assert.match(body, /WOVO_APP_VERSION: '1\.0'/);
   assert.match(body, /WOVO_BUILD_NUMBER: '1'/);
   assert.match(body, /WOVO_TRIGGER_ACK: REVIEWED_NATIVE_PUSH/);
   assert.match(body, /persist-credentials: false/);
   assert.match(body, /run: node scripts\/testflight-release\.mjs/);
-  assert.doesNotMatch(body, /WOVO_UPLOAD_ACK|vars\.WOVO_RELEASE_OPERATION|workflow_dispatch:|pull_request:|upload-artifact@|contents: write|id-token:/);
+  assert.doesNotMatch(body, /vars\.WOVO_RELEASE_OPERATION|vars\.WOVO_UPLOAD_ACK|workflow_dispatch:|pull_request:|upload-artifact@|contents: write|id-token:|betaGroups|appStoreVersionSubmissions/);
   for (const match of body.matchAll(/uses: (\S+)/g)) assert.match(match[1], /@[a-f0-9]{40}$/);
   const manifest = await json('public-source-manifest.json');
   assert.ok(manifest.files.includes('native/ci/testflight-request.json'));

@@ -1,6 +1,6 @@
 {
-  "request": "validation4",
+  "request": "upload1",
   "version": "1.0",
   "build": "1",
-  "operation": "validate-only"
+  "operation": "upload-to-testflight"
 }

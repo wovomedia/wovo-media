@@ -1,6 +1,16 @@
-# Dormant signed-device / TestFlight path
+# Protected signed-device / TestFlight path
 
-## Local validation1 activation candidate
+## Current execution status — September 14, 2026
+
+The owner-created certificate/profile and encrypted GitHub secrets are configured.
+Signed archive, IPA export and Apple's altool validation succeeded in run34824766410
+at08:53UTC. Earlier Transporter failure's exact cause remains unknown. The next
+reviewed upload1 request is fixed to version1.0/build1 and upload-to-testflight,
+with UPLOAD_BUILD_ONLY acknowledgement. It revalidates before one upload; it cannot
+invite testers or submit review. Actual upload/processing must be checked separately.
+The original setup notes below are historical, not a request to recreate keys.
+
+## Historical validation1 activation notes (superseded)
 
 The owner has now approved encrypted GitHub signing-secret transfer and root
 reports the Distribution certificate/profile verified. This task did **not**
@@ -76,8 +86,8 @@ mapped to `.github/workflows/wovo-ios-testflight.yml` **on the native-only branc
    including this workflow and a changed `native/ci/testflight-request.json`.
    That trigger file contains only a non-secret request label (for example
    `{"request":"owner-approved-validation-1"}`); it is never parsed as commands.
-   The current local candidate supplies `validation1` with matching version/build
-   and validate-only metadata; future requests need a new reviewed change.
+   The original local candidate supplied `validation1` with matching version/build
+   and validate-only metadata. Upload1 is the separate reviewed request described above.
 2. Verify the commit contains only the approved native allowlist, workflow and
    no-deploy guard. Record its exact SHA **before** pushing it.
 3. After approval for secrets, runner cost and that source, configure the protected
@@ -90,8 +100,8 @@ mapped to `.github/workflows/wovo-ios-testflight.yml` **on the native-only branc
    `upload-to-testflight` and `UPLOAD_BUILD_ONLY`. First check whether a prior upload
    already arrived. Never blindly rerun an uncertain upload or reuse its build number.
 
-The initial dormant implementation had no activation mapping. The local
-`validation1` candidate now maps only the fixed validation workflow; templates
+The initial dormant implementation had no activation mapping. The historical
+`validation1` candidate mapped only the fixed validation workflow; templates
 remain unmapped. Publishing that candidate can run validation only when its exact
 SHA, enable flag, protected credentials and approvals are configured. Actions use immutable commits,
 read-only repository permission, no persisted checkout credentials, and no secret
@@ -116,10 +126,12 @@ then its bundle/version/signature are checked. Export uses ordinary
 change or provisioning. Thus an uploaded build can later be considered for public
 review; this script does **not** submit it. The `.p8` is written only after export.
 
-Apple Transporter verifies the IPA before optional upload, with key/issuer
-authentication from a private temporary working directory. No raw credentials,
+Apple altool validates the IPA before optional upload, with key/issuer
+authentication and API_PRIVATE_KEYS_DIR set only for those delivery subprocesses
+to the exact private temporary key directory. An actual altool --version check
+runs before signing material is installed. No raw credentials,
 tool logs or IPA are published as artifacts; a safe receipt prints source/IPA
-hashes, version/build and command outcome. Transporter success is **not** processing
+hashes, version/build and command outcome. Tool success is **not** processing
 completion, TestFlight availability or App Review approval. [Apple Transporter guide](https://help.apple.com/itc/transporteruserguide/en.lproj/static.html),
 [Apple build upload lifecycle](https://developer.apple.com/help/app-store-connect/manage-builds/upload-builds/).
 
@@ -135,10 +147,12 @@ machines. Do not retain or publish runner disks or signing directories.
 The Node tests use synthetic credentials and mocked macOS/Apple commands to check
 authorization gates, profile rejection, exact certificate matching, operation
 order, failure cleanup, and no upload after a failed build/validation. They do not
-prove a real certificate is accepted, Transporter is installed, signing succeeds
+prove a real certificate is accepted, altool starts, signing succeeds
 or an iPhone can install the app. Run the first authorized job in `validate-only`
-and inspect the result before granting upload permission. A failure prints only
-the stage; investigate privately rather than turning on public debug logging.
+and inspect the result before granting upload permission. Apple tool failures print
+only the stage, bounded numeric error codes and fixed allowlisted categories;
+unrelated errors remain generic. Never turn on public debug logging to diagnose
+signing. Raw tool output, private paths and key values are never error artifacts.
 
 The separate iOS submission-readiness document remains applicable: native login,
 billing, deletion, privacy and device QA gates are not solved by signing a binary.

@@ -1,7 +1,7 @@
-# Reviewed LOCAL activation candidate: validation4 only. Root owns remote mapping,
+# Reviewed upload1 candidate after Apple validation passed. Root owns remote mapping,
 # secret transfer, environment approval, enable flag and exact reviewed commit SHA.
-# Changing repository variables alone cannot turn this request into an upload.
-name: WOVO signed validation 4
+# Fixed build-only upload; no invitations, App Review submission or public release.
+name: WOVO TestFlight upload 1
 on:
   push:
     branches: [wovo-ios-build]
@@ -12,7 +12,7 @@ concurrency:
   group: wovo-native-signing
   cancel-in-progress: false
 jobs:
-  signed-validation:
+  signed-upload:
     if: github.repository == 'wovomedia/wovo-media' && github.ref == 'refs/heads/wovo-ios-build' && github.event_name == 'push' && vars.WOVO_IOS_SIGNING_ENABLED == 'true' && vars.WOVO_REVIEWED_SHA == github.sha
     environment: ios-internal-signing
     runs-on: macos-26
@@ -28,14 +28,15 @@ jobs:
       - name: Install locked native dependencies without signing secrets
         working-directory: native
         run: npm ci --ignore-scripts --no-audit --no-fund
-      - name: Build and validate only the reviewed version 1.0 build 1
+      - name: Validate and upload the reviewed version 1.0 build 1 to Apple
         working-directory: native
         env:
           WOVO_IOS_SIGNING_ENABLED: ${{ vars.WOVO_IOS_SIGNING_ENABLED }}
           WOVO_REVIEWED_SHA: ${{ vars.WOVO_REVIEWED_SHA }}
           WOVO_TRIGGER_ACK: REVIEWED_NATIVE_PUSH
           WOVO_RELEASE_ACK: ${{ vars.WOVO_RELEASE_ACK }}
-          WOVO_RELEASE_OPERATION: validate-only
+          WOVO_RELEASE_OPERATION: upload-to-testflight
+          WOVO_UPLOAD_ACK: UPLOAD_BUILD_ONLY
           WOVO_APP_VERSION: '1.0'
           WOVO_BUILD_NUMBER: '1'
           WOVO_APPLE_TEAM_ID: ${{ vars.WOVO_APPLE_TEAM_ID }}
@@ -46,4 +47,4 @@ jobs:
           WOVO_PROFILE_BASE64: ${{ secrets.WOVO_PROFILE_BASE64 }}
           WOVO_ASC_P8_BASE64: ${{ secrets.WOVO_ASC_P8_BASE64 }}
         run: node scripts/testflight-release.mjs
-      # No upload acknowledgement, artifacts, tester invitations or review API.
+      # No artifacts, automatic retries, tester invitations or review API.
