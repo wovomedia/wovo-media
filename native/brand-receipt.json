@@ -1,0 +1,8 @@
+{
+  "source": "public/brand/wovo-orbit-profile-large-1024.png",
+  "sourceSha256": "6245d3a7f74d48ebcf507af25717a6120876f857a1d0d82cb48860db0cf93695",
+  "appIconSha256": "5779eca3e9cb66813d4f9a756f1df8761b35dae9ec4762b6fd2078285f819cdb",
+  "webSource": "public/brand/wovo-orbit-icon-512.png",
+  "webSha256": "c8b1db391440cbbe1888496b88e78c32f11bfe45ecf6b9da5eed778aec596274",
+  "transform": "No resize/redraw. Flatten alpha on #f65a37 for the 1024px iOS app icon only."
+}

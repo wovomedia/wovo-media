@@ -1,0 +1,38 @@
+# DORMANT TEMPLATE. Does not run under native/ci. Before enabling: approve the
+# repository/source upload, inspect visibility and runner billing, and pin actions.
+# A simulator .app cannot go on an iPhone or TestFlight.
+name: WOVO internal iOS simulator
+on: workflow_dispatch
+permissions:
+  contents: read
+concurrency:
+  group: wovo-native-simulator
+  cancel-in-progress: false
+jobs:
+  simulator:
+    runs-on: macos-26
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: native/package-lock.json
+      - name: Install isolated locked native dependencies
+        working-directory: native
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify and compile without signing
+        working-directory: native
+        run: bash scripts/build-simulator.sh
+      - name: Keep simulator app with file metadata
+        working-directory: native
+        run: ditto -c -k --sequesterRsrc --keepParent build/simulator/Build/Products/Debug-iphonesimulator/App.app build/WOVO-Internal-simulator.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WOVO-Internal-simulator
+          path: native/build/WOVO-Internal-simulator.zip
+          retention-days: 3
+          if-no-files-found: error

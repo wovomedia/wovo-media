@@ -1,0 +1,18 @@
+{
+  "appId": "com.wovomedia.wovo",
+  "appName": "WOVO Internal",
+  "webDir": "www",
+  "backgroundColor": "#0b0b0c",
+  "loggingBehavior": "none",
+  "server": {
+    "url": "https://wovomedia.com",
+    "cleartext": false,
+    "errorPath": "offline.html"
+  },
+  "ios": {
+    "contentInset": "automatic",
+    "allowsLinkPreview": false,
+    "webContentsDebuggingEnabled": false
+  },
+  "includePlugins": []
+}

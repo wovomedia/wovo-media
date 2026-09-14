@@ -1,0 +1,42 @@
+# Reviewed native-only upload. Never install this workflow on main or wovo-v2.
+# The first visible wovo-ios-build commit must also contain root vercel.json
+# with git.deploymentEnabled:false. This builds an unsigned simulator app only.
+name: WOVO isolated iOS simulator
+on:
+  push:
+    branches: [wovo-ios-build]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: wovo-native-simulator
+  cancel-in-progress: false
+jobs:
+  simulator:
+    if: github.repository == 'wovomedia/wovo-media' && github.ref == 'refs/heads/wovo-ios-build' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: macos-26
+    timeout-minutes: 25
+    steps:
+      # Official actions/* v4 references verified on 2026-09-14; immutable commits.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Install isolated locked native dependencies
+        working-directory: native
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify and compile without signing
+        working-directory: native
+        run: bash scripts/build-simulator.sh
+      - name: Preserve simulator app file metadata
+        working-directory: native
+        run: ditto -c -k --sequesterRsrc --keepParent build/simulator/Build/Products/Debug-iphonesimulator/App.app build/WOVO-Internal-simulator.zip
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: WOVO-Internal-simulator
+          path: native/build/WOVO-Internal-simulator.zip
+          retention-days: 3
+          if-no-files-found: error
