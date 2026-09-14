@@ -95,11 +95,12 @@ export function exportOptions(config, profileUuid, fingerprint) {
 
 export function transportArguments(operation, ipa, config) {
   requireTrue(['verify', 'upload'].includes(operation), 'Unsupported delivery action.');
-  return ['iTMSTransporter', '-m', operation, '-assetFile', ipa, '-apiKey', config.keyId, '-apiIssuer', config.issuer, '-v', 'critical'];
+  return ['altool', operation === 'verify' ? '--validate-app' : '--upload-app', '-f', ipa, '-t', 'ios',
+    '--apiKey', config.keyId, '--apiIssuer', config.issuer, '--output-format', 'json'];
 }
 
 export function childEnvironment(env) {
-  return Object.fromEntries(Object.entries(env).filter(([key]) => !SECRET_NAMES.includes(key) && !key.startsWith('WOVO_ASC_')));
+  return Object.fromEntries(Object.entries(env).filter(([key]) => !SECRET_NAMES.includes(key) && !key.startsWith('WOVO_ASC_') && key !== 'API_PRIVATE_KEYS_DIR'));
 }
 
 const TRANSPORTER_CATEGORIES = ['tool-unavailable', 'interrupted', 'output-limit', 'private-key-unavailable',
@@ -117,12 +118,29 @@ export function classifyTransporterFailure({ stdout = '', stderr = '', exitCode 
     /\b(?:Asset validation failed|Validation failed)\s*\((-?\d{3,6})\)(?=$|[\s:;,.)\]}"'])/gi,
     /\bError Domain=[A-Za-z][A-Za-z0-9.]{0,80}\s+Code=(-?\d{3,6})(?=$|[\s:;,.)\]}"'])/g,
   ]) for (const match of output.matchAll(pattern)) errorCodes.add(Number(match[1]));
+  // altool JSON is read only as a complete bounded document. Never walk arbitrary
+  // objects or echo descriptions/IDs; inspect code fields in known error arrays.
+  for (const stream of [stdout, stderr]) {
+    if (typeof stream !== 'string' || stream.length > DIAGNOSTIC_STREAM_LIMIT) continue;
+    try {
+      const document = JSON.parse(stream);
+      if (!document || typeof document !== 'object' || Array.isArray(document)) continue;
+      for (const key of ['product-errors', 'errors']) {
+        if (!Array.isArray(document[key])) continue;
+        for (const item of document[key].slice(0, 16)) {
+          const code = item?.code;
+          if (typeof code === 'number' && Number.isInteger(code) && Math.abs(code) <= 999999) errorCodes.add(code);
+          else if (typeof code === 'string' && /^-?\d{3,6}$/.test(code)) errorCodes.add(Number(code));
+        }
+      }
+    } catch { /* Unstructured tool output is handled only by the strict patterns above. */ }
+  }
   const categories = [];
   if (['ENOENT', 'EACCES'].includes(spawnCode) || /unable to find utility|could not find or load main class|unable to locate a java runtime|java: command not found/i.test(output)) categories.push('tool-unavailable');
   if (spawnCode === 'ABORT_ERR') categories.push('interrupted');
   if (outputLimitExceeded) categories.push('output-limit');
   if (/could not find (?:the )?private key|cannot find (?:the )?private key|private key (?:file )?(?:not found|is missing)|unable to (?:load|read) (?:the )?private key/i.test(output)) categories.push('private-key-unavailable');
-  if (/authentication (?:failed|failure)|(?:authentication )?credentials (?:are )?(?:missing|invalid)|not authorized|unauthorized|invalid (?:jwt|token)|token (?:has )?expired/i.test(output)) categories.push('authentication-rejected');
+  if (/authentication (?:failed|failure)|unable to authenticate|(?:authentication )?credentials (?:are )?(?:missing|invalid)|not authorized|unauthorized|invalid (?:jwt|token)|token (?:has )?expired/i.test(output)) categories.push('authentication-rejected');
   if (/connection (?:timed out|refused|reset)|unknown host|unable to resolve host|network is unreachable|could not connect|ssl handshake/i.test(output)) categories.push('network-failure');
   if (itmsCodes.length || /asset validation failed|validation failed|invalid binary|invalid provisioning profile/i.test(output)) categories.push('asset-validation');
   if (/unrecognized option|unknown option|invalid (?:option|argument)|unsupported (?:option|argument)|not a valid option/i.test(output)) categories.push('unsupported-option');
@@ -189,7 +207,7 @@ export async function release({ env = process.env, platform = process.platform, 
   const installedProfiles = [];
   let cleanupFailed = false;
   const command = async (name, args, input, cwd = root) => run(name, args, { env: cleanEnv, input, cwd, signal,
-    diagnosticType: name === 'xcrun' && args[0] === 'iTMSTransporter' ? 'transporter' : undefined });
+    diagnosticType: name === 'xcrun' && args[0] === 'altool' ? 'transporter' : undefined });
   const plist = async input => JSON.parse(await command('plutil', ['-convert', 'json', '-o', '-', '--', '-'], input));
   try {
     requireTrue((await command('git', ['rev-parse', 'HEAD'])).trim() === config.sha, 'Checked-out source changed.');
@@ -197,7 +215,8 @@ export async function release({ env = process.env, platform = process.platform, 
     requireTrue(Number(/^Xcode (\d+)/m.exec(xcode)?.[1] ?? 0) >= 26, 'Xcode 26 or newer is required.');
     const sdk = await command('xcrun', ['--sdk', 'iphoneos', '--show-sdk-version']);
     requireTrue(Number(sdk.trim().split('.')[0]) >= 26, 'iOS 26 SDK or newer is required.');
-    await command('xcrun', ['--find', 'iTMSTransporter']);
+    stage = 'Apple tool preflight';
+    await command('xcrun', ['altool', '--version']);
     stage = 'source verification';
     log('Verifying the reviewed native source before installing signing material.');
     await command('npm', ['run', 'verify']);
@@ -288,21 +307,26 @@ export async function release({ env = process.env, platform = process.platform, 
     const keyDirectory = path.join(temporary, 'private_keys');
     await mkdir(keyDirectory, { mode: 0o700 });
     await privateWrite(path.join(keyDirectory, `AuthKey_${config.keyId}.p8`), p8);
+    // Only these two explicitly gated altool operations receive the exact private
+    // key directory. No global environment change or home-directory key install.
+    const appleDelivery = operation => run('xcrun', transportArguments(operation, ipa, config), {
+      env: { ...cleanEnv, API_PRIVATE_KEYS_DIR: keyDirectory }, cwd: temporary, signal, diagnosticType: 'transporter',
+    });
     stage = 'Apple validation';
     log('Validating the signed IPA with Apple. This does not invite testers or submit App Review.');
-    await command('xcrun', transportArguments('verify', ipa, config), undefined, temporary);
+    await appleDelivery('verify');
     if (config.operation === 'upload-to-testflight') {
       stage = 'Apple upload (acceptance may be uncertain on interruption)';
       requireTrue(createHash('sha256').update(await readFile(ipa)).digest('hex') === ipaHash, 'The validated IPA changed before upload.');
       log('Uploading the validated build only; no automatic retry, invitations or App Review submission.');
-      await command('xcrun', transportArguments('upload', ipa, config), undefined, temporary);
+      await appleDelivery('upload');
     }
     log(JSON.stringify({ result: config.operation === 'upload-to-testflight' ? 'upload-command-succeeded-processing-unverified' : 'validation-command-succeeded-no-upload',
       bundleId: BUNDLE_ID, version: config.version, build: config.build, sourceSha: config.sha, ipaSha256: ipaHash }));
     return { operation: config.operation, ipaSha256: ipaHash };
   } catch (error) {
-    if ((stage === 'Apple validation' || stage === 'Apple upload (acceptance may be uncertain on interruption)') && error?.transporterDiagnostic) {
-      log(JSON.stringify({ event: 'apple-transporter-failure', ...safeTransporterDiagnostic(error.transporterDiagnostic) }));
+    if (['Apple tool preflight', 'Apple validation', 'Apple upload (acceptance may be uncertain on interruption)'].includes(stage) && error?.transporterDiagnostic) {
+      log(JSON.stringify({ event: 'apple-tool-failure', tool: 'altool', ...safeTransporterDiagnostic(error.transporterDiagnostic) }));
     }
     throw new Error(`Native release stopped at ${stage}. Raw credential/tool output is suppressed. If upload started, check App Store Connect before another attempt; acceptance is unconfirmed.`);
   } finally {

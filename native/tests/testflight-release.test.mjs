@@ -26,6 +26,7 @@ const typedProfileXml = () => `<?xml version="1.0" encoding="UTF-8"?><plist vers
 </dict></plist>`;
 const pythonCommand = process.platform === 'win32' ? 'python' : 'python3';
 const privatePython = (script, input) => runCommand(pythonCommand, ['-c', script], { input, env: childEnvironment(process.env) });
+const appleOperation = args => args[0] !== 'altool' ? null : args.includes('--validate-app') ? 'verify' : args.includes('--upload-app') ? 'upload' : null;
 const environment = temp => ({ GITHUB_ACTIONS: 'true', RUNNER_ENVIRONMENT: 'github-hosted', RUNNER_OS: 'macOS',
   GITHUB_REPOSITORY: 'wovomedia/wovo-media', GITHUB_REF: 'refs/heads/wovo-ios-build', GITHUB_EVENT_NAME: 'workflow_dispatch',
   GITHUB_SHA: 'a'.repeat(40), WOVO_REVIEWED_SHA: 'a'.repeat(40), WOVO_IOS_SIGNING_ENABLED: 'true',
@@ -46,6 +47,7 @@ async function fixture(t, overrides = {}, failAt) {
     calls.push({ name, args, env: options.env, cwd: options.cwd, diagnosticType: options.diagnosticType });
     assert.equal(options.env.WOVO_P12_PASSWORD, undefined);
     assert.equal(options.env.WOVO_ASC_P8_BASE64, undefined);
+    if (!appleOperation(args)) assert.equal(options.env.API_PRIVATE_KEYS_DIR, undefined);
     const injectedFailure = failAt?.(name, args);
     if (injectedFailure) throw injectedFailure instanceof Error ? injectedFailure : new Error(`should never leak ${env.WOVO_P12_PASSWORD}`);
     if (name === 'git') return env.GITHUB_SHA;
@@ -76,8 +78,9 @@ async function fixture(t, overrides = {}, failAt) {
       assert.match(optionsFile, /<key>destination<\/key><string>export<\/string>/);
       assert.doesNotMatch(optionsFile, /<string>upload<\/string>/);
     }
-    if (name === 'xcrun' && args[0] === 'iTMSTransporter') {
+    if (name === 'xcrun' && appleOperation(args)) {
       const privatePath = path.join(options.cwd, 'private_keys', `AuthKey_${env.WOVO_ASC_KEY_ID}.p8`);
+      assert.equal(options.env.API_PRIVATE_KEYS_DIR, path.dirname(privatePath));
       assert.equal(await readFile(privatePath, 'utf8'), key);
       assert.ok(calls.some(call => call.name === 'codesign'));
     }
@@ -131,7 +134,7 @@ test('a failed profile decoder stops before importing any signing identity or ar
   await assert.rejects(f.execute, /Native release stopped at profile verification/);
   assert.ok(!f.calls.some(call => call.name === 'security' && ['create-keychain', 'import'].includes(call.args[0])));
   assert.ok(!f.calls.some(call => call.name === 'xcodebuild' && call.args.at(-1) === 'archive'));
-  assert.ok(!f.calls.some(call => call.args[0] === 'iTMSTransporter'));
+  assert.ok(!f.calls.some(call => appleOperation(call.args)));
   assert.deepEqual((await readdir(f.directory)).filter(name => name.startsWith('wovo-signing-')), []);
 });
 
@@ -141,8 +144,11 @@ test('secret decoding and child environments do not forward signing secrets', ()
   assert.equal(decodeSecret(b64('ok'), 2).toString(), 'ok');
   assert.equal(childEnvironment({ PATH: '/usr/bin', WOVO_P12_PASSWORD: 'no', WOVO_ASC_P8_BASE64: 'no' }).PATH, '/usr/bin');
   assert.deepEqual(Object.keys(childEnvironment({ WOVO_P12_PASSWORD: 'no', WOVO_ASC_P8_BASE64: 'no' })), []);
+  assert.equal(childEnvironment({ API_PRIVATE_KEYS_DIR: '/untrusted/external' }).API_PRIVATE_KEYS_DIR, undefined);
   assert.throws(() => exportOptions({ team: '<bad>' }, uuid, certHash));
   assert.throws(() => transportArguments('submit-review', 'App.ipa', {}));
+  for (const operation of ['verify', 'upload']) assert.deepEqual(transportArguments(operation, '/private/App.ipa', { keyId: 'ABC1234567', issuer: uuid }),
+    ['altool', operation === 'verify' ? '--validate-app' : '--upload-app', '-f', '/private/App.ipa', '-t', 'ios', '--apiKey', 'ABC1234567', '--apiIssuer', uuid, '--output-format', 'json']);
 });
 
 test('Transporter classifier emits only bounded numeric contextual codes and fixed categories', () => {
@@ -187,23 +193,46 @@ test('actual child diagnostics retain stdout/stderr error codes without raw outp
   });
 });
 
+test('altool structured diagnostics accept only numeric codes in known bounded error arrays', () => {
+  const result = classifyTransporterFailure({ stdout: JSON.stringify({
+    'product-errors': [{ code: -1011, message: 'private secret' }, { code: '90161' }, { code: '123PRIVATE_TOKEN' }],
+    errors: [{ code: -18000 }, { code: 1234567890 }, { code: 1.5 }],
+    code: 98765, requestId: 'must not be logged', nested: { errors: [{ code: 77777 }] },
+  }) });
+  assert.deepEqual(result.errorCodes, [-1011, 90161, -18000]);
+  assert.doesNotMatch(JSON.stringify(result), /private|secret|must not|requestId|98765|77777|1234567890/);
+  assert.deepEqual(classifyTransporterFailure({ stdout: JSON.stringify({ errors: [{ code: -1011 }], padding: 'x'.repeat(70_000) }) }).errorCodes, []);
+  assert.deepEqual(classifyTransporterFailure({ stdout: '[{"code":-1011}]' }).errorCodes, []);
+});
+
+test('failed altool startup emits only sanitized preflight diagnostics before installing signing material', async t => {
+  const failure = new Error('private tool startup output');
+  failure.transporterDiagnostic = classifyTransporterFailure({ exitCode: 1, stderr: 'Unable to locate a Java Runtime. /private/secret' });
+  const f = await fixture(t, {}, (name, args) => name === 'xcrun' && args[0] === 'altool' && args.includes('--version') ? failure : false);
+  await assert.rejects(f.execute, /Native release stopped at Apple tool preflight/);
+  assert.deepEqual(f.logs.map(line => JSON.parse(line)), [{ event: 'apple-tool-failure', tool: 'altool', exitCode: 1,
+    itmsCodes: [], errorCodes: [], categories: ['tool-unavailable'] }]);
+  assert.ok(!f.calls.some(call => call.name === 'security' || appleOperation(call.args)));
+  assert.deepEqual(await readdir(f.directory), ['home']);
+});
+
 test('release logs revalidated safe Transporter diagnostics only at Apple failure and never uploads after failed verify', async t => {
   const failure = new Error('raw /private/path and secret MUST_NOT_APPEAR');
   failure.transporterDiagnostic = { exitCode: 1, itmsCodes: [90161, 'raw-private-value', 1234567890],
     errorCodes: [-1011, 'secret'], categories: ['asset-validation', 'raw-private-category'], path: '/private/no' };
-  const f = await fixture(t, {}, (name, args) => name === 'xcrun' && args[0] === 'iTMSTransporter' ? failure : false);
+  const f = await fixture(t, {}, (name, args) => name === 'xcrun' && appleOperation(args) ? failure : false);
   await assert.rejects(f.execute, /Native release stopped at Apple validation/);
   assert.deepEqual(f.logs.filter(line => line.startsWith('{')).map(line => JSON.parse(line)), [{
-    event: 'apple-transporter-failure', exitCode: 1, itmsCodes: [90161], errorCodes: [-1011], categories: ['asset-validation'],
+    event: 'apple-tool-failure', tool: 'altool', exitCode: 1, itmsCodes: [90161], errorCodes: [-1011], categories: ['asset-validation'],
   }]);
   assert.doesNotMatch(f.logs.filter(line => !line.startsWith('::add-mask::')).join('\n'), /private|MUST_NOT_APPEAR|raw-/);
-  assert.ok(f.calls.filter(call => call.diagnosticType).every(call => call.name === 'xcrun' && call.args[0] === 'iTMSTransporter'));
-  assert.equal(f.calls.filter(call => call.args[0] === 'iTMSTransporter').length, 1);
+  assert.ok(f.calls.filter(call => call.diagnosticType).every(call => call.name === 'xcrun' && call.args[0] === 'altool'));
+  assert.equal(f.calls.filter(call => appleOperation(call.args)).length, 1);
   assert.deepEqual((await readdir(f.directory)).filter(name => name.startsWith('wovo-signing-')), []);
 
   const unrelated = await fixture(t, {}, (name, args) => name === 'security' && args[0] === 'import' ? failure : false);
   await assert.rejects(unrelated.execute, /Native release stopped at temporary keychain/);
-  assert.ok(!unrelated.logs.some(line => line.includes('apple-transporter-failure')));
+  assert.ok(!unrelated.logs.some(line => line.includes('apple-tool-failure')));
 });
 
 test('non-default push trigger still requires its explicit acknowledgement and exact reviewed SHA', () => {
@@ -214,11 +243,13 @@ test('non-default push trigger still requires its explicit acknowledgement and e
 });
 
 test('validation builds and checks one exact IPA, never uploads, restores keychains and removes private material', async t => {
-  const f = await fixture(t);
+  const f = await fixture(t, { API_PRIVATE_KEYS_DIR: '/untrusted/external' });
   const result = await f.execute();
   assert.equal(result.operation, 'validate-only');
-  const transport = f.calls.filter(call => call.args[0] === 'iTMSTransporter');
-  assert.deepEqual(transport.map(call => call.args[2]), ['verify']);
+  const transport = f.calls.filter(call => appleOperation(call.args));
+  assert.deepEqual(transport.map(call => appleOperation(call.args)), ['verify']);
+  const preflightIndex = f.calls.findIndex(call => call.name === 'xcrun' && call.args[0] === 'altool' && call.args.includes('--version'));
+  assert.ok(preflightIndex >= 0 && preflightIndex < f.calls.findIndex(call => call.name === 'security'));
   assert.equal(f.calls.filter(call => call.name === 'swiftc').length, 2);
   const archive = f.calls.find(call => call.name === 'xcodebuild' && call.args.at(-1) === 'archive');
   assert.ok(archive.args.includes('CODE_SIGN_STYLE=Manual'));
@@ -238,7 +269,7 @@ test('validation builds and checks one exact IPA, never uploads, restores keycha
 test('separate upload opt-in validates first, uploads exactly once, and never submits review or invites', async t => {
   const f = await fixture(t, { WOVO_RELEASE_OPERATION: 'upload-to-testflight', WOVO_UPLOAD_ACK: 'UPLOAD_BUILD_ONLY' });
   await f.execute();
-  assert.deepEqual(f.calls.filter(call => call.args[0] === 'iTMSTransporter').map(call => call.args[2]), ['verify', 'upload']);
+  assert.deepEqual(f.calls.filter(call => appleOperation(call.args)).map(call => appleOperation(call.args)), ['verify', 'upload']);
   assert.ok(f.logs.some(line => line.includes('upload-command-succeeded-processing-unverified')));
   assert.doesNotMatch(JSON.stringify(f.calls.map(call => [call.name, call.args])), /betaGroups|appStoreVersionSubmissions|allowProvisioning|notarytool/);
 });
@@ -273,9 +304,9 @@ for (const failure of ['import', 'archive', 'export', 'verify', 'upload']) {
       (name, args) => failure === 'import' ? name === 'security' && args[0] === 'import'
         : failure === 'archive' ? name === 'xcodebuild' && args.at(-1) === 'archive'
           : failure === 'export' ? name === 'xcodebuild' && args[0] === '-exportArchive'
-            : name === 'xcrun' && args[0] === 'iTMSTransporter' && args[2] === failure);
+            : name === 'xcrun' && appleOperation(args) === failure);
     await assert.rejects(f.execute, error => error.message.includes('Native release stopped') && !error.message.includes(f.env.WOVO_P12_PASSWORD));
-    const uploads = f.calls.filter(call => call.args[0] === 'iTMSTransporter' && call.args[2] === 'upload');
+    const uploads = f.calls.filter(call => appleOperation(call.args) === 'upload');
     assert.equal(uploads.length, failure === 'upload' ? 1 : 0);
     assert.deepEqual((await readdir(f.directory)).filter(name => name.startsWith('wovo-signing-')), []);
     assert.ok(f.calls.some(call => call.name === 'security' && call.args[0] === 'delete-keychain'));
