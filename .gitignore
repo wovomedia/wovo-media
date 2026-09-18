@@ -10,6 +10,12 @@
 !.yarn/releases
 !.yarn/versions
 
+# package manager caches (must never be committed)
+.npm-cache/
+.npm/
+.pnpm-store/
+.cache/
+
 # testing
 /coverage
 
