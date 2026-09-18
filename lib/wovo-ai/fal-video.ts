@@ -1,7 +1,12 @@
 import "server-only";
 
 import { fal } from "@fal-ai/client";
-import { quoteShortVideo, resolveAiModel } from "@/lib/ai/provider-models";
+import {
+  normalizeVideoDurationSeconds,
+  quoteShortVideo,
+  resolveAiModel,
+  type AiModelKey,
+} from "@/lib/ai/provider-models";
 import { getEnv } from "@/lib/env";
 
 type FalVideoData = {
@@ -16,44 +21,96 @@ function configureFal() {
   fal.config({ credentials });
 }
 
-export function getFalVideoModel(hasReferenceImage: boolean) {
-  return resolveAiModel(hasReferenceImage ? "video.image.default" : "video.text.default").modelId;
+function resolveVideoModelKey(input: {
+  hasReferenceImage: boolean;
+  requestedSeconds?: number | null;
+  preferSeedance?: boolean;
+}): AiModelKey {
+  const duration = normalizeVideoDurationSeconds(input.requestedSeconds);
+  if (duration >= 30 || (input.requestedSeconds != null && input.requestedSeconds > 20)) {
+    return "video.seedance.long";
+  }
+  if (input.preferSeedance) {
+    return input.hasReferenceImage ? "video.seedance.fast.image" : "video.seedance.fast.text";
+  }
+  return input.hasReferenceImage ? "video.kling.pro.image" : "video.kling.pro.text";
+}
+
+export function getFalVideoModel(hasReferenceImage: boolean, requestedSeconds?: number | null) {
+  const key = resolveVideoModelKey({ hasReferenceImage, requestedSeconds });
+  return resolveAiModel(key).modelId;
 }
 
 export async function createFalVideoJob(input: {
   prompt: string;
   durationSeconds?: number;
   inputReferenceImageUrl?: string;
+  preferSeedance?: boolean;
 }) {
   configureFal();
-  // Wan Turbo currently returns one short clip per fixed-price generation.
-  // Retain the requested duration only as UI metadata; never promise an exact
-  // runtime that the provider endpoint does not accept.
-  const requestedSeconds = Number.isFinite(input.durationSeconds) ? Math.round(Number(input.durationSeconds)) : 5;
-  const seconds = Math.max(4, Math.min(requestedSeconds, 8));
   const hasReferenceImage = Boolean(input.inputReferenceImageUrl);
-  const resolvedModel = resolveAiModel(hasReferenceImage ? "video.image.default" : "video.text.default");
+  const quote = quoteShortVideo({
+    hasReferenceImage,
+    requestedSeconds: input.durationSeconds,
+    preferSeedance: input.preferSeedance,
+  });
+  const resolvedModel = resolveAiModel(quote.models[0].key as AiModelKey);
   const model = resolvedModel.modelId;
-  const quote = quoteShortVideo(hasReferenceImage);
-  const common = {
-    prompt: input.prompt,
-    resolution: "720p" as const,
-    enable_safety_checker: true,
-    enable_output_safety_checker: true,
-  };
-  const submitted = input.inputReferenceImageUrl
-    ? await fal.queue.submit(model, {
-        input: { ...common, image_url: input.inputReferenceImageUrl, aspect_ratio: "auto" as const },
-      })
-    : await fal.queue.submit(model, {
-        input: { ...common, aspect_ratio: "9:16" as const, enable_prompt_expansion: true },
-      });
+  const seconds = quote.durationSeconds ?? normalizeVideoDurationSeconds(input.durationSeconds);
+
+  // Kling uses start_image_url + duration string; Seedance uses image_url + duration number-ish.
+  // Always request native audio when the endpoint supports it.
+  const isKling = model.includes("kling-video");
+  const isSeedance = model.includes("seedance");
+
+  let submitted: { request_id?: string };
+
+  if (isKling) {
+    const klingInput: Record<string, unknown> = {
+      prompt: input.prompt,
+      duration: String(seconds),
+      generate_audio: true,
+      negative_prompt: "blur, distort, low quality, jitter, warped geometry",
+    };
+    if (input.inputReferenceImageUrl) {
+      klingInput.start_image_url = input.inputReferenceImageUrl;
+    }
+    submitted = await fal.queue.submit(model, { input: klingInput });
+  } else if (isSeedance) {
+    const seedanceInput: Record<string, unknown> = {
+      prompt: input.prompt,
+      duration: seconds,
+      generate_audio: true,
+      aspect_ratio: hasReferenceImage ? "auto" : "9:16",
+    };
+    if (input.inputReferenceImageUrl) {
+      seedanceInput.image_url = input.inputReferenceImageUrl;
+    }
+    submitted = await fal.queue.submit(model, { input: seedanceInput });
+  } else {
+    // Defensive fallback — should not run with the current registry.
+    const common = {
+      prompt: input.prompt,
+      resolution: "720p" as const,
+      enable_safety_checker: true,
+      enable_output_safety_checker: true,
+    };
+    submitted = input.inputReferenceImageUrl
+      ? await fal.queue.submit(model, {
+          input: { ...common, image_url: input.inputReferenceImageUrl, aspect_ratio: "auto" as const },
+        })
+      : await fal.queue.submit(model, {
+          input: { ...common, aspect_ratio: "9:16" as const, enable_prompt_expansion: true },
+        });
+  }
+
   if (!submitted.request_id) throw new Error("FAL_VIDEO_JOB_ID_MISSING");
   return {
     providerJobId: submitted.request_id,
     status: "queued",
     model,
     seconds,
+    audioEnabled: true,
     pricingVersion: resolvedModel.pricingVersion,
     registryVersion: quote.registryVersion,
     estimatedProviderCostMicros: quote.estimatedProviderCostMicros,
