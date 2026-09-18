@@ -42,18 +42,29 @@ test("social post quote snapshots both models and customer credits", () => {
   assert.deepEqual(quote.models.map((model) => model.key), ["caption.default", "image.default"]);
 });
 
-test("short-video quote records the correct fal workflow", () => {
-  const textQuote = quoteShortVideo(false);
-  const imageQuote = quoteShortVideo(true);
-  assert.equal(textQuote.customerCredits, 12);
-  assert.equal(textQuote.estimatedProviderCostMicros, 100_000);
-  assert.equal(textQuote.models[0]?.key, "video.text.default");
-  assert.equal(imageQuote.models[0]?.key, "video.image.default");
+test("short-video quote uses Kling 3.0 with audio and duration-aware credits", () => {
+  const textQuote = quoteShortVideo({ hasReferenceImage: false, requestedSeconds: 10 });
+  const imageQuote = quoteShortVideo({ hasReferenceImage: true, requestedSeconds: 10 });
+  assert.equal(textQuote.models[0]?.key, "video.kling.pro.text");
+  assert.equal(imageQuote.models[0]?.key, "video.kling.pro.image");
+  assert.equal(textQuote.audioEnabled, true);
+  assert.equal(textQuote.durationSeconds, 10);
+  assert.ok(textQuote.customerCredits >= 100, "10s Kling with audio must not be underpriced");
+  assert.ok(directProviderMarginBps(textQuote) >= AI_MIN_DIRECT_PROVIDER_MARGIN_BPS);
+});
+
+test("long video requests route to Seedance 2.5 and charge more than short clips", () => {
+  const shortClip = quoteShortVideo({ hasReferenceImage: true, requestedSeconds: 10 });
+  const longClip = quoteShortVideo({ hasReferenceImage: true, requestedSeconds: 30 });
+  assert.equal(longClip.models[0]?.key, "video.seedance.long");
+  assert.equal(longClip.durationSeconds, 30);
+  assert.ok(longClip.customerCredits > shortClip.customerCredits);
+  assert.ok(directProviderMarginBps(longClip) >= AI_MIN_DIRECT_PROVIDER_MARGIN_BPS);
 });
 
 test("starter image and premium video quotes clear the direct-provider margin floor", () => {
   const image = quoteSocialPostImage();
-  const video = quoteShortVideo(false);
+  const video = quoteShortVideo({ hasReferenceImage: false, requestedSeconds: 10 });
   assert.ok(image.customerCredits <= 10, "starter credits must cover at least one image workflow");
   assert.ok(video.customerCredits > 10, "starter credits must not imply a free premium video");
   assert.ok(directProviderMarginBps(image) >= AI_MIN_DIRECT_PROVIDER_MARGIN_BPS);
