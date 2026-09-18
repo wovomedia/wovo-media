@@ -23,8 +23,8 @@ export const brand = {
   phoneDisplay: "",
   baseLocation: "",
   reach: "Serving businesses worldwide",
-  logoIcon: "/icon.svg",
-  logoWordmark: "/icon.svg",
+  logoIcon: "/images/brand/wovo-glow-icon.svg",
+  logoWordmark: "/images/brand/wovo-wordmark.svg",
 };
 
 export const payments = {
