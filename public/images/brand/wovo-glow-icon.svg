@@ -1,0 +1,19 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="glow" x="90" y="180" width="844" height="660" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+      <feGaussianBlur stdDeviation="64" result="effect1_foregroundBlur"/>
+    </filter>
+    <linearGradient id="wFill" x1="190" y1="320" x2="845" y2="760" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#36FBC5"/>
+      <stop offset="1" stop-color="#00D88A"/>
+    </linearGradient>
+  </defs>
+
+  <g filter="url(#glow)" opacity="0.45">
+    <path d="M230 315C248 302 275 312 284 334L367 590L468 391C481 364 520 364 533 391L634 590L717 334C726 312 753 302 771 315C790 328 798 355 789 377L681 710C671 739 642 759 611 759C580 759 551 739 541 710L501 595L460 710C450 739 421 759 390 759C359 759 330 739 320 710L212 377C203 355 211 328 230 315Z" fill="url(#wFill)"/>
+  </g>
+
+  <path d="M230 315C248 302 275 312 284 334L367 590L468 391C481 364 520 364 533 391L634 590L717 334C726 312 753 302 771 315C790 328 798 355 789 377L681 710C671 739 642 759 611 759C580 759 551 739 541 710L501 595L460 710C450 739 421 759 390 759C359 759 330 739 320 710L212 377C203 355 211 328 230 315Z" fill="url(#wFill)" stroke="#73FFD4" stroke-opacity="0.3"/>
+</svg>
