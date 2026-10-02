@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-        <string>WOVO Internal</string>
+        <string>WOVO</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -30,6 +30,8 @@
 	<string>Record audio only when you choose to record a voice reference in WOVO.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Choose photos and videos to attach to your WOVO creation.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Save a WOVO export to Photos only when you choose Save Video or Save Image.</string>
 	<key>UIUserInterfaceStyle</key>
 	<string>Dark</string>
 	<key>UIStatusBarStyle</key>

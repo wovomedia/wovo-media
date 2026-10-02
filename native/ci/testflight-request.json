@@ -1,6 +1,6 @@
 {
-  "request": "upload1",
+  "request": "upload3",
   "version": "1.0",
-  "build": "1",
+  "build": "3",
   "operation": "upload-to-testflight"
 }

@@ -2,13 +2,13 @@ import UIKit
 import WebKit
 import Capacitor
 
-// INTERNAL TEST ONLY. The current online studio is not a bundled native client.
+// The online Cloudflare studio with restricted native navigation and downloads.
 final class WovoBridgeViewController: CAPBridgeViewController {
     private var secureDelegate: WovoWebViewDelegate?
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        navigationItem.title = "WOVO · Internal"
+        navigationItem.title = "WOVO"
         navigationItem.leftBarButtonItem = UIBarButtonItem(title: "Back", style: .plain, target: self, action: #selector(goBack))
         navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .refresh, target: self, action: #selector(reconnect))
     }
@@ -26,6 +26,11 @@ final class WovoBridgeViewController: CAPBridgeViewController {
         let webConfiguration = super.webViewConfiguration(for: configuration)
         webConfiguration.mediaTypesRequiringUserActionForPlayback = .all
         webConfiguration.defaultWebpagePreferences.preferredContentMode = .mobile
+        // UI capability hints only. Cloudflare must still authorize each request.
+        // Native OAuth and in-app purchases have no verified Cloudflare contract.
+        webConfiguration.userContentController.addUserScript(WKUserScript(
+            source: "window.__WOVO_NATIVE__ = Object.freeze({ version: 3, auth: false, storeKit: false, generationArtifactDownloads: true });",
+            injectionTime: .atDocumentStart, forMainFrameOnly: true))
         return webConfiguration
     }
 
@@ -91,7 +96,9 @@ private final class WovoWebViewDelegate: NSObject, WKNavigationDelegate, WKUIDel
     }
 
     private func mayDownload(_ action: WKNavigationAction, in webView: WKWebView) -> Bool {
-        guard let url = action.request.url else { return false }
+        // WebKit can omit a usable sourceFrame for app/script-started loads.
+        // Check explicit intent before accessing the source frame.
+        guard action.navigationType == .linkActivated, let url = action.request.url else { return false }
         return WovoDownloadPolicy.mayStart(url: url, topLevel: webView.url, source: action.sourceFrame.request.url,
             mainSource: action.sourceFrame.isMainFrame, mainTarget: action.targetFrame == nil || action.targetFrame?.isMainFrame == true,
             explicitLink: action.navigationType == .linkActivated, downloadAttribute: action.shouldPerformDownload,

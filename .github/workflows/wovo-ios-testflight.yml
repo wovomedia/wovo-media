@@ -1,7 +1,7 @@
-# Reviewed upload1 candidate after Apple validation passed. Root owns remote mapping,
+# Local upload3 candidate; not authorized for publication or upload. Root owns remote mapping,
 # secret transfer, environment approval, enable flag and exact reviewed commit SHA.
 # Fixed build-only upload; no invitations, App Review submission or public release.
-name: WOVO TestFlight upload 1
+name: WOVO TestFlight upload 3
 on:
   push:
     branches: [wovo-ios-build]
@@ -28,7 +28,7 @@ jobs:
       - name: Install locked native dependencies without signing secrets
         working-directory: native
         run: npm ci --ignore-scripts --no-audit --no-fund
-      - name: Validate and upload the reviewed version 1.0 build 1 to Apple
+      - name: Validate and upload the reviewed version 1.0 build 3 to Apple
         working-directory: native
         env:
           WOVO_IOS_SIGNING_ENABLED: ${{ vars.WOVO_IOS_SIGNING_ENABLED }}
@@ -38,7 +38,7 @@ jobs:
           WOVO_RELEASE_OPERATION: upload-to-testflight
           WOVO_UPLOAD_ACK: UPLOAD_BUILD_ONLY
           WOVO_APP_VERSION: '1.0'
-          WOVO_BUILD_NUMBER: '1'
+          WOVO_BUILD_NUMBER: '3'
           WOVO_APPLE_TEAM_ID: ${{ vars.WOVO_APPLE_TEAM_ID }}
           WOVO_ASC_KEY_ID: ${{ vars.WOVO_ASC_KEY_ID }}
           WOVO_ASC_ISSUER_ID: ${{ vars.WOVO_ASC_ISSUER_ID }}

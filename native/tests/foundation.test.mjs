@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
+import { runInNewContext } from 'node:vm';
 const root = new URL('../', import.meta.url);
 const read = (path) => readFile(new URL(path, root), 'utf8');
 const json = async (path) => JSON.parse(await read(path));
@@ -20,7 +21,7 @@ test('isolated pinned official Capacitor project; no paid SDK or inherited web b
 test('config restricts internal studio to HTTPS without broad navigation or native plugins', async () => {
   const config = await json('capacitor.config.json');
   assert.equal(config.appId, 'com.wovomedia.wovo');
-  assert.equal(config.appName, 'WOVO Internal');
+  assert.equal(config.appName, 'WOVO');
   assert.equal(config.server.url, 'https://wovomedia.com');
   assert.equal(config.server.cleartext, false);
   assert.equal(config.server.errorPath, 'offline.html');
@@ -28,7 +29,25 @@ test('config restricts internal studio to HTTPS without broad navigation or nati
   assert.equal(config.loggingBehavior, 'none');
   assert.equal(config.ios.webContentsDebuggingEnabled, false);
   assert.deepEqual(config.includePlugins, []);
+  const info = await read('ios/App/App/Info.plist');
+  assert.match(info, /CFBundleDisplayName<\/key>\s*<string>WOVO<\/string>/);
+  assert.match(info, /NSPhotoLibraryAddUsageDescription/);
   assert.doesNotMatch(await read('ios/App/App/Info.plist'), /NSAllowsArbitraryLoads|NSAllowsLocalNetworking|NSAppTransportSecurity/);
+});
+
+test('native marker advertises current downloads without claiming OAuth or StoreKit', async () => {
+  const controller = await read('ios/App/App/WovoBridgeViewController.swift');
+  const script = /source: "([^"]+)"/.exec(controller)?.[1];
+  assert.ok(script);
+  const context = {window: {}};
+  runInNewContext(script, context);
+  const hint = context.window.__WOVO_NATIVE__;
+  assert.equal(hint.version, 3);
+  assert.equal(hint.generationArtifactDownloads, true);
+  assert.equal(hint.auth, false);
+  assert.equal(hint.storeKit, false);
+  assert.equal(Object.isFrozen(hint), true);
+  assert.match(controller, /injectionTime: \.atDocumentStart, forMainFrameOnly: true/);
 });
 
 test('native delegate is installed and gates exact origin/permissions/links without dropping bridge forwarding', async () => {
@@ -61,8 +80,8 @@ test('fallbacks are bundled, accessible, truthful and have no job/API/network sc
     assert.doesNotMatch(html, /<script|iframe|fetch\(|\/api\//i);
     assert.match(html, /href="https:\/\/wovomedia\.com"/);
   }
-  assert.match(await read('www/index.html'), /not an App Store release/);
-  assert.match(await read('www/offline.html'), /Check your Library before starting it again/);
+  assert.match(await read('www/index.html'), /Internet is required/);
+  assert.match(await read('www/offline.html'), /Check your projects before starting it again/);
 });
 
 test('real orbit assets retain packaged provenance and app icon is 1024px opaque PNG', async () => {

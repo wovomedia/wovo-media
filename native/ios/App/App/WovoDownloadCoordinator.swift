@@ -69,8 +69,11 @@ final class WovoDownloadCoordinator: NSObject, WKDownloadDelegate {
         guard !sharing, let startedAt = startedAt else { return }
         let bytes = transfer?.progress.completedUnitCount ?? 0
         let total = transfer?.progress.totalUnitCount ?? 0
+        let routeLimit = request.map { WovoDownloadPolicy.kind(for: $0) == "artifact" } == true
+            ? WovoDownloadPolicy.maximumArtifactBytes : WovoDownloadPolicy.maximumBytes
+        let byteLimit = expectedBytes > 0 ? min(routeLimit, expectedBytes) : routeLimit
         if Date().timeIntervalSince(startedAt) > WovoDownloadPolicy.maximumSeconds
-            || bytes > WovoDownloadPolicy.maximumBytes || total > WovoDownloadPolicy.maximumBytes {
+            || bytes > byteLimit || total > byteLimit {
             stop(showError: true)
         }
     }
@@ -84,7 +87,9 @@ final class WovoDownloadCoordinator: NSObject, WKDownloadDelegate {
     func download(_ download: WKDownload, decideDestinationUsing response: URLResponse, suggestedFilename: String, completionHandler: @escaping (URL?) -> Void) {
         guard transfer === download, let request = request, let http = response as? HTTPURLResponse,
               let format = WovoDownloadPolicy.format(request: request, response: response.url, status: http.statusCode,
-                                                     mime: response.mimeType, length: response.expectedContentLength) else {
+                                                     mime: WovoDownloadPolicy.kind(for: request) == "artifact"
+                                                        ? http.value(forHTTPHeaderField: "Content-Type") : response.mimeType,
+                                                     length: response.expectedContentLength) else {
             completionHandler(nil)
             if transfer === download { stop(showError: true) }
             return
@@ -122,7 +127,7 @@ final class WovoDownloadCoordinator: NSObject, WKDownloadDelegate {
     }
 
     func downloadDidFinish(_ download: WKDownload) {
-        guard transfer === download, let destination = destination, let format = format, let identifier = attempt else { return }
+        guard transfer === download, let request = request, let destination = destination, let format = format, let identifier = attempt else { return }
         transfer = nil
         timer?.invalidate()
         timer = nil
@@ -133,7 +138,14 @@ final class WovoDownloadCoordinator: NSObject, WKDownloadDelegate {
                   Int64(count) <= WovoDownloadPolicy.maximumBytes else { stop(showError: true); return }
             let handle = try FileHandle(forReadingFrom: destination)
             defer { try? handle.close() }
-            guard WovoDownloadPolicy.matchesHeader(try handle.read(upToCount: 16) ?? Data(), format: format) else { stop(showError: true); return }
+            if format == .txt {
+                guard expectedBytes <= WovoDownloadPolicy.maximumTextBytes else { stop(showError: true); return }
+                let bytes = try handle.read(upToCount: Int(WovoDownloadPolicy.maximumTextBytes) + 1) ?? Data()
+                guard Int64(bytes.count) == expectedBytes, WovoDownloadPolicy.matchesText(bytes) else { stop(showError: true); return }
+            } else {
+                guard WovoDownloadPolicy.matchesHeader(try handle.read(upToCount: 24) ?? Data(), format: format,
+                                                       request: request, length: expectedBytes) else { stop(showError: true); return }
+            }
         } catch { stop(showError: true); return }
         sharing = true
         dismissProgress { [weak self] in self?.presentShare(destination, attempt: identifier) }
@@ -186,7 +198,7 @@ final class WovoDownloadCoordinator: NSObject, WKDownloadDelegate {
 
     private func offerError() {
         guard let owner = owner, owner.presentedViewController == nil, UIApplication.shared.applicationState == .active else { return }
-        let alert = UIAlertController(title: "Download couldn't finish", message: "Keep WOVO open and try Download again from your Library. This app supports WOVO video and audio files up to 256 MB. Nothing was posted or generated.", preferredStyle: .alert)
+        let alert = UIAlertController(title: "Download couldn't finish", message: "Keep WOVO open and try Download again from your projects. The file must be a supported WOVO export within its size limit. Nothing was posted or generated.", preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "OK", style: .default))
         owner.present(alert, animated: true)
     }

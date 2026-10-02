@@ -71,7 +71,7 @@
       { "source": "native/ci/github-ios-testflight.yml", "destination": ".github/workflows/wovo-ios-testflight.yml" },
       { "source": "native/ci/vercel.no-deploy.json", "destination": "vercel.json" }
     ],
-    "note": "Prepare and review the native-only tree and exact commit before updating wovo-ios-build. Do not modify main/default, wovo-v2 or productionBranch, or rewrite remote history. Native push may start the unsigned simulator workflow; root vercel.json disables Git deployments. The separately mapped validation1 signing workflow is fixed to validate-only and also requires protected secrets, environment approval where configured, repository enable flag and exact reviewed SHA. This local manifest does not transfer credentials, enable variables, push a ref or upload a build."
+    "note": "Prepare and review the native-only tree and exact commit before updating wovo-ios-build. Do not modify main/default, wovo-v2 or productionBranch, or rewrite remote history. Native push may start the unsigned simulator workflow and publish a simulator artifact; root vercel.json disables Git deployments. The separately mapped upload3 signing workflow prepares version 1.0 build 3 and requires protected secrets, environment approval where configured, repository enable flag and exact reviewed SHA, plus its explicit upload acknowledgement. Publication, remote build activation and Apple upload require their specific approvals. This local manifest does not transfer credentials, enable variables, push a ref or upload a build."
   },
   "workflow": {
     "source": "native/ci/github-ios-simulator.yml.example",

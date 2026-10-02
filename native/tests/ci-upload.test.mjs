@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, lstat } from 'node:fs/promises';
 const root = new URL('../', import.meta.url);
-const read = (path) => readFile(new URL(path, root), 'utf8');
+const read = async (path) => (await readFile(new URL(path, root), 'utf8')).replace(/\r\n/g, '\n');
 const json = async (path) => JSON.parse(await read(path));
 
 test('active simulator workflow is restricted to the authorized repository and isolated branch', async () => {
@@ -59,9 +59,9 @@ test('reviewed native-only payload maps exactly the simulator, gated release wor
   for (const required of ['native/package.json', 'native/package-lock.json', 'native/capacitor.config.json', 'native/tests/ci-upload.test.mjs', 'native/scripts/build-simulator.sh', 'native/ios/App/App.xcodeproj/xcshareddata/xcschemes/App.xcscheme']) assert.ok(manifest.files.includes(required));
 });
 
-test('upload1 request is fixed to the reviewed build with separate upload acknowledgement and no review or invites', async () => {
+test('upload3 request is fixed to the reviewed build with separate upload acknowledgement and no review or invites', async () => {
   assert.deepEqual(await json('ci/testflight-request.json'), {
-    request: 'upload1', version: '1.0', build: '1', operation: 'upload-to-testflight',
+    request: 'upload3', version: '1.0', build: '3', operation: 'upload-to-testflight',
   });
   const body = await read('ci/github-ios-testflight.yml');
   assert.match(body, /push:\n    branches: \[wovo-ios-build\]\n    paths: \[native\/ci\/testflight-request\.json\]/);
@@ -72,7 +72,7 @@ test('upload1 request is fixed to the reviewed build with separate upload acknow
   assert.match(body, /WOVO_RELEASE_OPERATION: upload-to-testflight/);
   assert.match(body, /WOVO_UPLOAD_ACK: UPLOAD_BUILD_ONLY/);
   assert.match(body, /WOVO_APP_VERSION: '1\.0'/);
-  assert.match(body, /WOVO_BUILD_NUMBER: '1'/);
+  assert.match(body, /WOVO_BUILD_NUMBER: '3'/);
   assert.match(body, /WOVO_TRIGGER_ACK: REVIEWED_NATIVE_PUSH/);
   assert.match(body, /persist-credentials: false/);
   assert.match(body, /run: node scripts\/testflight-release\.mjs/);

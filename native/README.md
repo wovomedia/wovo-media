@@ -1,10 +1,24 @@
-# WOVO iOS — internal-test foundation
+# WOVO iOS - Cloudflare update candidate
 
-This directory is isolated from the Next.js website. **The first cloud Mac
-simulator compile passed; no signed IPA, TestFlight release or App Store
-submission has been produced or verified.** The first
-foundation opens the existing online studio, with native navigation, strict
-origin handling and a packaged offline page. It is not Store-ready.
+This native-only checkout is isolated from the live Cloudflare studio. The app
+loads `https://wovomedia.com` with restricted native navigation, export sharing
+and an offline page. Apple read-only inspection on October 2, 2026 confirms
+WOVO Media, app `6811810017`, bundle `com.wovomedia.wovo`, version 1.0/build 1,
+VALID and in internal beta testing; it expires December 13, 2026. App Store
+version 1.0 remains Prepare for Submission.
+
+The local version 1.0/build 3 candidate extends export transport to the current
+Cloudflare artifact endpoint, adds PNG/text support and Photos save permission,
+updates WOVO branding and advertises only implemented native capabilities.
+Build 3 has NOT been compiled, signed, uploaded or run on iOS. The old local
+build-2 Supabase authentication bridge is not imported. Native OAuth and billing
+handoff remain unavailable until current Cloudflare contracts are verified.
+
+The web release owner must separately integrate the reviewed real download
+anchor for `/api/generations/{jobId}/artifact?organizationId={organizationId}`.
+The existing web blob download does not meet the native policy. The marker
+`__WOVO_NATIVE__` is a UI transport hint, never authorization. Node tests and
+Capacitor sync on Windows do not prove Swift compilation or device behavior.
 
 ## Local checks (Windows works)
 
@@ -21,7 +35,8 @@ It uses Swift Package Manager and includes a shared `App` scheme. Do not re-run
 Root verified and registered bundle ID `com.wovomedia.wovo` on2026-09-14 for
 Wovo Media LLC, Apple Team `SD667C7LAG`. These are nonsecret identifiers, not
 signing credentials. Root created App Store Connect app6811810017, WOVO Media,
-v1.0 Prepare for Submission. Signing still needs verification.
+v1.0 Prepare for Submission. The existing App Store profile is active through
+September 14, 2027. No signing credential was changed during this update.
 
 ## Mac build
 
@@ -62,8 +77,9 @@ the binary works. Never commit or paste signing keys into chat/source/logs.
 - Google/social OAuth redirects intentionally cannot navigate the bridged view
   to external domains. A system-auth session and verified callback/session
   handoff are **not implemented**. Do not advertise Google sign-in as verified.
-- Native Download-to-share-sheet source now handles explicit WOVO video/audio
-  exports, with foreground cancellation and size/time limits. It is NOT yet
+- Native Download-to-share-sheet source handles explicit legacy video/audio
+  exports and current Cloudflare PNG/MP4/text artifacts, with foreground
+  cancellation and size/time limits. It is NOT yet
   verified on an authenticated iPhone. Native push, direct save-to-Photos and
   background rendering are not implemented.
 - The microphone/camera descriptions explain existing web requests. Permission
@@ -79,7 +95,12 @@ the binary works. Never commit or paste signing keys into chat/source/logs.
 - The app follows the current web backend; it has no bundled server keys,
   independent credit grants or bypass of account authorization.
 - Refresh opens the studio with a GET; it does not retry a generation. Unsent
-  drafts can be lost. Check Library after a connection failure before spending again.
+  drafts can be lost. Check projects after a connection failure before spending again.
+
+The local signing workflow/request is prepared for build 3, but publication,
+runner activation and Apple upload require their specific approvals. The remote
+signing flag remains false and the reviewed SHA remains the uploaded build-1
+source. Do not enable them or push this source as part of an audit handoff.
 
 ## Branding
 

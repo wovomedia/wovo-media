@@ -11,6 +11,7 @@ test('native download is an explicit trusted-frame GET, not a script or response
   assert.match(bridge, /action\.shouldPerformDownload[\s\S]*?mayDownload\(action, in: webView\) && downloads\.begin\(action\)/);
   assert.match(bridge, /explicitLink: action\.navigationType == \.linkActivated/);
   assert.match(bridge, /mainSource: action\.sourceFrame\.isMainFrame/);
+  assert.match(bridge, /private func mayDownload[\s\S]*?guard action\.navigationType == \.linkActivated, let url = action\.request\.url else \{ return false \}/);
   assert.match(bridge, /navigationResponse response:[\s\S]*?download\.cancel\(nil\)/);
   assert.match(policy, /explicitLink && downloadAttribute && mainSource && mainTarget && method == "GET"/);
   assert.match(coordinator, /approvedAction === action[\s\S]*?download\.originalRequest\?\.url == request/);
@@ -30,7 +31,8 @@ test('download is bounded, foreground-only, cleans up, and shares only the finis
   assert.match(coordinator, /guard attempt == identifier else \{ return \}/);
   assert.match(coordinator, /attempt != identifier \{ return \}/);
   assert.match(coordinator, /Int64\(count\) == expectedBytes/);
-  assert.match(coordinator, /matchesHeader\(try handle\.read\(upToCount: 16\)/);
+  assert.match(coordinator, /matchesHeader\(try handle\.read\(upToCount: 24\)/);
+  assert.match(coordinator, /let byteLimit = expectedBytes > 0 \? min\(routeLimit, expectedBytes\) : routeLimit/);
   assert.match(coordinator, /UIActivityViewController\(activityItems: \[file\], applicationActivities: nil\)/);
   assert.match(coordinator, /completionWithItemsHandler[\s\S]*?stop\(showError: false, for: identifier\)/);
   assert.match(coordinator, /popoverPresentationController\?\.sourceView/);
@@ -41,7 +43,7 @@ test('download is bounded, foreground-only, cleans up, and shares only the finis
   assert.doesNotMatch(coordinator, /print\(|NSLog|error\.localizedDescription|resumeData\s*=|writeToSavedPhotosAlbum|PHPhotoLibrary/);
 });
 
-test('download policy is compiled and tested on Mac and bundled without new dependencies', () => {
+test('download policy is wired into the Mac compile and test commands without new dependencies', () => {
   const script = read('scripts/build-simulator.sh');
   assert.match(script, /swiftc ios\/App\/App\/WovoNavigationPolicy\.swift ios\/App\/App\/WovoDownloadPolicy\.swift tests\/download-policy-tests\.swift/);
   const project = read('ios/App/App.xcodeproj/project.pbxproj');
@@ -49,4 +51,37 @@ test('download policy is compiled and tested on Mac and bundled without new depe
     assert.match(project, new RegExp(`${name}\\.swift in Sources`));
     assert.ok(JSON.parse(read('public-source-manifest.json')).files.includes(`native/ios/App/App/${name}.swift`));
   }
+});
+
+test('current private artifacts retain a narrow endpoint, query, MIME and size boundary', () => {
+  assert.match(policy, /path\[2\] == "generations"[\s\S]*?path\[4\] == "artifact"[\s\S]*?isArtifactJobId/);
+  assert.match(policy, /items\.count == 1[\s\S]*?items\[0\]\.name == "organizationId"/);
+  assert.match(policy, /components\.percentEncodedQuery == "organizationId=\\\(organizationId\)"/);
+  assert.match(policy, /\[1-8\]\[0-9a-f\]\{3\}-\[89ab\]/);
+  assert.match(policy, /\(1\.\.\.128\)\.contains\(value\.utf8\.count\)/);
+  assert.match(policy, /maximumArtifactBytes: Int64 = 20 \* 1024 \* 1024/);
+  assert.match(policy, /maximumTextBytes: Int64 = 800_000/);
+  assert.match(policy, /case \("artifact", "image\/png"\) where length <= maximumArtifactBytes: return \.png/);
+  assert.match(policy, /case \("artifact", "video\/mp4"\) where length <= maximumArtifactBytes: return \.mp4/);
+  assert.match(policy, /length <= maximumTextBytes \? \.txt : nil/);
+  assert.match(policy, /case \.png:[^\n]*\[137, 80, 78, 71, 13, 10, 26, 10\]/);
+  assert.match(policy, /case \.txt: return matchesText\(bytes\)/);
+  const swiftTests = read('tests/download-policy-tests.swift');
+  assert.match(swiftTests, /artifactInvalid[\s\S]*?%6frganizationId[\s\S]*?signature=[\s\S]*?blob:/);
+  assert.match(swiftTests, /maximumArtifactBytes \+ 1/);
+  assert.match(swiftTests, /maximumTextBytes \+ 1/);
+  assert.match(swiftTests, /0xed,0xa0,0x80/);
+  assert.doesNotMatch(policy, /httpCookieStore|URLSession|URLRequest|evaluateJavaScript/);
+});
+
+test('current artifacts validate full MIME, approved MP4 bytes and the complete bounded text file', () => {
+  assert.match(coordinator, /kind\(for: request\) == "artifact"[\s\S]*?http\.value\(forHTTPHeaderField: "Content-Type"\) : response\.mimeType/);
+  assert.match(policy, /case \("artifact", "text\/plain;charset=utf-8"\)/);
+  assert.doesNotMatch(policy, /case \("artifact", "text\/plain"\)/);
+  assert.match(policy, /prefix\.count >= 24[\s\S]*?\["isom", "iso2", "mp41", "mp42", "avc1", "M4V "\]/);
+  assert.match(policy, /boxSize >= 16 && Int64\(boxSize\) <= length/);
+  assert.match(coordinator, /if format == \.txt[\s\S]*?read\(upToCount: Int\(WovoDownloadPolicy\.maximumTextBytes\) \+ 1\)[\s\S]*?Int64\(bytes\.count\) == expectedBytes, WovoDownloadPolicy\.matchesText\(bytes\)/);
+  assert.match(policy, /String\(data: bytes, encoding: \.utf8\)/);
+  assert.match(policy, /text\.unicodeScalars\.allSatisfy/);
+  assert.doesNotMatch(coordinator, /supports WOVO video and audio files up to 256 MB/);
 });
