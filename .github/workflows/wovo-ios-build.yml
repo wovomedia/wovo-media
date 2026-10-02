@@ -35,8 +35,13 @@ jobs:
         working-directory: native
         timeout-minutes: 12
         run: node scripts/smoke-simulator.mjs
+      - name: Bound anonymous runtime evidence storage
+        if: always() && !cancelled()
+        id: runtime_size_guard
+        working-directory: native
+        run: node scripts/artifact-size-limit.mjs runtime
       - name: Preserve anonymous runtime evidence
-        if: always()
+        if: always() && !cancelled() && steps.runtime_size_guard.outcome == 'success' && steps.runtime_size_guard.outputs.upload_ready == 'true'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: WOVO-anonymous-runtime-smoke
@@ -46,12 +51,17 @@ jobs:
             native/build/runtime-smoke/summary.json
           retention-days: 3
           if-no-files-found: warn
+          compression-level: 0
       - name: Preserve simulator app file metadata
         working-directory: native
         run: ditto -c -k --sequesterRsrc --keepParent build/simulator/Build/Products/Debug-iphonesimulator/App.app build/WOVO-Internal-simulator.zip
+      - name: Bound simulator artifact storage
+        working-directory: native
+        run: node scripts/artifact-size-limit.mjs simulator
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: WOVO-Internal-simulator
           path: native/build/WOVO-Internal-simulator.zip
           retention-days: 3
           if-no-files-found: error
+          compression-level: 0

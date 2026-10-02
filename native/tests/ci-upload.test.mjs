@@ -59,6 +59,19 @@ test('reviewed native-only payload maps exactly the simulator, gated release wor
   for (const required of ['native/package.json', 'native/package-lock.json', 'native/capacitor.config.json', 'native/tests/ci-upload.test.mjs', 'native/scripts/build-simulator.sh', 'native/ios/App/App.xcodeproj/xcshareddata/xcschemes/App.xcscheme']) assert.ok(manifest.files.includes(required));
 });
 
+test('both uploads follow fixed-path size guards and have three-day retention with no rerun or billing changes', async () => {
+  const body = await read('ci/github-ios-build.yml');
+  assert.equal(body, (await readFile(new URL('../.github/workflows/wovo-ios-build.yml', root), 'utf8')).replace(/\r\n/g, '\n'));
+  assert.match(body, /name: Bound anonymous runtime evidence storage\n        if: always\(\) && !cancelled\(\)\n        id: runtime_size_guard\n        working-directory: native\n        run: node scripts\/artifact-size-limit\.mjs runtime/);
+  assert.match(body, /name: Preserve anonymous runtime evidence\n        if: always\(\) && !cancelled\(\) && steps\.runtime_size_guard\.outcome == 'success' && steps\.runtime_size_guard\.outputs\.upload_ready == 'true'/);
+  assert.ok(body.indexOf('run: node scripts/artifact-size-limit.mjs runtime') < body.indexOf('name: WOVO-anonymous-runtime-smoke'));
+  assert.ok(body.indexOf('run: node scripts/artifact-size-limit.mjs simulator') > body.indexOf('run: ditto '));
+  assert.ok(body.indexOf('run: node scripts/artifact-size-limit.mjs simulator') < body.indexOf('name: WOVO-Internal-simulator'));
+  assert.equal([...body.matchAll(/retention-days: 3\n/g)].length, 2);
+  assert.equal([...body.matchAll(/compression-level: 0\n/g)].length, 2);
+  assert.doesNotMatch(body, /continue-on-error|billing|settings\/|merge-multiple|overwrite:|retry/);
+});
+
 test('upload3 request is fixed to the reviewed build with separate upload acknowledgement and no review or invites', async () => {
   assert.deepEqual(await json('ci/testflight-request.json'), {
     request: 'upload3', version: '1.0', build: '3', operation: 'upload-to-testflight',

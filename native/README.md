@@ -112,6 +112,12 @@ packaging helper, not required in a standalone native-source CI checkout.
 
 ## Source handling
 
+The simulator workflow caps the three runtime-evidence files together at 16 MiB
+and the simulator ZIP at 256 MiB before upload. Both artifacts use compression
+level zero and three-day retention. An oversized artifact fails its guard and
+is not uploaded. Runtime evidence remains capped even when the launch smoke
+fails. These guards do not change account billing, quotas or payment settings.
+
 The existing GitHub repository is public and its default branch is stale.
 Do not upload the web repository, environment files, generated media, customer
 data or verification artifacts. Any native-only upload still needs the owner's
